@@ -1,3 +1,4 @@
+#include <string.h>
 /* Copyright 2025 muzkr https://github.com/muzkr
  * Copyright 2023 Manuel Jinger
  * Copyright 2023 Dual Tachyon
@@ -42,6 +43,14 @@ bool       gWasFKeyPressed  = false;
 #define SERIAL_KEY_TYPE         0x03
 #define SERIAL_KEY_TYPE_LONG    0x04
 #define SERIAL_GPS_TYPE         0x07
+// K1 Remote — PTT à distance : AA 55 06 v (v ^ 0xA5), v = 1 maintenu, 0 relâché.
+// Le téléphone répète « maintenu » toutes les 200 ms ; sans nouvelle pendant
+// REMOTE_PTT_IDLE_10MS, ou au bout de REMOTE_PTT_MAX_10MS, l'émission s'arrête.
+#define SERIAL_PTT_TYPE         0x06
+// K1 Remote — commande directe : AA 55 08 len data[len] chk, chk = 08 ^ len ^ data…
+#define SERIAL_CMD_TYPE         0x08
+#define REMOTE_PTT_IDLE_10MS    90      // 0,9 s
+#define REMOTE_PTT_MAX_10MS     3000    // 30 s
 #ifdef ENABLE_FEAT_F4HWN_RXTX_LOG_K5VIEWER
 #define SERIAL_FEATURE_TYPE     0x05
 #endif
@@ -51,6 +60,49 @@ volatile KEY_Code_t gKeyFromSerial      = KEY_INVALID;
 volatile uint8_t    gSerialViewerFeatures = 0;
 #endif
 static   uint8_t    gSerialKeyHoldCount = 0;
+volatile bool       gRemotePttActive    = false;
+static volatile uint16_t gRemotePttIdle = 0;
+static volatile uint8_t  gSerialQuiet10ms = 0;
+static uint8_t           gCmdBuf[9];
+static volatile uint8_t  gCmdLen = 0;        // > 0 : commande prête
+
+bool KEYBOARD_SerialQuiet(void) { return gSerialQuiet10ms > 0 || gKeyFromSerial != KEY_INVALID; }
+
+bool KEYBOARD_TakeCommand(uint8_t *buf, uint8_t *len)
+{
+    if (!gCmdLen) return false;
+    *len = gCmdLen;
+    memcpy(buf, gCmdBuf, gCmdLen);
+    gCmdLen = 0;
+    return true;
+}
+static volatile uint16_t gRemotePttHeld = 0;
+
+void KEYBOARD_RemotePttTick10ms(void)
+{
+    if (gSerialQuiet10ms) gSerialQuiet10ms--;
+    if (!gRemotePttActive)
+        return;
+    // En mode « une pression » (SetPTT), app.c traite quand même le PTT à distance
+    // en « maintenir pour émettre ».
+    if (++gRemotePttIdle > REMOTE_PTT_IDLE_10MS ||
+        ++gRemotePttHeld > REMOTE_PTT_MAX_10MS)
+    {
+        gRemotePttActive = false;
+    }
+}
+
+static void KEYBOARD_RemotePtt(uint8_t v)
+{
+    if (v == 1) {
+        if (!gRemotePttActive)
+            gRemotePttHeld = 0;
+        gRemotePttIdle = 0;
+        gRemotePttActive = true;
+    } else {
+        gRemotePttActive = false;
+    }
+}
 static   uint8_t    gSerialKeyLong      = 0;  // 0 = short press, 1 = long press
 
 // Inject a short or long press from serial (UART or VCP).
@@ -59,6 +111,7 @@ static inline void KEYBOARD_InjectKey(uint8_t keyCode, bool keyLong)
 {
     if (keyCode < KEY_INVALID && keyCode != KEY_PTT) {
         gKeyFromSerial      = (KEY_Code_t)keyCode;
+        gSerialQuiet10ms    = 120;     // touche du téléphone : pas de bip (appui et relâchement)
         gSerialKeyHoldCount = 0;
         gSerialKeyLong      = keyLong;
     }
@@ -134,6 +187,10 @@ bool KEYBOARD_ProcessProtocolByte(ParseState_t *state, uint8_t b)
                 state->state = STATE_KEY_3;
             } else if (b == SERIAL_KEY_TYPE_LONG) {
                 state->state = STATE_KEY_3L;
+            } else if (b == SERIAL_CMD_TYPE) {
+                state->state = STATE_CMD_LEN;
+            } else if (b == SERIAL_PTT_TYPE) {
+                state->state = STATE_PTT_1;
             } else if (b == SERIAL_GPS_TYPE) {
                 state->state = STATE_GPS;
                 state->payload_pos = 0;
@@ -148,6 +205,46 @@ bool KEYBOARD_ProcessProtocolByte(ParseState_t *state, uint8_t b)
             connected = true;
             state->state = STATE_IDLE;
             break;
+
+        case STATE_PTT_1:
+            state->payload[0] = b;
+            state->state = STATE_PTT_2;
+            break;
+
+        case STATE_PTT_2:
+            if (b == (uint8_t)(state->payload[0] ^ 0xA5u) && state->payload[0] <= 1u) {
+                KEYBOARD_RemotePtt(state->payload[0]);
+                connected = true;
+            } else {
+                gRemotePttActive = false;       // trame douteuse : sécurité d'abord
+            }
+            KEYBOARD_ResetProtocolParser(state);
+            break;
+
+        case STATE_CMD_LEN:
+            if (b == 0 || b > sizeof(state->payload)) { KEYBOARD_ResetProtocolParser(state); break; }
+            state->payload_pos = 0;
+            state->payload[sizeof(state->payload) - 1u] = b;   // longueur gardée à la fin
+            state->len = b;
+            state->state = STATE_CMD_DATA;
+            break;
+
+        case STATE_CMD_DATA:
+            state->payload[state->payload_pos++] = b;
+            if (state->payload_pos >= state->len) state->state = STATE_CMD_CHK;
+            break;
+
+        case STATE_CMD_CHK: {
+            uint8_t chk = SERIAL_CMD_TYPE ^ state->len;
+            for (uint8_t i = 0; i < state->len; i++) chk ^= state->payload[i];
+            if (chk == b && gCmdLen == 0) {
+                memcpy(gCmdBuf, state->payload, state->len);
+                gCmdLen = state->len;
+                connected = true;
+            }
+            KEYBOARD_ResetProtocolParser(state);
+            break;
+        }
 
         case STATE_GPS:
             state->payload[state->payload_pos++] = b;

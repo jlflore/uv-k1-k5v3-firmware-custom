@@ -58,18 +58,33 @@ typedef enum {
     STATE_KEY_3,
     STATE_KEY_3L,
     STATE_GPS,
+    STATE_PTT_1,
+    STATE_PTT_2,
+    STATE_CMD_LEN,
+    STATE_CMD_DATA,
+    STATE_CMD_CHK,
 } ParseStateCode_t;
 
 typedef struct {
     uint8_t state;
     uint8_t payload_pos;
     uint8_t payload[9];
+    uint8_t len;
 } ParseState_t;
 
 extern KEY_Code_t gKeyReading0;
 extern KEY_Code_t gKeyReading1;
 extern uint16_t   gDebounceCounter;
 extern bool       gWasFKeyPressed;
+
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+// K1 Remote — PTT à distance sécurisé : appelé toutes les 10 ms
+void KEYBOARD_RemotePttTick10ms(void);
+// K1 Remote — commandes directes (AA 55 08 len data… chk) en attente d'exécution
+bool KEYBOARD_TakeCommand(uint8_t *buf, uint8_t *len);
+// K1 Remote — vrai juste après une touche envoyée par le téléphone : bip coupé
+bool KEYBOARD_SerialQuiet(void);
+#endif
 
 #ifdef ENABLE_FEAT_F4HWN_K5VIEWER
 // Serial-injected key (written by UART/VCP parser, consumed by KEYBOARD_Poll).
