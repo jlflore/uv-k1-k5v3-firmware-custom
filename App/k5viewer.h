@@ -25,5 +25,8 @@ void K5VIEWER_ParseInput(void);
 bool K5VIEWER_HasPendingStateChange(void);
 bool K5VIEWER_SetGps(int32_t lat_cas, int32_t lon_cas);
 bool K5VIEWER_GetGps(int32_t *lat_cas, int32_t *lon_cas);
+// K1 Remote : réponse à une commande directe (trame AA 55 09 len… 0A)
+void K5VIEWER_ForceFullFrame(void);
+void K5VIEWER_SendReply(const uint8_t *data, uint8_t len);
 
 #endif
