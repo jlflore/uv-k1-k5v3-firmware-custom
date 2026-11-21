@@ -541,7 +541,12 @@ int MENU_GetLimits(uint8_t menu_id, int32_t *pMin, int32_t *pMax)
 
 void MENU_AcceptSetting(void)
 {
-    const uint8_t menu_id = UI_MENU_GetCurrentMenuId();
+    MENU_AcceptSettingId(UI_MENU_GetCurrentMenuId());
+}
+
+// K1 Remote : applique gSubMenuSelection au réglage menu_id, sans passer par l'écran du menu
+void MENU_AcceptSettingId(uint8_t menu_id)
+{
     const MenuSetting *setting = MENU_FindSetting(menu_id);
     if (setting != NULL)
     {
@@ -943,7 +948,7 @@ void MENU_AcceptSetting(void)
                     &gEeprom.KEY_2_SHORT_PRESS_ACTION,
                     &gEeprom.KEY_2_LONG_PRESS_ACTION,
                     &gEeprom.KEY_M_LONG_PRESS_ACTION};
-                *fun[UI_MENU_GetCurrentMenuId()-MENU_F1SHRT] = gSubMenuSelection;
+                *fun[menu_id-MENU_F1SHRT] = gSubMenuSelection;
             }
             break;
 
