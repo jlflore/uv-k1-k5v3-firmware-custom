@@ -2,7 +2,7 @@ name: Build Firmware
 
 on:
   push:
-    branches: [ main, temoin, k1remote ]
+    branches: [ main, temoin, k1remote, 'k1-*' ]
   workflow_dispatch:
 
 jobs:
@@ -30,10 +30,10 @@ jobs:
 
     - name: Publish binaries to a git branch
       run: |
-        mkdir -p /tmp/out && cp build/Fusion/*.bin /tmp/out/ && ls -la /tmp/out
+        mkdir -p /tmp/out && cp build/Fusion/*.bin build/Fusion/*.elf build/Fusion/*.map /tmp/out/ && ls -la /tmp/out
         git config user.name "ci" && git config user.email "ci@localhost"
         git checkout --orphan "bin-${GITHUB_REF_NAME}"
         git rm -rq --cached . && git clean -fdxq
-        cp /tmp/out/*.bin . && git add *.bin
+        cp /tmp/out/* . && git add -f *.bin *.elf *.map
         git commit -qm "binaires ${GITHUB_SHA}"
         git push -f origin "bin-${GITHUB_REF_NAME}"
