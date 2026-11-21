@@ -2,7 +2,8 @@ name: Build Firmware
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, temoin, k1remote ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,8 +16,7 @@ jobs:
     - name: Compile firmware
       run: |
         chmod +x compile-firmware.sh compile-app.sh
-        ./compile-firmware.sh All
-        ./compile-app.sh All
+        ./compile-firmware.sh Fusion
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
