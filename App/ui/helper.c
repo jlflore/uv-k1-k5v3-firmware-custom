@@ -194,7 +194,7 @@ void UI_PrintStringSmall(const char *pString, uint8_t Start, uint8_t End, uint8_
         return;
 
     char clipped[24];
-    const size_t room = (LCD_WIDTH - x + 1u) / char_spacing;   // le dernier glyphe n'a pas besoin de son espace
+    const size_t room = (LCD_WIDTH - x) / char_spacing;   // le dernier glyphe n'a pas besoin de son espace
     if (Length > room) {
         const size_t n = (room < sizeof(clipped) - 1) ? room : sizeof(clipped) - 1;
         memcpy(clipped, pString, n);
