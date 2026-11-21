@@ -18,7 +18,7 @@ jobs:
     - name: Compile firmware
       run: |
         chmod +x compile-firmware.sh compile-app.sh
-        ./compile-firmware.sh Fusion -DEDITION_STRING=k1-C
+        ./compile-firmware.sh Fusion -DEDITION_STRING=k1-E
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

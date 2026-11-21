@@ -1724,6 +1724,7 @@ void CheckKeys(void)
     const bool isPressed = !GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) && !serialConfigInProgress;
 #endif
 
+
 #ifdef ENABLE_FEAT_F4HWN
     if (gSetting_set_ptt_session)
     {
@@ -1863,9 +1864,219 @@ void CheckKeys(void)
     }
 }
 
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+// =====================================================================
+// K1 Remote — commandes directes envoyées par le téléphone
+//   01 n lo hi : réglage n° n du menu (liste « All ») = valeur (lo | hi << 8)
+//   02 f0 f1 f2 f3 : fréquence de la ligne active, en pas de 10 Hz (mode fréquence)
+//   03 c… : code DTMF « UP » (menu 45 UPCode), 1 à 8 caractères 0-9 A-D * #
+//   04 : présence (réponse « K1R » + version)
+// Réponse : AA 55 09 00 len [op, état, …] 0A ; état 0 = fait.
+// =====================================================================
+#include "app/menu.h"
+#include "k5viewer.h"
+#include "driver/py25q16.h"
+#include "fw_assets.h"
+#include "ui/menu.h"
+
+// Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
+// r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic)
+#ifndef K1R_REVISION
+#define K1R_REVISION "12"
+#endif
+
+// Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
+// ProcessKey() après chaque touche (étiquette Skip). Sans cela, le réglage restait
+// en attente jusqu'à la touche suivante : un passage A/B l'appliquait alors à
+// l'autre ligne et la ligne réglée revenait à son ancien état.
+extern volatile uint16_t gK1R_LastCmdId;
+extern volatile uint8_t  gK1R_LastCmdPort;
+
+static void K1R_Commit(void)
+{
+    if (gRequestSaveSettings) {
+        SETTINGS_SaveSettings();
+        gRequestSaveSettings = false;
+        gUpdateStatus        = true;
+    }
+
+    if (gRequestSaveVFO) {
+        gRequestSaveVFO = false;
+        SETTINGS_SaveVfoIndices();
+    }
+
+    if (gRequestSaveChannel > 0) {
+        SETTINGS_SaveChannel(gTxVfo->CHANNEL_SAVE, gEeprom.TX_VFO, gTxVfo, gRequestSaveChannel);
+        if (!SCANNER_IsScanning() && gVfoConfigureMode == VFO_CONFIGURE_NONE)
+            gVfoConfigureMode = VFO_CONFIGURE;
+        gRequestSaveChannel = 0;
+    }
+
+    if (gVfoConfigureMode != VFO_CONFIGURE_NONE) {
+        if (gFlagResetVfos) {
+            RADIO_ConfigureChannel(0, gVfoConfigureMode);
+            RADIO_ConfigureChannel(1, gVfoConfigureMode);
+        }
+        else
+            RADIO_ConfigureChannel(gEeprom.TX_VFO, gVfoConfigureMode);
+
+        gFlagReconfigureVfos = true;
+        gVfoConfigureMode    = VFO_CONFIGURE_NONE;
+        gFlagResetVfos       = false;
+    }
+
+    if (gFlagReconfigureVfos) {
+#ifdef ENABLE_FEAT_F4HWN_FULL_WATCH
+        APP_FullWatchReset();
+#endif
+        RADIO_SelectVfos();
+        RADIO_SetupRegisters(true);
+        gVFO_RSSI_bar_level[0] = 0;
+        gVFO_RSSI_bar_level[1] = 0;
+        gFlagReconfigureVfos   = false;
+    }
+
+    gUpdateDisplay = true;
+}
+
+static void K1R_RunCommand(void)
+{
+    uint8_t c[9], n = 0, status = 0;
+    if (!KEYBOARD_TakeCommand(c, &n))
+        return;
+
+    switch (c[0]) {
+        case 0x01: {
+            if (n < 4) { status = 1; break; }
+            uint8_t count = 0;
+            while (MenuListId[count] != 0xFF) count++;
+            if (c[1] < 1 || c[1] > count) { status = 2; break; }
+            gSubMenuSelection = (int32_t)(c[2] | (c[3] << 8));
+            MENU_AcceptSettingId(MenuListId[c[1] - 1]);
+            gFlagReconfigureVfos = true;
+            gUpdateDisplay = true;
+            break;
+        }
+        case 0x02: {
+            if (n < 5) { status = 1; break; }
+            if (!IS_FREQ_CHANNEL(gTxVfo->CHANNEL_SAVE)) { status = 3; break; }   // ligne en mode canal
+            uint32_t f = (uint32_t)c[1] | ((uint32_t)c[2] << 8) | ((uint32_t)c[3] << 16) | ((uint32_t)c[4] << 24);
+            if (f < frequencyBandTable[0].lower || f > frequencyBandTable[BAND_N_ELEM - 1].upper ||
+                (f >= BX4819_band1.upper && f < BX4819_band2.lower)) { status = 4; break; }
+            const uint8_t Vfo = gEeprom.TX_VFO;
+            const FREQUENCY_Band_t band = FREQUENCY_GetBand(f);
+            if (gTxVfo->Band != band) {
+                gTxVfo->Band               = band;
+                gEeprom.ScreenChannel[Vfo] = band + FREQ_CHANNEL_FIRST;
+                gEeprom.FreqChannel[Vfo]   = band + FREQ_CHANNEL_FIRST;
+                SETTINGS_SaveVfoIndices();
+                RADIO_ConfigureChannel(Vfo, VFO_CONFIGURE_RELOAD);
+            }
+            // Fréquence exacte : pas d'arrondi au pas (le téléphone choisit)
+            gTxVfo->freq_config_RX.Frequency = f;
+            gRequestSaveChannel = 1;
+            gUpdateDisplay = true;
+            break;
+        }
+        case 0x03: {
+            char code[16];
+            memset(code, 0, sizeof(code));
+            if (n < 2) { status = 1; break; }
+            for (uint8_t i = 1; i < n && i <= 8; i++) {
+                const char ch = (char)c[i];
+                if (!((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'D') || ch == '*' || ch == '#')) { status = 5; break; }
+                code[i - 1] = ch;
+            }
+            if (status) break;
+            memcpy(gEeprom.DTMF_UP_CODE, code, sizeof(gEeprom.DTMF_UP_CODE));
+            PY25Q16_WriteBuffer(0x00A0F8 + 0x18, code, sizeof(code), false);
+            break;
+        }
+        case 0x04:
+            K5VIEWER_ForceFullFrame();     // connexion de l'appli : écran complet tout de suite
+            break;
+        case 0x06: {
+            // Écran affiché (pour l'aide contextuelle de l'appli) :
+            // 06 0 écran niveauMenu sousMenu n°(liste All) sélLo sélHi nom[7]
+            uint8_t d[15] = { 0x06, 0, (uint8_t)gScreenToDisplay, 0xFF, gIsInSubMenu, 0, 0, 0 };
+            if (gScreenToDisplay == DISPLAY_MENU) {
+#ifdef ENABLE_FEAT_F4HWN_MENU_CAT
+                d[3] = gMenuLevel;
+                if (gMenuLevel == MENU_LEVEL_ITEMS)
+#else
+                d[3] = 1;
+#endif
+                {
+                    const uint8_t idx = UI_MENU_GetMenuIdx(UI_MENU_GetCurrentMenuId());
+                    d[5] = idx + 1;
+                    d[6] = (uint8_t)gSubMenuSelection;
+                    d[7] = (uint8_t)(gSubMenuSelection >> 8);
+                    char name[MENU_NAME_SIZE];
+                    FW_ASSETS_STRCPY(name, MenuListName, idx);
+                    memcpy(&d[8], name, MENU_NAME_SIZE);
+                }
+            }
+            K5VIEWER_SendReply(d, sizeof(d));
+            return;
+        }
+        case 0x05: {
+            // Diagnostic : état d'émission vu par la radio
+            const uint32_t f = gTxVfo->pTX->Frequency;
+            uint8_t d[43] = { 0x05, 0,
+                (uint8_t)VfoState[0], (uint8_t)VfoState[1], gSetting_F_LOCK, gTxVfo->TX_LOCK,
+                (uint8_t)gSerialConfigCountDown_500ms,
+#ifdef ENABLE_TX1750
+                gTx1750Active,
+#else
+                0,
+#endif
+                (uint8_t)gCurrentFunction, gBatteryDisplayLevel,
+                (uint8_t)f, (uint8_t)(f >> 8), (uint8_t)(f >> 16), (uint8_t)(f >> 24),
+                (uint8_t)gTxVfo->Modulation, gEeprom.TX_TIMEOUT_TIMER,
+                gEeprom.KEY_1_SHORT_PRESS_ACTION, gEeprom.KEY_1_LONG_PRESS_ACTION,
+                gEeprom.KEY_2_SHORT_PRESS_ACTION, gEeprom.KEY_2_LONG_PRESS_ACTION,
+                gEeprom.KEY_M_LONG_PRESS_ACTION, gSetting_set_ptt_session,
+                gEeprom.DTMF_SIDE_TONE, (uint8_t)gTxVfo->DTMF_PTT_ID_TX_MODE,
+                !GPIO_IsInputPinSet(GPIO_PIN_PTT), gRemotePttActive, gPttIsPressed,
+                (uint8_t)gTxTimerCountdown_500ms,
+                (uint8_t)gK1R_LastCmdId, (uint8_t)(gK1R_LastCmdId >> 8), gK1R_LastCmdPort,
+                0,0, 0,0, 0,0, 0,0, 0,0, 0,0 };
+            // Registres du BK4819 (puce radio) : générateur de tonalité, sortie audio, chaîne TX
+            static const uint8_t regs[6] = { 0x70, 0x71, 0x47, 0x30, 0x50, 0x31 };
+            for (uint8_t i = 0; i < 6; i++) {
+                const uint16_t v = BK4819_ReadRegister((BK4819_REGISTER_t)regs[i]);
+                d[31 + 2 * i] = (uint8_t)v;
+                d[32 + 2 * i] = (uint8_t)(v >> 8);
+            }
+            K5VIEWER_SendReply(d, sizeof(d));
+            return;
+        }
+        default:
+            status = 9;
+    }
+
+    if (status == 0 && (c[0] == 0x01 || c[0] == 0x02 || c[0] == 0x03))
+        K1R_Commit();
+
+    // Présence : « K1R », version du protocole, modèle (selon SetNav : 0 = UV-K1, 1 = UV-K5 V3),
+    // puis la version du firmware (ex. « v7.0.0 »)
+    uint8_t reply[16] = { c[0], status, 'K', '1', 'R', 2, gEeprom.SET_NAV ? 1 : 0 };
+    uint8_t len = 2;
+    if (c[0] == 0x04) {
+        len = 7;
+        for (const char *v = VERSION_STRING_2 " r" K1R_REVISION; *v && len < sizeof(reply); v++) reply[len++] = (uint8_t)*v;
+    }
+    K5VIEWER_SendReply(reply, len);
+}
+#endif
+
 void APP_TimeSlice10ms(void)
 {
     gNextTimeslice = false;
+
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    K1R_RunCommand();
+#endif
 
     SETTINGS_SaveVfoIndicesFlush();
 
