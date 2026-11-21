@@ -174,7 +174,21 @@ void UI_PrintStringSmall(const char *pString, uint8_t Start, uint8_t End, uint8_
     const unsigned int char_spacing = FONT_SMALL_WIDTH + 1u;
 
     if (End > Start) {
-        Start += (((End - Start) - Length * char_spacing) + 1) / 2;
+        // K1 Remote : un texte plus large que la zone faisait passer le calcul en
+        // négatif (non signé) ; Start partait vers 250 et l'écriture débordait de
+        // gFrameBuffer (variables voisines écrasées). On ne centre que s'il y a la place.
+        if (Length * char_spacing <= (unsigned)(End - Start))
+            Start += (((End - Start) - Length * char_spacing) + 1) / 2;
+    }
+
+    // Jamais au-delà de la ligne : on coupe les caractères qui ne tiennent pas
+    char clipped[24];
+    const size_t room = (Start < LCD_WIDTH) ? (LCD_WIDTH - Start) / char_spacing : 0;
+    if (Length > room) {
+        const size_t n = (room < sizeof(clipped) - 1) ? room : sizeof(clipped) - 1;
+        memcpy(clipped, pString, n);
+        clipped[n] = '\0';
+        pString = clipped;
     }
 
     UI_PrintStringBuffer(pString, gFrameBuffer[Line] + Start, font);
