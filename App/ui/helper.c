@@ -145,6 +145,11 @@ void UI_PrintString(const char *pString, uint8_t Start, uint8_t End, uint8_t Lin
     for (i = 0; i < Length; i++)
     {
         const unsigned int ofs   = (unsigned int)Start + (i * Width);
+        // K1 Remote : jamais hors de l'écran (un nom de canal de 10 caractères en
+        // police large débordait d'une colonne ; un texte plus long, de bien plus)
+        const unsigned int row = (unsigned int)Line + ofs / LCD_WIDTH;
+        if (row + 1u >= FRAME_LINES || (ofs % LCD_WIDTH) + 7u > LCD_WIDTH)
+            break;
         if (pString[i] > ' ' && pString[i] < 127)
         {
             const unsigned int index = pString[i] - ' ' - 1;
@@ -174,16 +179,22 @@ void UI_PrintStringSmall(const char *pString, uint8_t Start, uint8_t End, uint8_
     const unsigned int char_spacing = FONT_SMALL_WIDTH + 1u;
 
     if (End > Start) {
-        // K1 Remote : un texte plus large que la zone faisait passer le calcul en
+        // K1 Remote : un texte plus large que la zone faisait passer ce calcul en
         // négatif (non signé) ; Start partait vers 250 et l'écriture débordait de
         // gFrameBuffer (variables voisines écrasées). On ne centre que s'il y a la place.
-        if (Length * char_spacing <= (unsigned)(End - Start))
+        if (Length * char_spacing <= (unsigned)(End - Start) + 1u)
             Start += (((End - Start) - Length * char_spacing) + 1) / 2;
     }
 
-    // Jamais au-delà de la ligne : on coupe les caractères qui ne tiennent pas
+    // Certains appels visent volontairement la ligne suivante (Start >= LCD_WIDTH) :
+    // on ramène la position sur sa vraie ligne, puis on coupe ce qui dépasse.
+    const unsigned row = (unsigned)Line + Start / LCD_WIDTH;
+    const unsigned x   = Start % LCD_WIDTH;
+    if (row >= FRAME_LINES)
+        return;
+
     char clipped[24];
-    const size_t room = (Start < LCD_WIDTH) ? (LCD_WIDTH - Start) / char_spacing : 0;
+    const size_t room = (LCD_WIDTH - x + 1u) / char_spacing;   // le dernier glyphe n'a pas besoin de son espace
     if (Length > room) {
         const size_t n = (room < sizeof(clipped) - 1) ? room : sizeof(clipped) - 1;
         memcpy(clipped, pString, n);
@@ -191,7 +202,7 @@ void UI_PrintStringSmall(const char *pString, uint8_t Start, uint8_t End, uint8_
         pString = clipped;
     }
 
-    UI_PrintStringBuffer(pString, gFrameBuffer[Line] + Start, font);
+    UI_PrintStringBuffer(pString, gFrameBuffer[row] + x, font);
 }
 
 
@@ -215,15 +226,26 @@ void UI_PrintStringSmallNormalInverse(const char *pString, uint8_t Start, uint8_
     if (End != 0 && x_end > End)
         x_end = End;
 
-    //gFrameBuffer[Line][x_start - 2] ^= 0x3E;
-    gFrameBuffer[Line][x_start - 1] ^= 0x7F;
-    //gFrameBuffer[Line][x_start - 1] ^= 0xFF;
+    // K1 Remote : bornes vérifiées (texte coupé, Line 0, Start 0, fin de ligne)
+    if (Line >= FRAME_LINES || x_start >= LCD_WIDTH)
+        return;
+    {
+        const unsigned shown = (len * char_width + 1u < (unsigned)(LCD_WIDTH - x_start))
+                             ? len * char_width + 1u : (unsigned)(LCD_WIDTH - 1u - x_start);
+        if (x_end > x_start + shown)
+            x_end = x_start + shown;
+    }
+    if (x_end > LCD_WIDTH - 1u)
+        x_end = LCD_WIDTH - 1u;
+
+    if (x_start > 0)
+        gFrameBuffer[Line][x_start - 1] ^= 0x7F;
     for (uint8_t x = x_start; x < x_end; x++)
     {
         gFrameBuffer[Line][x] ^= 0xFF;
-        gFrameBuffer[Line - 1][x] ^= 0x80;
+        if (Line > 0)
+            gFrameBuffer[Line - 1][x] ^= 0x80;
     }
-    //gFrameBuffer[Line][x_end + 0] ^= 0xFF;
     gFrameBuffer[Line][x_end + 0] ^= 0x7F;
     //gFrameBuffer[Line][x_end + 1] ^= 0x3E;
 }

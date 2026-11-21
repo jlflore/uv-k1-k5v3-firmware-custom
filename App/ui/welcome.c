@@ -364,7 +364,7 @@ void UI_DisplayWelcome(void)
         #endif
         */
 
-        sprintf(WelcomeString3, "%s Edition", Edition);
+        snprintf(WelcomeString3, sizeof(WelcomeString3), "%s Edition", Edition);
         UI_PrintStringSmallNormal(WelcomeString3, 0, 127, 6);
 
 #else
