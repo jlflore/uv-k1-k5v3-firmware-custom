@@ -257,6 +257,27 @@ static void K5VIEWER_SendRfLogHistory(void)
 }
 #endif
 
+static void K5VIEWER_Send(const uint8_t *buf, uint16_t len);
+
+// K1 Remote : l'appli vient de se (re)connecter et a effacé son image : renvoyer
+// l'écran entier à la prochaine mise à jour (sinon la radio, qui se croit toujours
+// connectée, ne renvoie qu'un morceau d'écran par mise à jour : affichage ligne à ligne).
+void K5VIEWER_ForceFullFrame(void)
+{
+    wasConnected = false;
+}
+
+void K5VIEWER_SendReply(const uint8_t *data, uint8_t len)
+{
+    if (!hasConnectionPing)
+        return;
+    uint8_t header[5] = { 0xAA, 0x55, 0x09, 0x00, len };
+    K5VIEWER_Send(header, 5);
+    K5VIEWER_Send(data, len);
+    uint8_t end = 0x0A;
+    K5VIEWER_Send(&end, 1);
+}
+
 bool K5VIEWER_HasPendingStateChange(void)
 {
     if (gUART_LockK5Viewer > 0 || keepAlive == 0 || !hasConnectionPing)
@@ -359,6 +380,8 @@ void K5VIEWER_Update(bool force)
 
     // Skip transmission if a key is currently pressed
     // UART_Send is blocking - would freeze the main loop and lose keypresses
+    // K1 Remote r5 : retour au comportement d'Armel. Envoyer l'écran pendant que le
+    // PTT est maintenu bloquait la boucle principale pendant l'émission.
     if (gKeyReading0 != KEY_INVALID)
         return;
 

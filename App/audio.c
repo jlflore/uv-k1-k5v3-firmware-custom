@@ -19,6 +19,7 @@
     #include "app/fm.h"
 #endif
 #include "audio.h"
+#include "driver/keyboard.h"
 #ifdef ENABLE_FMRADIO_EMBEDDED
     #include "driver/bk1080.h"
 #endif
@@ -55,6 +56,13 @@ void AUDIO_PlayBeep(BEEP_Type_t Beep)
 {
     if (Beep == BEEP_NONE)
         return;
+
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    // K1 Remote : les touches envoyées par le téléphone ne bipent jamais
+    if ((Beep == BEEP_1KHZ_60MS_OPTIONAL || Beep == BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL) &&
+        KEYBOARD_SerialQuiet())
+        return;
+#endif
 
     if ((Beep == BEEP_1KHZ_60MS_OPTIONAL ||
          Beep == BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL) &&

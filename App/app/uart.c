@@ -902,6 +902,11 @@ static uint32_t mb_port_timestamp(uint32_t Port)
 }
 #endif
 
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+volatile uint16_t gK1R_LastCmdId = 0;
+volatile uint8_t  gK1R_LastCmdPort = 0xFF;
+#endif
+
 void UART_HandleCommand(uint32_t Port)
 {
     UART_Command_t *pUART_Command;
@@ -923,6 +928,12 @@ void UART_HandleCommand(uint32_t Port)
     {
         return;
     }
+
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    // K1 Remote (diagnostic) : dernière commande de programmation reçue, et par où
+    gK1R_LastCmdId   = pUART_Command->Header.ID;
+    gK1R_LastCmdPort = (uint8_t)Port;
+#endif
 
     switch (pUART_Command->Header.ID)
     {

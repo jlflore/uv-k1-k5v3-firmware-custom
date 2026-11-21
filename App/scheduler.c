@@ -28,6 +28,9 @@
 
 #include "driver/backlight.h"
 #include "driver/gpio.h"
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+#include "driver/keyboard.h"
+#endif
 
 #define DECREMENT(cnt) \
     do {               \
@@ -55,6 +58,12 @@ uint32_t SCHEDULER_GetTick10ms(void)
 void SysTick_Handler(void)
 {
     gGlobalSysTickCounter++;
+
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    // K1 Remote : relâche le PTT à distance faute de nouvelles (dans l'interruption,
+    // donc aussi pendant les applis et tous les écrans)
+    KEYBOARD_RemotePttTick10ms();
+#endif
     
     gNextTimeslice = true;
 

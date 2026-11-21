@@ -79,9 +79,18 @@ static inline void GPIO_TurnOffBacklight()
     GPIO_ResetOutputPin(GPIO_PIN_BACKLIGHT);
 }
 
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+// K1 Remote — PTT à distance (voir driver/keyboard.c)
+extern volatile bool gRemotePttActive;
+#endif
+
 static inline bool GPIO_IsPttPressed()
 {
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    return !GPIO_IsInputPinSet(GPIO_PIN_PTT) || gRemotePttActive;
+#else
     return !GPIO_IsInputPinSet(GPIO_PIN_PTT);
+#endif
 }
 
 #endif
