@@ -217,11 +217,11 @@ void UI_PrintStringSmallNormalInverse(const char *pString, uint8_t Start, uint8_
     UI_PrintStringSmallNormal(pString, Start, End, Line);
 
     // Now invert the framebuffer bits for the rendered area
-    uint8_t len = strlen(pString);
-    uint8_t char_width = 7; // small font is typically 6px wide
+    const unsigned len = strlen(pString);   // K1 Remote : plus de calcul tronqué sur 8 bits
+    const unsigned char_width = 7; // small font is typically 6px wide
 
-    uint8_t x_start = Start;
-    uint8_t x_end   = Start + (len * char_width) + 1;
+    const unsigned x_start = Start;
+    unsigned x_end         = Start + (len * char_width) + 1u;
 
     if (End != 0 && x_end > End)
         x_end = End;
@@ -240,7 +240,7 @@ void UI_PrintStringSmallNormalInverse(const char *pString, uint8_t Start, uint8_
 
     if (x_start > 0)
         gFrameBuffer[Line][x_start - 1] ^= 0x7F;
-    for (uint8_t x = x_start; x < x_end; x++)
+    for (unsigned x = x_start; x < x_end; x++)
     {
         gFrameBuffer[Line][x] ^= 0xFF;
         if (Line > 0)

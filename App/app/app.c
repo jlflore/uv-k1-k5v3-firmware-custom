@@ -1897,7 +1897,7 @@ void CheckKeys(void)
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "15"
+#define K1R_REVISION "16"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -1967,7 +1967,25 @@ static void K1R_RunCommand(void)
             while (MenuListId[count] != 0xFF) count++;
             if (c[1] < 1 || c[1] > count) { status = 2; break; }
             gSubMenuSelection = (int32_t)(c[2] | (c[3] << 8));
-            MENU_AcceptSettingId(MenuListId[c[1] - 1]);
+            const uint8_t id = MenuListId[c[1] - 1];
+            MENU_AcceptSettingId(id);
+            // Réglage direct : rien ne « sort du menu », il faut appliquer soi-même ce que la
+            // radio applique d'habitude à la sortie (éclairage, inversion/contraste de l'écran).
+            switch (id) {
+                case MENU_ABR:
+                case MENU_ABR_MIN:
+                case MENU_ABR_MAX:
+                    BACKLIGHT_TurnOn();      // ABR = 0 : éteint tout de suite, sinon niveau MAX
+                    break;
+                #ifdef ENABLE_FEAT_F4HWN
+                case MENU_SET_INV:
+                case MENU_SET_CTR:
+                    ST7565_ContrastAndInv();
+                    break;
+                #endif
+                default:
+                    break;
+            }
             gFlagReconfigureVfos = true;
             gUpdateDisplay = true;
             break;
