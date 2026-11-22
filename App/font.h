@@ -33,7 +33,9 @@ void FONT_DrawBigGlyph(uint8_t glyph, uint8_t *top, uint8_t *bottom);
         FONT_BIG_DIGITS_ALT,
         FONT_BIG_DIGITS_SEVEN_SEGMENT,
         FONT_BIG_DIGITS_ORIGINAL,
-        FONT_BIG_DIGITS_COUNT
+        FONT_BIG_DIGITS_COUNT,
+        // K1 Remote : pochoir militaire, hors du codage d'origine (voir FONT_VariantDigits)
+        FONT_BIG_DIGITS_STENCIL = FONT_BIG_DIGITS_COUNT
     } FontBigDigits_t;
 
     #define FONT_BIG_DIGITS_COMPACT_COUNT FONT_BIG_DIGITS_ORIGINAL
@@ -47,7 +49,21 @@ void FONT_DrawBigGlyph(uint8_t glyph, uint8_t *top, uint8_t *bottom);
         FONT_TEXT_VARIANT_COUNT
     } FontTextVariant_t;
 
-    #define FONT_VARIANT_COUNT       (FONT_BIG_DIGITS_COUNT * FONT_TEXT_VARIANT_COUNT)
+    // Valeurs 0..11 : codage d'origine (inchangé, réglages déjà enregistrés conservés).
+    // K1 Remote : 12..14 = pochoir militaire avec les textes Normal / Caps / Block.
+    #define FONT_VARIANT_LEGACY_COUNT (FONT_BIG_DIGITS_COUNT * FONT_TEXT_VARIANT_COUNT)
+    #define FONT_VARIANT_COUNT        (FONT_VARIANT_LEGACY_COUNT + FONT_TEXT_VARIANT_COUNT)
+
+    static inline uint8_t FONT_VariantDigits(uint8_t v)
+    {
+        return (v >= FONT_VARIANT_LEGACY_COUNT) ? (uint8_t)FONT_BIG_DIGITS_STENCIL
+                                                : (uint8_t)(v % FONT_BIG_DIGITS_COUNT);
+    }
+    static inline uint8_t FONT_VariantText(uint8_t v)
+    {
+        return (v >= FONT_VARIANT_LEGACY_COUNT) ? (uint8_t)(v - FONT_VARIANT_LEGACY_COUNT)
+                                                : (uint8_t)(v / FONT_BIG_DIGITS_COUNT);
+    }
     #define FONT_VARIANT_DEFAULT     FONT_BIG_DIGITS_DEFAULT
 
     void FONT_DrawBigGlyphWithVariant(uint8_t variant, uint8_t glyph,

@@ -154,7 +154,7 @@ _Static_assert(sizeof(gFontBigSmallCaps) / sizeof(gFontBigSmallCaps[0]) == 26u,
 void FONT_DrawBigGlyphWithVariant(uint8_t variant, uint8_t glyph,
                                   uint8_t *top, uint8_t *bottom)
 {
-    const uint8_t family = variant / FONT_BIG_DIGITS_COUNT;
+    const uint8_t family = FONT_VariantText(variant);
     const uint8_t first_lowercase = (uint8_t)('a' - ' ' - 1);
 
     if (family == FONT_TEXT_BLOCK)

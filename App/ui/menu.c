@@ -83,7 +83,10 @@ static const char gSetFntLabels[][19] FW_ASSET =
     "BLOCK / TERMINUS",
     "BLOCK / ALT",
     "BLOCK / 7 SEGMENT",
-    "BLOCK / ORIGINAL"
+    "BLOCK / ORIGINAL",
+    "NORMAL / POCHOIR",
+    "CAPS / POCHOIR",
+    "BLOCK / POCHOIR"
 };
 _Static_assert(ARRAY_SIZE(gSetFntLabels) == FONT_VARIANT_COUNT,
                "one SetFnt label per font variant");
