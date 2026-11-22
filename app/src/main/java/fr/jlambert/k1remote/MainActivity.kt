@@ -1370,7 +1370,8 @@ class MainActivity : Activity() {
         val L = landscape
         val content = LinearLayout(this).apply {
             orientation = if (L) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-            if (L) setPadding(dp(16), dp(10), dp(16), dp(10)) else setPadding(dp(18), dp(14), dp(18), dp(14))
+            // Marges extérieures réduites (0.56) : l'écran du téléphone est utilisé au maximum
+            if (L) setPadding(dp(10), dp(6), dp(10), dp(6)) else setPadding(dp(10), dp(8), dp(10), dp(10))
         }
 
         opBand = null
@@ -1783,7 +1784,7 @@ class MainActivity : Activity() {
             setOnClickListener { opKeypad = !opKeypad; buildUi() }
         }
         val modeLink = TextView(this).apply {
-            text = "‹  Interface complète"
+            text = "‹  Complète"
             textSize = 13f
             typeface = medium
             maxLines = 1
