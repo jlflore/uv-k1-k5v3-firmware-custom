@@ -1763,7 +1763,7 @@ class MainActivity : Activity() {
         // Raccourcis : deux colonnes de gros boutons (la modification se fait dans l'interface complète)
         val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val rows = (shortcuts.size + 1) / 2
-        val rowH = dp(if (L) 42 else if (rows > 3) 48 else 56)
+        val rowH = dp(if (L) 38 else if (rows > 3) 42 else 46)
         for ((r, pair) in shortcuts.chunked(2).withIndex()) {
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             for ((i, s) in pair.withIndex()) {
@@ -1988,7 +1988,7 @@ class MainActivity : Activity() {
         val host = chipsHost ?: return
         host.removeAllViews()
         val cols = if (L) 5 else 3
-        val h = dp(if (L) 32 else 40)
+        val h = dp(if (L) 30 else 36)
         val items = mutableListOf<View>()
         for (s in shortcuts) items += chipView(s, L)
         if (shortcuts.size < Shortcut.MAX && !helpMode) items += addChip()
