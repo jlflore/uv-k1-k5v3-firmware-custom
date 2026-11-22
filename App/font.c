@@ -479,22 +479,27 @@ void FONT_DrawBigDigit(uint8_t font, uint8_t glyph, uint8_t *top, uint8_t *botto
 
 #ifdef ENABLE_FEAT_F4HWN_SET_FNT
     font = FONT_VariantDigits(font);    // discard the text-family part
-    if (font == FONT_BIG_DIGITS_STENCIL)
-        font = FONT_BIG_DIGITS_COMPACT_COUNT;   // dernier jeu du tableau compact
-    else if (font == FONT_BIG_DIGITS_ORIGINAL)
+    if (font == FONT_BIG_DIGITS_ORIGINAL)
     {
         data = gFontBigDigitsOriginal[glyph];
         width = FONT_BIG_DIGIT_CELL_WIDTH;
     }
     else
-#else
-    font = 0;
-#endif
     {
-        data = gFontBigDigitsCompact[font][glyph];
+        // Pochoir (K1 Remote) : rangé après les jeux d'origine, dernier du tableau compact.
+        // (r19-r22 : la branche pochoir ne renseignait pas « data » : affichage faux.)
+        const uint8_t set = (font == FONT_BIG_DIGITS_STENCIL) ? (uint8_t)FONT_BIG_DIGITS_COMPACT_COUNT
+                          : (font < FONT_BIG_DIGITS_COMPACT_COUNT ? font : 0u);
+        data = gFontBigDigitsCompact[set][glyph];
         top += 2;
         bottom += 2;
     }
+#else
+    (void)font;
+    data = gFontBigDigitsCompact[0][glyph];
+    top += 2;
+    bottom += 2;
+#endif
 
     FW_ASSETS_Read(data, top, width);
     FW_ASSETS_Read(data + width, bottom, width);
