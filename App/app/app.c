@@ -1931,7 +1931,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "26"
+#define K1R_REVISION "27"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -2066,7 +2066,10 @@ static void K1R_RunCommand(void)
 #ifndef ENABLE_FEAT_F4HWN
                 case MENU_200TX:   case MENU_350TX:   case MENU_500TX:
 #endif
-                case MENU_MEM_CH:  case MENU_DEL_CH:  case MENU_MEM_NAME:
+                // MENU_MEM_CH (enregistrer la ligne active dans un canal) est permis depuis r27 :
+                // c'est exactement ce que font les touches MENU 1 5, déjà pilotables à distance,
+                // et la configuration d'équipe doit rester discrète.
+                case MENU_DEL_CH:  case MENU_MEM_NAME:
                 case MENU_TX_LOCK:          // contournerait le plan de bandes en émission
                 case MENU_BATCAL:           // étalonnage de la batterie
 #ifdef ENABLE_FEAT_F4HWN_MULTIBOOT

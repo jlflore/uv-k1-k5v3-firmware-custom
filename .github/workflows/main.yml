@@ -18,7 +18,7 @@ jobs:
     - name: Compile firmware
       run: |
         chmod +x compile-firmware.sh compile-app.sh
-        ./compile-firmware.sh Fusion "-DEDITION_STRING=FusPTT r26"
+        ./compile-firmware.sh Fusion "-DEDITION_STRING=FusPTT r27"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
