@@ -293,10 +293,16 @@ class ChannelsActivity : Activity() {
                 c.txTone?.let { "TX $it" }, c.rxTone?.let { "RX $it" }, c.shift.ifEmpty { null }).joinToString(" · ")
             mid.addView(text(sub, 14f, p.muted))
             card.addView(mid, LinearLayout.LayoutParams(0, -2, 1f))
-            if (changed(c.number)) card.addView(pill("Modifié", p.accentBg, p.accentText, p.accentBorder),
-                LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
-            if (c.listenOnly) card.addView(pill("Écoute", p.chipBg, p.chipText, p.chipBorder))
-            else if (c.scanLists.isNotEmpty()) card.addView(pill("Liste " + c.scanLists.joinToString(","), p.chipBg, p.chipText, p.chipBorder))
+            // Étiquettes empilées à droite : un canal peut être à la fois modifié, en écoute seule et dans des listes
+            val tags = listOfNotNull(
+                if (changed(c.number)) pill("Modifié", p.accentBg, p.accentText, p.accentBorder) else null,
+                if (c.listenOnly) pill("Écoute", p.chipBg, p.chipText, p.chipBorder) else null,
+                if (c.scanLists.isNotEmpty()) pill("Liste " + c.scanLists.sorted().joinToString(","), p.chipBg, p.chipText, p.chipBorder) else null)
+            if (tags.isNotEmpty()) {
+                val col = LinearLayout(this@ChannelsActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.END }
+                tags.forEachIndexed { k, t -> col.addView(t, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.END; if (k > 0) topMargin = dp(4) }) }
+                card.addView(col, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(6) })
+            }
             return LinearLayout(this@ChannelsActivity).apply {
                 setPadding(0, dp(3), 0, dp(3))
                 addView(card, LinearLayout.LayoutParams(-1, -2))

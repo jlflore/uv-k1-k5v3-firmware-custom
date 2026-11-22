@@ -56,6 +56,32 @@ class ScreensTest {
         controller.pause().stop().destroy()
     }
 
+    /** Liste des canaux à partir d'une mémoire d'exemple (cas : écoute seule + listes). */
+    private fun captureChannels(name: String, label: String) {
+        RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
+        val ctx = RuntimeEnvironment.getApplication()
+        val mem = RadioMemory(ByteArray(RadioMemory.SIZE) { 0xFF.toByte() }, "F4HWN Fusion PTT r27", 0L, "Exemple")
+        for (i in 0 until RadioMemory.CHANNELS) mem.deleteChannel(i)
+        mem.setChannel(0, ChannelEdit(name = "Scorpio", rxHz = 446_006_250, scanLists = setOf(1)))
+        mem.setChannel(1, ChannelEdit(name = "PMR 2", rxHz = 446_018_750))
+        mem.setChannel(2, ChannelEdit(name = "Écoute L1+3", rxHz = 446_031_250, rxOnly = true, scanLists = setOf(3, 1)))
+        mem.setChannel(3, ChannelEdit(name = "VHF10", rxHz = 156_500_000, narrow = false, stepIdx = 5, rxOnly = true))
+        mem.setChannel(4, ChannelEdit(name = "Tour Bron", rxHz = 118_100_000, mode = 1, narrow = false, stepIdx = 6, rxOnly = true, scanLists = setOf(2)))
+        val f = File(RadioMemory.dir(ctx), "exemple.k1r").apply { outputStream().use { mem.write(it) } }
+        val controller = Robolectric.buildActivity(ChannelsActivity::class.java, ChannelsActivity.intent(ctx, f)).setup()
+        val act = controller.get()
+        shadowOf(Looper.getMainLooper()).idle()
+        val dm = act.resources.displayMetrics
+        val w = dm.widthPixels; val h = dm.heightPixels
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val root = act.window.decorView
+        root.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY))
+        root.layout(0, 0, w, h); root.draw(Canvas(bmp))
+        File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        shots += name to label
+        controller.pause().stop().destroy()
+    }
+
     /** Carte de réussite par-dessus l'écran principal (animation terminée). */
     private fun captureSuccess(name: String, label: String) {
         RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
@@ -115,6 +141,10 @@ class ScreensTest {
         for (land in listOf(false, true)) {
             prefs(ThemeId.CIEL, true, 0)
             capture("nuit_complete_${if (land) "paysage" else "portrait"}", "Nuit · complète · ${if (land) "paysage" else "portrait"}", land)
+        }
+        for (t in listOf(ThemeId.CIEL, ThemeId.FRANCE)) {
+            prefs(t, false, 0)
+            captureChannels("canaux_${t.name.lowercase()}", "Canaux · ${t.label}")
         }
         for ((t, night) in listOf(ThemeId.CIEL to false, ThemeId.FRANCE to false, ThemeId.CIEL to true)) {
             prefs(t, night, 0)

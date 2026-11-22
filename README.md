@@ -1,4 +1,7 @@
-# K1 Remote · version 0.58 (firmware Fusion PTT r27)
+# K1 Remote · version 0.59 (firmware Fusion PTT r27)
+
+## 0.59
+- Liste des canaux : un canal en écoute seule affiche aussi ses listes de scan (les étiquettes s'empilent à droite au lieu de se remplacer).
 
 ## 0.58
 - Envoi réussi : une carte de réussite (coche qui se dessine, fond vert clair, rouge sombre en mode nuit) remplace les messages secs, après la configuration d'équipe et après l'envoi des canaux.
