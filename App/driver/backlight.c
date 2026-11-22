@@ -243,8 +243,13 @@ bool BACKLIGHT_IsOn()
     return backlightOn;
 }
 
+extern volatile bool gK1R_Stealth;
+
 static void BACKLIGHT_SetHardwareBrightness(uint8_t brightness)
 {
+    // Furtif complet (K1 Remote) : afficheur éteint, donc aucun éclairage, quels que soient les réglages
+    if (gK1R_Stealth)
+        brightness = 0;
     // printf("BL: %d\n", brigtness);
 
     if (0 == brightness)

@@ -1900,7 +1900,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "17"
+#define K1R_REVISION "18"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -1926,7 +1926,14 @@ static void K1R_SetStealth(bool on)
     if (on) {
         BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
         BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
+        BACKLIGHT_TurnOff();         // matériel forcé à 0 tant que le furtif dure
         K1R_LinkAlive();
+    } else {
+        // Voyants recalculés selon l'état réel (et non l'ancien état) : rouge en émission,
+        // vert si le squelch est ouvert ; éclairage normal rétabli
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, gCurrentFunction == FUNCTION_TRANSMIT);
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, g_SquelchLost);   // même règle que l'interruption squelch
+        BACKLIGHT_TurnOn();
     }
     ST7565_ApplyDisplayOnOff();
 }

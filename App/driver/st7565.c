@@ -440,7 +440,7 @@ void ST7565_Init(void)
     ST7565_FillScreen(0x00);
 
     CS_Assert();
-    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 1);   // D=1
+    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | (gK1R_Stealth ? 0 : 1));   // D=1 (sauf furtif K1 Remote)
     CS_Release();
 }
 
