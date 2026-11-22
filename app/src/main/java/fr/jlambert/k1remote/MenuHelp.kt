@@ -145,7 +145,7 @@ object MenuHelp {
         "SetRxG" to e("Porte de bruit en réception", "Coupe le souffle de fond entre les mots.", "OFF, ON."),
         "SetTmr" to e("Chronomètre d'émission / réception", "Affiche la durée de l'émission ou de la réception en cours dans la barre d'état.", "OFF, ON."),
         "SetOff" to e("Mise en veille automatique", "Éteint l'écran et met la radio en sommeil profond après ce délai sans activité.", "OFF ou un délai."),
-        "SetNFM" to e("Bande étroite", "NARROWER resserre encore le filtre en bande étroite (affiché NAR+).", "NARROW, NARROWER.", "NARROWER améliore la portée utile en PMR446."),
+        "SetNFM" to e("Bande étroite", "NARROWER resserre encore le filtre en bande étroite (affiché N+ ou NAR+ à côté de la fréquence). Toute l'équipe devrait avoir le même réglage.", "NARROW, NARROWER.", "NARROWER améliore la portée utile en PMR446."),
         "SetVol" to e("Volume", "Volume général du haut-parleur.", "OFF, 1 à 63."),
         "SetKey" to e("Touche de secours", "Touche utilisée par les fonctions de secours (rescue).", "MENU, UP, DOWN, EXIT, STAR."),
         "SetScn" to e("Vitesse du balayage", "Vitesse du balayage des canaux et fréquences.", "NORMAL, FAST."),
@@ -176,6 +176,6 @@ object MenuHelp {
         screen == 4 -> "Journal des émissions et réceptions" to
             "Liste des derniers passages (heure, durée, fréquence). ▲ ▼ pour parcourir, EXIT pour revenir."
         else -> "Écran principal" to
-            "Fréquence ou canal des lignes A et B, puissance, sous-canal, barre de signal. Touchez « ? » puis l'écran pour le détail de chaque indication."
+            "Fréquence ou canal des lignes A et B, puissance, sous-canal, barre de signal. « Aide complète » détaille chaque indication."
     }
 }

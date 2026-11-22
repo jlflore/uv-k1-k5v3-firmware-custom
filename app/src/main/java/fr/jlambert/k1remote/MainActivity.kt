@@ -2747,6 +2747,8 @@ class MainActivity : Activity() {
                         val name = String(d, 8, 7, Charsets.ISO_8859_1).substringBefore('\u0000').trim()
                         openSheet("menu:" + (d[5].toInt() and 0xFF) + "|" + name)
                     }
+                    // Écran principal : directement l'aide complète de tout ce qu'on y voit (0.60)
+                    (d[2].toInt() and 0xFF) == 0 -> openSheet("key:LCD")
                     else -> openSheet("screen:" + (d[2].toInt() and 0xFF) + "," + (d[3].toInt() and 0xFF))
                 }
             }
