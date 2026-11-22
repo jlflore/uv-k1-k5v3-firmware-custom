@@ -154,6 +154,10 @@ data class TeamProfile(
         // SetOff (67) sur OFF : sans cela, après quelques minutes sans activité la radio se met en
         // veille profonde et n'écoute plus qu'environ toutes les 8 s : les appels se perdaient
         m(67, 0)
+        // SetNFM (68) sur NARROW, la bande étroite standard du PMR446. Sur NARROWER (« N+ » à l'écran),
+        // la radio resserre aussi son émission : voix plus faible ou étouffée chez les autres. Réglage
+        // général de la radio, identique pour toute l'équipe (0.61 ; n° vérifié sur la radio, Fusion v7).
+        m(68, 0)
         if (upCode != null) {
             c(K5ViewerProtocol.setUpCode(upCode))
             m(47, 1)      // PTT ID : code « UP » au début de chaque émission

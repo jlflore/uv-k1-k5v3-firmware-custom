@@ -207,7 +207,13 @@ class FunctionsTest {
 
     @Test fun equipe_reglages_contre_les_pertes_de_code() {
         val menus = menusOf(TeamProfile().directSteps(false, "A1", true))
-        for (m in listOf(50, 67, 47, 48, 49)) assertTrue("menu $m absent", m in menus)
+        for (m in listOf(50, 67, 68, 47, 48, 49)) assertTrue("menu $m absent", m in menus)
+    }
+
+    @Test fun equipe_bande_etroite_standard_setnfm_narrow() {
+        val f = TeamProfile().directSteps(false, null, true).mapNotNull { it.cmd }
+            .first { it[4].toInt() == 1 && (it[5].toInt() and 0xFF) == 68 }
+        assertEquals(0, f[6].toInt())
     }
 
     @Test fun equipe_controle_des_saisies() {

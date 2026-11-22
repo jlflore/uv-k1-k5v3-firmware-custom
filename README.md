@@ -1,4 +1,7 @@
-# K1 Remote · version 0.60 (firmware Fusion PTT r27)
+# K1 Remote · version 0.61 (firmware Fusion PTT r27)
+
+## 0.61
+- Configuration d'équipe : SetNFM (menu 68) est mis sur NARROW, la bande étroite standard du PMR446. Sur NARROWER (« N+ » à l'écran), la radio resserre aussi son émission ; toutes les radios de l'équipe ont désormais le même réglage. Firmware Fusion PTT seulement (commande directe).
 
 ## 0.60
 - Journal des appels : par jour, une ligne par appel (heure, appelant, durée), vos émissions comprises. Les ouvertures brèves du squelch sont ignorées, les reprises d'un même appelant fusionnées ; 300 entrées au plus. « Partager » : appels seuls ou rapport complet. « Effacer » avec confirmation. Le journal technique reste à un bouton (« Technique ») et à l'appui long sur le titre.
