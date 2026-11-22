@@ -77,6 +77,9 @@ bool KEYBOARD_TakeCommand(uint8_t *buf, uint8_t *len)
     return true;
 }
 static volatile uint16_t gRemotePttHeld = 0;
+// Après les 30 s maximum, les « maintenu » suivants sont ignorés jusqu'à un relâchement
+// explicite : un téléphone qui continue d'envoyer « maintenu » ne relance pas l'émission.
+static volatile bool gRemotePttExpired = false;
 
 void KEYBOARD_RemotePttTick10ms(void)
 {
@@ -95,10 +98,6 @@ void KEYBOARD_RemotePttTick10ms(void)
         gRemotePttActive = false;      // plus de nouvelles du téléphone
     }
 }
-
-// Après les 30 s maximum, les « maintenu » suivants sont ignorés jusqu'à un relâchement
-// explicite : un téléphone qui continue d'envoyer « maintenu » ne relance pas l'émission.
-static volatile bool gRemotePttExpired = false;
 
 static void KEYBOARD_RemotePtt(uint8_t v)
 {
