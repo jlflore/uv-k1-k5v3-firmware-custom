@@ -1789,9 +1789,11 @@ class MainActivity : Activity() {
             typeface = medium
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
-            gravity = Gravity.CENTER_VERTICAL or Gravity.START
-            setTextColor(p.muted)
-            setPadding(dp(4), dp(8), dp(4), dp(8))
+            gravity = Gravity.CENTER
+            setTextColor(p.text)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            // Pastille comme les autres commandes : lisible sur tous les fonds (camouflages compris)
+            background = Ui.ripple(this@MainActivity, p.surface, 999f, p.border, night = p.night)
             contentDescription = "Revenir à l'interface complète"
             setOnClickListener { prefs.uiMode = 0; buildUi() }
         }

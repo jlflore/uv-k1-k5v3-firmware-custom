@@ -1,4 +1,13 @@
-# K1 Remote · version 0.55 (firmware Fusion PTT r27)
+# K1 Remote · version 0.56 (firmware Fusion PTT r27)
+
+## 0.56
+- En-tête refait, vérifié sur captures d'écran Android réelles (tous les thèmes, portrait et paysage) :
+  - ligne 1 : l'identité sur une seule ligne (drapeau, « K1 REMOTE » ou « K1 Remote », version, unité ou radio à droite). Avant, le titre se coupait sur deux ou trois lignes faute de place et la version disparaissait ;
+  - ligne 2 : la pastille d'état et les cinq boutons. La pastille passe au vert en réception (nom de l'appelant, sinon « RÉCEPTION ») et au rouge en émission (« ÉMISSION ») ; les témoins RX/TX séparés disparaissent ;
+  - en paysage, le bouton « ? » n'est plus coupé et la pastille réapparaît ; en camouflage, le pavé n'est plus écrasé.
+- Marges extérieures réduites : l'écran du téléphone est mieux utilisé.
+- Raccourcis un peu moins hauts dans les deux interfaces ; lien « ‹ Complète » en pastille en interface « En opération ».
+- Compilation et captures automatiques sur GitHub (branche k1remote-app) : chaque version est compilée et ses écrans vérifiés avant livraison.
 
 ## 0.55
 - Audit de non-régression 0.34 → 0.54 (chaque ligne retirée relue) : aucune fonction perdue. Un effet de bord corrigé : un raccourci « Réglage » visant un menu que le firmware réserve au clavier (13 TXLock, 16 ChDele, 17 ChName, 73 SetCfg, 75 F Lock, 76 350 En, 77 BatCal, 80 Reset) passe par le clavier au lieu d'être refusé.
