@@ -95,19 +95,19 @@ class FunctionsTest {
     @Test fun canal_ecrit_puis_relu_a_l_identique() {
         val m = emptyMemory()
         m.setChannel(4, ChannelEdit(name = "Scorpio", rxHz = 446_006_250, power = 2, narrow = true,
-            txTone = "88,5 Hz", rxTone = "D023N", scanLists = setOf(1, 3), shiftDir = 1, shiftHz = 600_000))
+            txTone = "88,5 Hz", rxTone = "D023N", scanList = 3, shiftDir = 1, shiftHz = 600_000))
         val c = m.channel(4)!!
         assertEquals(5, c.number); assertEquals("Scorpio", c.name); assertEquals(446_006_250L, c.rxHz)
         assertEquals(446_606_250L, c.txHz); assertEquals("LOW 2", c.power); assertTrue(c.narrow)
-        assertEquals("88,5 Hz", c.txTone); assertEquals("D023N", c.rxTone); assertEquals(listOf(1, 3), c.scanLists)
+        assertEquals("88,5 Hz", c.txTone); assertEquals("D023N", c.rxTone); assertEquals(3, c.scanList)
         assertFalse(c.listenOnly)
     }
 
     @Test fun canal_ecoute_seule_garde_ses_listes() {
         val m = emptyMemory()
-        m.setChannel(0, ChannelEdit(name = "VHF10", rxHz = 156_500_000, rxOnly = true, scanLists = setOf(2)))
+        m.setChannel(0, ChannelEdit(name = "VHF10", rxHz = 156_500_000, rxOnly = true, scanList = 2))
         val c = m.channel(0)!!
-        assertTrue(c.rxOnly); assertTrue(c.listenOnly); assertEquals(listOf(2), c.scanLists)
+        assertTrue(c.rxOnly); assertTrue(c.listenOnly); assertEquals(2, c.scanList)
     }
 
     @Test fun canal_am_toujours_en_ecoute_seule() {
@@ -121,6 +121,36 @@ class FunctionsTest {
         assertEquals("Equipe 2", RadioMemory.radioName("Équipe 2"))
         assertEquals("Bete noire", RadioMemory.radioName("Bête noire"))
         assertEquals(10, RadioMemory.radioName("Une phrase beaucoup trop longue").length)
+    }
+
+    @Test fun canal_liste_de_scan_un_numero_comme_le_firmware_v7() {
+        val m = emptyMemory()
+        m.setChannel(0, ChannelEdit(name = "A", rxHz = 446_006_250, scanList = 3))
+        // Octet haut de l'attribut = n° de liste (3), pas un masque (qui aurait donné 4)
+        assertEquals(3, m.image[0x8001].toInt() and 0xFF)
+        m.setChannel(1, ChannelEdit(name = "B", rxHz = 446_018_750, scanList = 24))
+        assertEquals(24, m.channel(1)!!.scanList)
+        m.setChannel(2, ChannelEdit(name = "C", rxHz = 446_031_250, scanList = RadioMemory.LIST_ALL))
+        assertEquals("Toutes les listes", m.listLabel(m.channel(2)!!.scanList))
+        // Un canal en liste 3 lu depuis la radio s'affiche « Liste 3 », plus « Liste 1,2 »
+        m.image[0x8003] = 3
+        assertEquals("Liste 3", m.listLabel(m.channel(1)!!.scanList))
+    }
+
+    @Test fun canal_nom_de_liste_lu_dans_la_radio() {
+        val m = emptyMemory()
+        "PMR".forEachIndexed { k, ch -> m.image[0x880E + 2 * 4 + k] = ch.code.toByte() }
+        m.image[0x880E + 2 * 4 + 3] = 0
+        assertEquals("Liste 3 · PMR", m.listLabel(3))
+        assertEquals("Liste 4", m.listLabel(4))
+    }
+
+    @Test fun canal_modification_garde_l_exclusion_temporaire() {
+        val m = emptyMemory()
+        m.setChannel(0, ChannelEdit(name = "A", rxHz = 446_006_250))
+        m.image[0x8000] = (m.image[0x8000].toInt() or 0x80).toByte()
+        m.setChannel(0, ChannelEdit(name = "A2", rxHz = 446_006_250, scanList = 1))
+        assertEquals(0x80, m.image[0x8000].toInt() and 0x80)
     }
 
     @Test fun canal_suppression() {
@@ -139,7 +169,7 @@ class FunctionsTest {
 
     @Test fun envoi_ne_touche_que_les_zones_des_canaux() {
         val base = emptyMemory(); val m = base.copy()
-        m.setChannel(10, ChannelEdit(name = "Z", rxHz = 446_150_000, scanLists = setOf(1)))
+        m.setChannel(10, ChannelEdit(name = "Z", rxHz = 446_150_000, scanList = 1))
         val d = m.diff(base)
         assertTrue(d.isNotEmpty())
         for ((addr, bytes) in d) assertTrue("écriture hors zone à $addr",

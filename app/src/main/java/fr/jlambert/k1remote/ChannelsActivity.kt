@@ -297,7 +297,7 @@ class ChannelsActivity : Activity() {
             val tags = listOfNotNull(
                 if (changed(c.number)) pill("Modifié", p.accentBg, p.accentText, p.accentBorder) else null,
                 if (c.listenOnly) pill("Écoute", p.chipBg, p.chipText, p.chipBorder) else null,
-                if (c.scanLists.isNotEmpty()) pill("Liste " + c.scanLists.sorted().joinToString(","), p.chipBg, p.chipText, p.chipBorder) else null)
+                mem.listLabel(c.scanList, short = true)?.let { pill(it, p.chipBg, p.chipText, p.chipBorder) })
             if (tags.isNotEmpty()) {
                 val col = LinearLayout(this@ChannelsActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.END }
                 tags.forEachIndexed { k, t -> col.addView(t, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.END; if (k > 0) topMargin = dp(4) }) }
@@ -434,18 +434,21 @@ class ChannelsActivity : Activity() {
         val (sRow, sEdit) = field("Valeur du décalage (MHz)", if (e.shiftHz > 0) RadioMemory.mhz(e.shiftHz) else "", "0,6", true)
         box.addView(sRow)
         box.addView(choiceRow("Pas (kHz)", RadioMemory.STEP_KHZ, { e.stepIdx }) { e.stepIdx = it })
-        val listsLabel = { if (e.scanLists.isEmpty()) "Aucune" else e.scanLists.sorted().joinToString(", ") }
+        val listsLabel = { mem.listLabel(e.scanList) ?: "Aucune" }
         val listsRow = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(6), 0, dp(6)) }
-        listsRow.addView(text("Listes de scan", 12f, p.muted))
+        listsRow.addView(text("Liste de scan (une seule par canal)", 12f, p.muted))
         val listsValue = text(listsLabel() + "  ▾", 16f, p.text, medium).apply {
             setPadding(dp(12), dp(10), dp(12), dp(10))
             background = Ui.ripple(this@ChannelsActivity, p.bg, 10f, p.border, night = p.night)
         }
         listsValue.setOnClickListener {
-            val names = (1..8).map { "Liste $it" }.toTypedArray()
-            val checked = BooleanArray(8) { (it + 1) in e.scanLists }
-            AlertDialog.Builder(this).setTitle("Listes de scan").setMultiChoiceItems(names, checked) { _, w, on -> checked[w] = on }
-                .setPositiveButton("OK") { _, _ -> e.scanLists = (1..8).filter { checked[it - 1] }.toSet(); listsValue.text = listsLabel() + "  ▾" }
+            // 0 = aucune, 1..24, 25 = toutes : l'index du choix est la valeur écrite dans la radio
+            val names = (listOf("Aucune") + (1..RadioMemory.LISTS).map { mem.listLabel(it)!! } + listOf("Toutes les listes")).toTypedArray()
+            AlertDialog.Builder(this).setTitle("Liste de scan")
+                .setSingleChoiceItems(names, e.scanList.coerceIn(0, RadioMemory.LIST_ALL)) { d, w ->
+                    e.scanList = w; listsValue.text = listsLabel() + "  ▾"; d.dismiss()
+                }
+                .setNegativeButton("Annuler", null)
                 .show()
         }
         listsRow.addView(listsValue, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })

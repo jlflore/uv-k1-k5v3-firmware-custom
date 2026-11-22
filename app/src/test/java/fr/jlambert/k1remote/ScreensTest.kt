@@ -62,11 +62,13 @@ class ScreensTest {
         val ctx = RuntimeEnvironment.getApplication()
         val mem = RadioMemory(ByteArray(RadioMemory.SIZE) { 0xFF.toByte() }, "F4HWN Fusion PTT r27", 0L, "Exemple")
         for (i in 0 until RadioMemory.CHANNELS) mem.deleteChannel(i)
-        mem.setChannel(0, ChannelEdit(name = "Scorpio", rxHz = 446_006_250, scanLists = setOf(1)))
+        mem.setChannel(0, ChannelEdit(name = "Scorpio", rxHz = 446_006_250, scanList = 1))
         mem.setChannel(1, ChannelEdit(name = "PMR 2", rxHz = 446_018_750))
-        mem.setChannel(2, ChannelEdit(name = "Écoute L1+3", rxHz = 446_031_250, rxOnly = true, scanLists = setOf(3, 1)))
+        mem.setChannel(2, ChannelEdit(name = "Écoute L3", rxHz = 446_031_250, rxOnly = true, scanList = 3))
         mem.setChannel(3, ChannelEdit(name = "VHF10", rxHz = 156_500_000, narrow = false, stepIdx = 5, rxOnly = true))
-        mem.setChannel(4, ChannelEdit(name = "Tour Bron", rxHz = 118_100_000, mode = 1, narrow = false, stepIdx = 6, rxOnly = true, scanLists = setOf(2)))
+        mem.setChannel(4, ChannelEdit(name = "Tour Bron", rxHz = 118_100_000, mode = 1, narrow = false, stepIdx = 6, rxOnly = true, scanList = RadioMemory.LIST_ALL))
+        "PMR".forEachIndexed { k, ch -> mem.image[0x880E + 2 * 4 + k] = ch.code.toByte() }   // liste 3 nommée « PMR »
+        mem.image[0x880E + 2 * 4 + 3] = 0
         val f = File(RadioMemory.dir(ctx), "exemple.k1r").apply { outputStream().use { mem.write(it) } }
         val controller = Robolectric.buildActivity(ChannelsActivity::class.java, ChannelsActivity.intent(ctx, f)).setup()
         val act = controller.get()

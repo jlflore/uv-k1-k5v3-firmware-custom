@@ -134,7 +134,11 @@ data class Channel(
     val stepHz: Int,
     val bcl: Boolean,
     val txLock: Boolean,
-    val scanLists: List<Int>,
+    /**
+     * Liste de scan du canal (Fusion v7) : 0 = aucune, 1 à 24 = cette liste, 25 = toutes.
+     * Un canal n'appartient qu'à UNE liste (avant la 0.62, l'appli croyait à tort à un masque de 8 listes).
+     */
+    val scanList: Int,
     val raw: ByteArray,
     /** Octet 12, bit 7 : « écoute seule » (Fusion PTT r25+ : émission toujours refusée sur ce canal). */
     val rxOnly: Boolean = false
@@ -160,7 +164,7 @@ data class ChannelEdit(
     var txTone: String? = null,      // « 88,5 Hz », « D023N »… ; null = aucun
     var rxTone: String? = null,
     var stepIdx: Int = 4,            // 12,5 kHz
-    var scanLists: Set<Int> = emptySet(),
+    var scanList: Int = 0,           // 0 aucune, 1..24, 25 toutes
     var rxOnly: Boolean = false
 )
 
@@ -190,6 +194,11 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
                 .replace('’', '\'').replace('«', '"').replace('»', '"')
             return plain.filter { it.code in 32..126 }.take(10)
         }
+
+        /** Listes de scan de Fusion v7 : 24 listes nommées (3 caractères), plus « toutes ». */
+        const val LISTS = 24
+        const val LIST_ALL = 25
+        private const val LIST_NAMES = 0x880E
 
         fun powerWatts(name: String) = POWER_WATTS.getOrNull(POWER_NAMES.indexOf(name)) ?: ""
         val STEP_KHZ = listOf("2,5", "5", "6,25", "10", "12,5", "25", "8,33", "0,01", "0,05", "0,1", "0,25", "0,5",
@@ -297,7 +306,7 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
         power = (u8((c.number - 1) * 16 + 12) shr 2) and 7,
         narrow = c.narrow, txTone = c.txTone, rxTone = c.rxTone,
         stepIdx = u8((c.number - 1) * 16 + 14).let { if (it < STEP_KHZ.size) it else 4 },
-        scanLists = c.scanLists.toSet(), rxOnly = c.rxOnly)
+        scanList = c.scanList, rxOnly = c.rxOnly)
 
     fun firstFree(from: Int = 0): Int? = (from until CHANNELS).firstOrNull { channel(it) == null }
 
@@ -326,9 +335,10 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
         for (k in 0 until 16) image[0x4000 + base + k] = if (k < nm.size) nm[k] else 0
         // Attributs : bande (d'après la fréquence), listes de scan
         val band = bandOf(e.rxHz)
-        val lists = e.scanLists.filter { it in 1..8 }.fold(0) { acc, l -> acc or (1 shl (l - 1)) }
+        val list = e.scanList.coerceIn(0, LIST_ALL)
         val attrOld = if (wasEmpty) 0 else u16(0x8000 + i * 2)
-        val attr = (band and 7) or (attrOld and 0x18) or (lists shl 8)
+        // On garde compander (bits 3-4), bits libres et exclusion temporaire (bit 7)
+        val attr = (band and 7) or (attrOld and 0xF8) or (list shl 8)
         image[0x8000 + i * 2] = attr.toByte()
         image[0x8000 + i * 2 + 1] = (attr shr 8).toByte()
     }
@@ -379,7 +389,7 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
         val nameBytes = image.copyOfRange(0x4000 + i * 16, 0x4000 + i * 16 + 10)
         val name = nameBytes.takeWhile { it in 32..126 }.map { it.toInt().toChar() }.joinToString("").trimEnd()
         val stepIdx = u8(base + 14)
-        val lists = (0 until 8).filter { attr shr (8 + it) and 1 == 1 }.map { it + 1 }
+        val list = (attr shr 8) and 0xFF
         return Channel(
             number = i + 1, name = name, rxHz = rx, txHz = tx,
             mode = MODES.getOrElse(dirB shr 4) { "?" },
@@ -390,10 +400,28 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
             stepHz = if (stepIdx < STEPS.size) STEPS[stepIdx] * 10 else 0,
             bcl = (f shr 5) and 1 == 1,
             txLock = (f shr 6) and 1 == 1,
-            scanLists = lists,
+            scanList = if (list > LIST_ALL) 0 else list,
             raw = image.copyOfRange(base, base + 16),
             rxOnly = (f shr 7) and 1 == 1
         )
+    }
+
+    /** Nom (3 caractères) donné à la liste [n] sur la radio, ou null. */
+    fun listName(n: Int): String? {
+        if (n !in 1..LISTS) return null
+        val a = LIST_NAMES + (n - 1) * 4
+        if (a + 3 > image.size) return null
+        val s = (0 until 3).map { image[a + it].toInt() and 0xFF }.takeWhile { it in 33..126 || it == 32 }
+            .map { it.toChar() }.joinToString("").trim()
+        return s.ifEmpty { null }
+    }
+
+    /** « Liste 3 · ABC », « Liste 3 », « Toutes les listes », ou null si aucune. */
+    fun listLabel(n: Int, short: Boolean = false): String? = when (n) {
+        0 -> null
+        LIST_ALL -> if (short) "Toutes listes" else "Toutes les listes"
+        in 1..LISTS -> "Liste $n" + (listName(n)?.let { " · $it" } ?: "")
+        else -> null
     }
 
     fun channels(): List<Channel> = (0 until CHANNELS).mapNotNull { channel(it) }
@@ -433,7 +461,7 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
                 .append(if (c.narrow) "étroite" else "large").append(';')
                 .append(c.rxTone ?: "").append(';').append(c.txTone ?: "").append(';')
                 .append(String.format(Locale.FRANCE, "%.2f", c.stepHz / 1000.0)).append(';')
-                .append(c.scanLists.joinToString(" ")).append(';')
+                .append(when (c.scanList) { 0 -> ""; LIST_ALL -> "toutes"; else -> c.scanList.toString() }).append(';')
                 .append(if (c.listenOnly) "oui" else "").append('\n')
         }
         return sb.toString()

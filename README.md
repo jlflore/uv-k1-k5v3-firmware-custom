@@ -1,4 +1,9 @@
-# K1 Remote · version 0.61 (firmware Fusion PTT r27)
+# K1 Remote · version 0.62 (firmware Fusion PTT r27)
+
+## 0.62
+- Listes de scan corrigées : dans Fusion v7, un canal appartient à UNE liste (1 à 24, ou toutes), pas à plusieurs. L'appli lisait l'octet comme un masque de 8 listes : un canal en liste 3 s'affichait « Liste 1,2 », et cocher « listes 1 et 3 » écrivait la liste 5 dans la radio. Désormais : choix unique (Aucune, Liste 1 à 24 avec leur nom lu dans la radio, Toutes les listes), affichage et export CSV conformes.
+- La modification d'un canal conserve son exclusion temporaire du scan (bit 7 des attributs), au lieu de l'effacer.
+- Aide de l'écran : la liste du canal (nom de 3 lettres, 01 à 24, ALL, OFF) décrite comme la radio l'affiche.
 
 ## 0.61
 - Configuration d'équipe : SetNFM (menu 68) est mis sur NARROW, la bande étroite standard du PMR446. Sur NARROWER (« N+ » à l'écran), la radio resserre aussi son émission ; toutes les radios de l'équipe ont désormais le même réglage. Firmware Fusion PTT seulement (commande directe).
