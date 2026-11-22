@@ -1931,7 +1931,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "27"
+#define K1R_REVISION "28"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -2040,6 +2040,116 @@ static void K1R_Commit(void)
     }
 
     gUpdateDisplay = true;
+}
+
+/* =====================================================================
+ *  K1R r28 : commande 0x09 « état de la radio », format v1 (32 octets).
+ *  Contrat figé le 23 novembre 2026 (projet Radios, contrat-etat-radio-0x09-v1).
+ *  Lecture seule. Toutes les valeurs sont traduites vers les énumérations du protocole :
+ *  l'appli ne dépend jamais des valeurs internes de F4HWN. Valeur inconnue : 0xFF (octet),
+ *  0xFFFF (16 bits), 0xFFFFFFFF (32 bits). Exécuté dans la boucle principale, comme toute
+ *  modification de l'état radio : l'instantané est cohérent sans verrou.
+ * ===================================================================== */
+static void K1R_StatusLine(uint8_t *o, uint8_t i)
+{
+    const VFO_Info_t *v = &gEeprom.VfoInfo[i];
+    const uint16_t ch = gEeprom.ScreenChannel[i];
+    uint16_t num = 0xFFFF;
+    uint8_t kind;
+    if (IS_MR_CHANNEL(ch))        { kind = 0; num = (uint16_t)(ch - MR_CHANNEL_FIRST + 1); }
+    else if (IS_FREQ_CHANNEL(ch)) { kind = 1; num = (uint16_t)(ch - FREQ_CHANNEL_FIRST + 1); }
+#ifdef ENABLE_NOAA
+    else if (IS_NOAA_CHANNEL(ch)) { kind = 2; num = (uint16_t)(ch - NOAA_CHANNEL_FIRST + 1); }
+#endif
+    else {                        // type inconnu : bloc à ignorer par l'appli
+        memset(o, 0, 12);
+        o[0] = 0xFF;
+        return;
+    }
+    const uint32_t f = v->freq_config_RX.Frequency;          // déjà en unités de 10 Hz
+    uint8_t mod;
+    switch (v->Modulation) {
+        case MODULATION_FM:  mod = 0; break;
+        case MODULATION_AM:  mod = 1; break;
+        case MODULATION_USB: mod = 2; break;
+        default:             mod = (v->Modulation < MODULATION_UKNOWN) ? 3 : 0xFF; break;
+    }
+    uint8_t width = 0xFF;                                      // AM : filtre propre à l'AM
+    if (v->Modulation != MODULATION_AM) {
+        if (v->CHANNEL_BANDWIDTH == BANDWIDTH_WIDE) width = 0;
+        else if (v->CHANNEL_BANDWIDTH == BANDWIDTH_NARROW) {
+            width = 1;
+#ifdef ENABLE_FEAT_F4HWN_NARROWER
+            if (gSetting_set_nfm) width = 2;
+#endif
+        }
+    }
+    const uint8_t power = (v->OUTPUT_POWER <= OUTPUT_POWER_HIGH) ? (uint8_t)v->OUTPUT_POWER : 0xFF;
+    const uint8_t flags = (v->RX_ONLY ? 0x01 : 0) | (v->TX_LOCK ? 0x02 : 0) |
+        ((v->TX_OFFSET_FREQUENCY_DIRECTION != 0 && v->TX_OFFSET_FREQUENCY != 0) ? 0x04 : 0) |
+        (v->FrequencyReverse ? 0x08 : 0);
+    uint8_t list = 0;
+    if (kind == 0)
+        list = (v->SCANLIST_PARTICIPATION <= SCAN_LIST_MODE_ALL) ? v->SCANLIST_PARTICIPATION : 0xFF;
+
+    o[0] = kind;
+    o[1] = (uint8_t)num;  o[2] = (uint8_t)(num >> 8);
+    o[3] = (uint8_t)f;    o[4] = (uint8_t)(f >> 8);  o[5] = (uint8_t)(f >> 16);  o[6] = (uint8_t)(f >> 24);
+    o[7] = power; o[8] = mod; o[9] = width; o[10] = flags; o[11] = list;
+}
+
+static void K1R_SendStatus(void)
+{
+    uint8_t d[32];
+    memset(d, 0, sizeof(d));
+    d[0] = 0x09; d[1] = 0; d[2] = 1;
+    d[3] = gEeprom.TX_VFO ? 1 : 0;
+
+    uint8_t flags = 0;
+    if (gEeprom.KEY_LOCK) flags |= 0x01;
+    if (gEeprom.DUAL_WATCH != DUAL_WATCH_OFF) flags |= 0x02;
+    if (gEeprom.CROSS_BAND_RX_TX != CROSS_BAND_OFF) flags |= 0x04;
+#ifdef ENABLE_FEAT_F4HWN_NARROWER
+    if (gSetting_set_nfm) flags |= 0x08;
+#endif
+    if (gK1R_Stealth) flags |= 0x10;
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+    if (gWakeUp) flags |= 0x20;
+#endif
+    d[4] = flags;
+
+    uint8_t fn;
+    switch (gCurrentFunction) {
+        case FUNCTION_FOREGROUND:
+        case FUNCTION_RECEIVE:    fn = 0; break;               // veille, squelch fermé
+        case FUNCTION_TRANSMIT:   fn = 1; break;
+        case FUNCTION_INCOMING:   fn = 2; break;               // signal reçu
+        case FUNCTION_MONITOR:    fn = 3; break;
+        case FUNCTION_POWER_SAVE: fn = 4; break;
+        case FUNCTION_BAND_SCOPE: fn = 5; break;
+        default:                  fn = 0xFF; break;
+    }
+    if ((fn == 0 || fn == 4) && gScanStateDir != SCAN_OFF)
+        fn = 5;                                                // balayage en cours
+    d[5] = fn;
+
+    K1R_StatusLine(&d[6], 0);
+    K1R_StatusLine(&d[18], 1);
+
+    // Ligne en réception : d'après l'adresse réelle de la ligne écoutée (gRxVfo), pas RX_VFO,
+    // que la veille étendue et les applis en surimpression peuvent rendre trompeur.
+    uint8_t rx = 0xFF;
+    if (fn == 2 || fn == 3) {
+        if (gRxVfo == &gEeprom.VfoInfo[0]) rx = 0;
+        else if (gRxVfo == &gEeprom.VfoInfo[1]) rx = 1;
+#ifdef ENABLE_FEAT_F4HWN_FULL_WATCH
+        else if (gRxVfo != NULL && (gRxVfo == gFullWatchForegroundVfo ||
+                 gRxVfo == gFullWatchBackgroundVfo[0] || gRxVfo == gFullWatchBackgroundVfo[1])) rx = 2;
+#endif
+    }
+    d[30] = rx;
+    d[31] = 0;
+    K5VIEWER_SendReply(d, sizeof(d));
 }
 
 static void K1R_RunCommand(void)
@@ -2172,6 +2282,9 @@ static void K1R_RunCommand(void)
             K5VIEWER_SendReply(d, sizeof(d));
             return;
         }
+        case 0x09:
+            K1R_SendStatus();      // état de la radio, contrat 0x09 v1 (r28)
+            return;
         case 0x05: {
             // Diagnostic : état d'émission vu par la radio
             const uint32_t f = gTxVfo->pTX->Frequency;
@@ -2214,7 +2327,7 @@ static void K1R_RunCommand(void)
     // Présence : « K1R », version du protocole, modèle (selon SetNav : 0 = UV-K1, 1 = UV-K5 V3),
     // puis la version du firmware (ex. « v7.0.0 »)
     // 24 octets : « v7.0.0 r23 » (10 caractères) dépassait l'ancien tampon de 16 → « r2 »
-    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 2, gEeprom.SET_NAV ? 1 : 0 };
+    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 3, gEeprom.SET_NAV ? 1 : 0 };   // protocole 3 : 0x09 disponible (r28)
     uint8_t len = 2;
     if (c[0] == 0x04) {
         len = 7;
