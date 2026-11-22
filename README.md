@@ -1,4 +1,13 @@
-# K1 Remote · version 0.62 (firmware Fusion PTT r27)
+# K1 Remote Essai · version 0.63-essai (firmware Fusion PTT r28)
+
+## 0.63-essai — appli d'essai, installable à côté de K1 Remote
+- Identité distincte (fr.jlambert.k1remote.essai, nom « K1 Remote Essai ») : elle s'installe à côté de l'appli habituelle, avec ses propres réglages (vierges au départ). Une fois validée, la version définitive reprendra l'identité de K1 Remote et ses réglages.
+- État de la radio lu directement dans le firmware (commande 0x09, contrat v1 figé, firmware r28) : ligne active, puissance de chaque ligne, mode canal ou fréquence, verrou du clavier. Il remplace la lecture des pixels de l'écran, qui ne sert plus qu'en secours (firmware sans 0x09) et ne peut jamais écraser l'état du firmware.
+- Lectures toutes les 1,5 s (3 s pendant le spectre, aucune en arrière-plan ni pendant le PTT, espacées si la radio ne répond plus), et tout de suite après chaque réglage.
+- État trop ancien (plus de 3 s, hors émission) : la puissance s'affiche grisée, jamais présentée comme actuelle.
+- Puissance et changement de ligne confirmés par la radio ; sans confirmation en 2 s : « non confirmé » (jamais « échec » sans preuve).
+- Toutes les commandes vers la radio passent désormais une par une : le firmware n'a qu'une place pour la commande reçue, et la surveillance du journal pouvait rarement écraser un réglage.
+- Contrôles automatiques : RadioStatusTest (11) et RadioStateTest (12), en plus des 29 existants.
 
 ## 0.62
 - Listes de scan corrigées : dans Fusion v7, un canal appartient à UNE liste (1 à 24, ou toutes), pas à plusieurs. L'appli lisait l'octet comme un masque de 8 listes : un canal en liste 3 s'affichait « Liste 1,2 », et cocher « listes 1 et 3 » écrivait la liste 5 dans la radio. Désormais : choix unique (Aucune, Liste 1 à 24 avec leur nom lu dans la radio, Toutes les listes), affichage et export CSV conformes.

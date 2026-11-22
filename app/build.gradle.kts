@@ -8,11 +8,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "fr.jlambert.k1remote"
+        applicationId = "fr.jlambert.k1remote.essai"   // appli d'essai, installable à côté de K1 Remote (0.63)
         minSdk = 24
         targetSdk = 35
-        versionCode = 71
-        versionName = "0.62"
+        versionCode = 72
+        versionName = "0.63-essai"
     }
 
     buildTypes {

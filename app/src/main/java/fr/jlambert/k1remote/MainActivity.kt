@@ -125,14 +125,21 @@ class MainActivity : Activity() {
     private val waiting = java.util.concurrent.ConcurrentHashMap<Int, java.util.concurrent.LinkedBlockingQueue<ByteArray>>()
 
     /** Envoie une commande directe et attend SA réponse (null si rien). */
-    private val opLocks = java.util.concurrent.ConcurrentHashMap<Int, Any>()
+    private val cmdLock = Any()
+
+    /** État de la radio par la commande 0x09 (contrat v1), prioritaire sur la lecture des pixels. */
+    private val rstate = RadioState()
+    @Volatile private var statusKick = false
+    private var lastStatusAt = 0L
 
     private fun request(c: RadioLink?, cmd: ByteArray, timeoutMs: Long): ByteArray? {
         c ?: return null
         val op = cmd[4].toInt() and 0xFF
-        // Une seule demande à la fois par commande : deux demandes 05 simultanées
-        // (surveillance + diagnostic du PTT) ne se volent plus leur réponse.
-        synchronized(opLocks.getOrPut(op) { Any() }) {
+        // Une seule commande en vol à la fois, quel que soit son code (0.63) : le firmware n'a
+        // qu'une place pour la commande reçue (KEYBOARD_TakeCommand) ; deux commandes envoyées
+        // coup sur coup depuis deux fils (surveillance 05, état 09, réglage 01…) pouvaient
+        // s'écraser. Les réponses restent triées par leur code.
+        synchronized(cmdLock) {
             val q = java.util.concurrent.LinkedBlockingQueue<ByteArray>()
             synchronized(waiting) { waiting[op] = q }
             try {
@@ -1028,6 +1035,7 @@ class MainActivity : Activity() {
             var lastKey = ""
             var lastTxLog = 0L
             while (cdc === c && direct && watcherFor === c) {
+                if (!longSequenceRunning && !progSession) pollStatus(c)
                 if (!longSequenceRunning && !progSession) {
                     val d = request(c, K5ViewerProtocol.command(0x05), 700)?.let { decodeDiag(it) }
                     if (d != null) {
@@ -1045,7 +1053,10 @@ class MainActivity : Activity() {
                     lastFlags and 0x02 != 0 -> 1000
                     else -> 1500
                 }
-                while (waited < period && !watchKick) { Thread.sleep(50); waited += 50 }
+                while (waited < period && !watchKick && !statusKick) {
+                    Thread.sleep(50); waited += 50
+                    synchronized(rstate) { rstate.checkTimeout(System.currentTimeMillis()) }
+                }
                 watchKick = false
             }
             if (watcherFor === c) watcherFor = null
@@ -1074,6 +1085,79 @@ class MainActivity : Activity() {
                 putExtra(Intent.EXTRA_TEXT, body)
             }, if (callsOnly) "Envoyer le journal des appels" else "Envoyer le rapport"))
         }.onFailure { toast("Partage impossible : " + (it.message ?: it.javaClass.simpleName)) }
+    }
+
+    // =====================================================================
+    // État de la radio par la commande 0x09 (firmware r28, contrat v1 figé)
+    // =====================================================================
+
+    /** Appelée par la boucle de surveillance (fil k1-watch), jamais pendant un réglage long. */
+    private fun pollStatus(c: RadioLink) {
+        val now = System.currentTimeMillis()
+        val (support, delay) = synchronized(rstate) { rstate.support to rstate.nextPollDelay(now) }
+        if (support == RadioState.Support.SCREEN) return
+        if (pttOn) return                                    // PTT prioritaire, reprise après
+        if (!statusKick && now - lastStatusAt < delay) return
+        if (!resumed && !statusKick) return                 // appli en arrière-plan : aucune lecture
+        statusKick = false
+        lastStatusAt = now
+        val raw = request(c, RadioStatus.REQUEST, 800)
+        if (cdc !== c) return
+        val t = System.currentTimeMillis()
+        val change = synchronized(rstate) {
+            if (raw == null) rstate.onTimeout() else rstate.onResult(RadioStatus.decode(raw), t)
+        }
+        if (raw != null) (RadioStatus.decode(raw) as? RadioStatus.Result.Invalid)?.let { Journal.add("État 0x09 ignoré : ${it.reason}") }
+        when (change) {
+            RadioState.Change.SUPPORT_FIRMWARE -> {
+                Journal.add("État de la radio lu directement dans le firmware (commande 0x09)")
+                ui.post { applyFirmwareState() }
+            }
+            RadioState.Change.SUPPORT_SCREEN -> Journal.add("Firmware sans commande 0x09 : état lu sur l'écran de la radio")
+            RadioState.Change.STATE -> ui.post { applyFirmwareState() }
+            RadioState.Change.NONE -> if (raw == null && synchronized(rstate) { rstate.usesFirmware }) ui.post { refreshChips() }
+        }
+    }
+
+    /** Recopie l'état 0x09 dans la lecture consultée par tout l'affichage. */
+    private fun applyFirmwareState() {
+        val fw = synchronized(rstate) { rstate.reading() } ?: return
+        val old = reading
+        reading = fw
+        live = fw.copy(dtmf = live.dtmf)
+        if (old.mainVfo != fw.mainVfo || old.mainPower != fw.mainPower || old.powerA != fw.powerA ||
+            old.powerB != fw.powerB || stateWasStale) refreshChips()
+        stateWasStale = false
+    }
+
+    private var stateWasStale = false
+
+    /** État du firmware utilisé mais trop ancien (hors émission) : affiché grisé, jamais comme actuel. */
+    private fun stateStale(): Boolean {
+        val stale = synchronized(rstate) {
+            rstate.usesFirmware && !rstate.isFresh(System.currentTimeMillis(), pttOn || lastFlags and 0x02 != 0)
+        }
+        if (stale) stateWasStale = true
+        return stale
+    }
+
+    /** Réglage envoyé : sa confirmation est attendue dans l'état 0x09 (contrat § 6.5). */
+    private fun expectState(label: String, check: (RadioStatus.Snapshot) -> Boolean) {
+        synchronized(rstate) {
+            if (!rstate.usesFirmware) return
+            rstate.expect(RadioState.Pending(label, System.currentTimeMillis(), check) { outcome ->
+                when (outcome) {
+                    RadioState.Outcome.CONFIRMED -> Journal.add("Confirmé par la radio : $label")
+                    RadioState.Outcome.REFUSED -> Journal.add("Refusé par la radio : $label")
+                    RadioState.Outcome.UNDETERMINED -> {
+                        Journal.add("Non confirmé par la radio : $label (résultat inconnu)")
+                        statusKick = true; watchKick = true
+                        ui.post { toast("$label : non confirmé par la radio") }
+                    }
+                }
+            })
+        }
+        statusKick = true; watchKick = true
     }
 
     private fun showDiagnostic() {
@@ -1232,6 +1316,8 @@ class MainActivity : Activity() {
         pendingBle = null
         relayRadio = false
         direct = false
+        synchronized(rstate) { rstate.reset() }
+        lastStatusAt = 0L
         radioInfo = null; fwRevision = 0
         lastProbeAt = 0L
         parser.reset()
@@ -1264,13 +1350,21 @@ class MainActivity : Activity() {
             watchKick = true
         }
         val r = ScreenReader.read(px)
-        live = r
+        val fw = synchronized(rstate) { if (rstate.usesFirmware) rstate.reading() else null }
+        // État du firmware (0x09) prioritaire : les pixels ne servent plus qu'au code DTMF
+        // (firmwares d'avant r26) et, en secours, aux firmwares sans 0x09
+        live = fw?.copy(dtmf = r.dtmf) ?: r
         val code = r.dtmf
         if (code != null && code != lastDtmf) announceCaller(code, fromRadio = false)
         lastDtmf = code
         // Changement de ligne (A ⇄ B) : le bouton Puissance doit suivre, même si les deux lignes
         // ont la même puissance (avant la 0.51, la ligne était mise à jour avant d'être comparée,
         // et le bouton gardait l'ancienne lettre).
+        if (fw != null) {
+            val via0 = (if (cdc is BleLink) " · Bluetooth" else "") + (if (direct) " · PTT" else "")
+            if (sleeping) setLink(Link.SLEEP, "Radio en veille$via0") else setLink(Link.ON, "Connecté$via0")
+            return
+        }
         val lineChanged = r.mainVfo != null && r.mainVfo != reading.mainVfo
         if (lineChanged) {
             // La ligne active se lit même si la puissance n'est pas reconnue
@@ -1351,6 +1445,8 @@ class MainActivity : Activity() {
                                     4 -> "fréquence hors des bandes de la radio"
                                     else -> "réglage refusé (code ${r[1]})"
                                 }
+                                // Refus prouvé par l'accusé (statut non nul) : la commande attendue est refusée
+                                r?.getOrNull(1)?.toInt()?.let { st -> if (st != 0) synchronized(rstate) { rstate.onAck(st) } }
                                 Journal.add("Appli : réglage interrompu — $why")
                                 ui.post { toast("Réglage interrompu : $why") }
                                 break@run
@@ -1369,6 +1465,8 @@ class MainActivity : Activity() {
                 }
             } finally {
                 if (long) longSequenceRunning = false
+                // Réglage fini : l'état de la radio est relu tout de suite (confirmation, § 6.5)
+                statusKick = true; watchKick = true
                 // Réussite annoncée seulement si tout est passé (avant la 0.58, « terminé »
                 // s'affichait même après une interruption)
                 if (completed) ui.post { if (onDone != null) onDone() else if (long) toast("Réglage de la radio terminé") }
@@ -2076,6 +2174,7 @@ class MainActivity : Activity() {
                 setPadding(dp(if (L) 4 else 6), dp(2), dp(if (L) 4 else 6), dp(2))
             }
             styleBadge(badge, power)
+            if (stateStale()) badge.alpha = 0.45f
             box.addView(badge, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(5) })
             box.contentDescription = "Puissance actuelle de la ligne $vfo : ${ScreenReader.pretty(power)}. Toucher pour passer à la suivante."
         } else {
@@ -2291,7 +2390,12 @@ class MainActivity : Activity() {
         val label = ScreenReader.pretty(powerLevels[target])
         if (direct) {
             // Menu 2 Power : 0 USER, 1 LOW 1 … 7 HIGH
-            if (sendSteps(listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(2, target + 1))))) toast("Puissance : $label")
+            val sel = reading.mainVfo
+            if (sendSteps(listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(2, target + 1))))) {
+                toast("Puissance : $label")
+                expectState("Puissance $label", { st -> st.selectedLine?.power == target + 1 &&
+                    (sel == null || st.selected == (if (sel == 'B') 1 else 0)) })
+            }
         } else {
             if (cur < 0) { toast("Puissance actuelle non lue : revenez à l'écran principal de la radio"); return }
             val steps = (target - cur + powerLevels.size) % powerLevels.size
@@ -2432,7 +2536,7 @@ class MainActivity : Activity() {
             cur == target -> toast("Ligne $target déjà active")
             else -> {
                 lcd.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                Actions.byId("ab")?.let { sendSteps(it.steps) }
+                Actions.byId("ab")?.let { if (sendSteps(it.steps)) expectState("Ligne $target", { st -> st.selected == (if (top) 0 else 1) }) }
             }
         }
     }
