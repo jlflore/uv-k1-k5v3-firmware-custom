@@ -87,6 +87,8 @@
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN_FULL_WATCH
+void K1R_DtmfChar(char c);   // K1R : code DTMF reçu, transmis à l'appli (r26)
+
 static void FullWatchPromoteCurrentBackground(void);
 #endif
 
@@ -1167,6 +1169,9 @@ static void CheckRadioInterrupts(void)
             const char c = DTMF_GetCharacter(BK4819_GetDTMF_5TONE_Code()); // save the RX'ed DTMF character
             if (c != 0xff) {
                 if (gCurrentFunction != FUNCTION_TRANSMIT) {
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+                    K1R_DtmfChar(c);
+#endif
                     if (gSetting_live_DTMF_decoder) {
                         size_t len = strlen(gDTMF_RX_live);
                         if (len >= sizeof(gDTMF_RX_live) - 1) { // make room
@@ -1926,7 +1931,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "25"
+#define K1R_REVISION "26"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -1947,8 +1952,27 @@ void K1R_LinkAlive(void)
 }
 
 // Appelé toutes les 500 ms (boucle principale, et aussi depuis le spectre)
+/* Code DTMF reçu (identifiant de l'appelant) : capté quels que soient l'écran affiché, le
+ * verrou du clavier, la double veille, le furtif ou le réglage D Live, puis envoyé à l'appli
+ * une seconde après le dernier caractère : AA 55 09 00 len [08 00 n code…] 0A. */
+static char    k1rDtmf[12];
+static uint8_t k1rDtmfLen = 0;
+static uint8_t k1rDtmfIdle = 0;
+
+void K1R_DtmfChar(char c)
+{
+    if (k1rDtmfLen < sizeof(k1rDtmf)) k1rDtmf[k1rDtmfLen++] = c;
+    k1rDtmfIdle = 0;
+}
+
 void K1R_Tick500ms(void)
 {
+    if (k1rDtmfLen > 0 && ++k1rDtmfIdle >= 2) {
+        uint8_t d[3 + sizeof(k1rDtmf)] = { 0x08, 0, k1rDtmfLen };
+        for (uint8_t i = 0; i < k1rDtmfLen; i++) d[3 + i] = (uint8_t)k1rDtmf[i];
+        K5VIEWER_SendReply(d, (uint8_t)(3 + k1rDtmfLen));
+        k1rDtmfLen = 0;
+    }
     if (gK1R_Stealth && gK1R_LinkCountdown_500ms > 0 && --gK1R_LinkCountdown_500ms == 0)
         K1R_SetStealth(false);   // liaison perdue : l'afficheur revient
 }
