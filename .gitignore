@@ -27,3 +27,6 @@ App/apps/*/*_app_blob.h
 App/apps/*/*_assets.h
 App/apps/*/test/out/
 build/apps/
+K1Remote/
+k1relay/
+tmp/

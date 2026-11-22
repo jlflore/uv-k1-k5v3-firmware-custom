@@ -54,6 +54,7 @@ static uint16_t previousHash[128];
 static uint8_t previousStateFlags = 0xFF;
 static uint8_t forcedBlock = 0;
 static uint8_t keepAlive = 3;
+void K1R_LinkAlive(void);   // app.c : la liaison avec l'appli est vivante
 static bool hasConnectionPing = false;
 static bool wasConnected = false;
 static int32_t gpsLatitudeCas;
@@ -121,6 +122,7 @@ void K5VIEWER_ParseInput(void)
 #ifdef ENABLE_UART
     if (UART_IsCableConnected()) {
         keepAlive = 15;
+        K1R_LinkAlive();
         hasConnectionPing = true;
         gUSB_K5ViewerEnabled = false;
         return;
@@ -130,6 +132,7 @@ void K5VIEWER_ParseInput(void)
 #ifdef ENABLE_USB
     if (VCP_K5ViewerPing()) {
         keepAlive = 15;
+        K1R_LinkAlive();
         hasConnectionPing = true;
         gUSB_K5ViewerEnabled = true;
     }

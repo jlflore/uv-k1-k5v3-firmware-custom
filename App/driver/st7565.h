@@ -37,6 +37,8 @@ void ST7565_Init(void);
     void ST7565_ShutDown(void);
 #endif
 void ST7565_FixInterfGlitch(void);
+void ST7565_ApplyDisplayOnOff(void);
+extern volatile bool gK1R_Stealth;
 void ST7565_HardwareReset(void);
 void ST7565_SelectColumnAndLine(uint8_t Column, uint8_t Line);
 void ST7565_WriteByte(uint8_t Value);

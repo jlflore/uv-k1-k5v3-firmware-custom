@@ -1879,6 +1879,9 @@ void CheckKeys(void)
     }
 }
 
+// Furtif complet K1 Remote (lu aussi par st7565.c et bk4819.c, d'où une définition hors option)
+volatile bool gK1R_Stealth = false;
+
 #ifdef ENABLE_FEAT_F4HWN_K5VIEWER
 // =====================================================================
 // K1 Remote — commandes directes envoyées par le téléphone
@@ -1897,7 +1900,7 @@ void CheckKeys(void)
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "16"
+#define K1R_REVISION "17"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -1906,6 +1909,27 @@ void CheckKeys(void)
 // l'autre ligne et la ligne réglée revenait à son ancien état.
 extern volatile uint16_t gK1R_LastCmdId;
 extern volatile uint8_t  gK1R_LastCmdPort;
+
+// Furtif complet (op 07) : afficheur LCD éteint et voyants coupés. L'image continue d'être
+// calculée et envoyée à l'appli. Sécurité : sans nouvelles de l'appli pendant 6 s, l'afficheur
+// se rallume tout seul (une radio sans aucun affichage et sans téléphone serait inutilisable).
+static uint8_t gK1R_LinkCountdown_500ms = 0;
+
+void K1R_LinkAlive(void)
+{
+    gK1R_LinkCountdown_500ms = 12;
+}
+
+static void K1R_SetStealth(bool on)
+{
+    gK1R_Stealth = on;
+    if (on) {
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
+        BK4819_ToggleGpioOut(BK4819_GPIO6_PIN2_GREEN, false);
+        K1R_LinkAlive();
+    }
+    ST7565_ApplyDisplayOnOff();
+}
 
 static void K1R_Commit(void)
 {
@@ -1959,6 +1983,7 @@ static void K1R_RunCommand(void)
     uint8_t c[9], n = 0, status = 0;
     if (!KEYBOARD_TakeCommand(c, &n))
         return;
+    K1R_LinkAlive();
 
     switch (c[0]) {
         case 0x01: {
@@ -1981,6 +2006,7 @@ static void K1R_RunCommand(void)
                 case MENU_SET_INV:
                 case MENU_SET_CTR:
                     ST7565_ContrastAndInv();
+                    ST7565_ApplyDisplayOnOff();   // la réinitialisation ne doit pas rallumer en furtif
                     break;
                 #endif
                 default:
@@ -2025,6 +2051,11 @@ static void K1R_RunCommand(void)
             PY25Q16_WriteBuffer(0x00A0F8 + 0x18, code, sizeof(code), false);
             break;
         }
+        case 0x07:
+            // Furtif complet : 07 1 = afficheur et voyants éteints, 07 0 = rétablis
+            if (n < 2) { status = 1; break; }
+            K1R_SetStealth(c[1] != 0);
+            break;
         case 0x04:
             K5VIEWER_ForceFullFrame();     // connexion de l'appli : écran complet tout de suite
             break;
@@ -2290,6 +2321,10 @@ void cancelUserInputModes(void)
 void APP_TimeSlice500ms(void)
 {
     gNextTimeslice_500ms = false;
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+    if (gK1R_Stealth && gK1R_LinkCountdown_500ms > 0 && --gK1R_LinkCountdown_500ms == 0)
+        K1R_SetStealth(false);   // liaison perdue : l'afficheur revient
+#endif
 #ifdef ENABLE_FEAT_F4HWN_ACTION_PICKER
     if (gActionPickerKey != 0 && gActionPickerTimeout_500ms > 0 &&
         --gActionPickerTimeout_500ms == 0)

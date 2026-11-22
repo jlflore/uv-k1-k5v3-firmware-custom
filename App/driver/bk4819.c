@@ -401,8 +401,13 @@ int16_t BK4819_GetRSSI_dBm(void)
     return (rssi / 2) - 160;// - BK4819_GetRxGain_dB();
 }
 
+extern volatile bool gK1R_Stealth;
+
 void BK4819_ToggleGpioOut(BK4819_GPIO_PIN_t Pin, bool bSet)
 {
+    // Furtif complet (K1 Remote) : les voyants rouge et vert restent éteints
+    if (gK1R_Stealth && (Pin == BK4819_GPIO5_PIN1_RED || Pin == BK4819_GPIO6_PIN2_GREEN))
+        bSet = false;
     if (bSet)
         gBK4819_GpioOutState |=  (0x40u >> Pin);
     else

@@ -357,7 +357,11 @@ const uint8_t cmds[] = {
                 ST7565_WriteByte(21 + gSetting_set_ctr);
                 break;
             default:
-                ST7565_WriteByte(cmds[i]);
+                // Furtif complet (K1 Remote) : la remise en route périodique ne rallume pas l'afficheur
+                if (cmds[i] == (ST7565_CMD_DISPLAY_ON_OFF | 1) && gK1R_Stealth)
+                    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | 0);
+                else
+                    ST7565_WriteByte(cmds[i]);
         }
     }
 
@@ -450,6 +454,13 @@ void ST7565_Init(void)
         CS_Release();
     }
 #endif
+
+void ST7565_ApplyDisplayOnOff(void)
+{
+    CS_Assert();
+    ST7565_WriteByte(ST7565_CMD_DISPLAY_ON_OFF | (gK1R_Stealth ? 0 : 1));
+    CS_Release();
+}
 
 void ST7565_FixInterfGlitch(void)
 {
