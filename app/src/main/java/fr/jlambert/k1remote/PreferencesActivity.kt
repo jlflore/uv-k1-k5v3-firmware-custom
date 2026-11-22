@@ -109,6 +109,8 @@ class PreferencesActivity : Activity() {
         })
         night.addView(divider())
         night.addView(switchRow("Bascule automatique", "Passe en nuit et revient en jour aux heures choisies", prefs.autoNight) {
+            // Couper la bascule rend le jour si c'est elle qui avait mis la nuit (0.60)
+            if (!it && prefs.lastAuto != 0) prefs.night = false
             prefs.autoNight = it; prefs.lastAuto = -1; build()
         })
         if (prefs.autoNight) {
@@ -218,9 +220,9 @@ class PreferencesActivity : Activity() {
         // Affichage
         // Journal : tout ce que l'appli et la radio ont fait (appelants, réglages, liaison)
         col.addView(section("JOURNAL"))
-        col.addView(text("Appelants reçus, réglages envoyés, connexions… À partager pour un diagnostic. " +
-            "Aussi accessible par un appui long sur le titre « K1 Remote » de l'écran principal.", 12f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 6))
-        col.addView(button("Ouvrir le Journal") { MemoryBridge.openJournal = true; finish() }, lp(top = 8))
+        col.addView(text("Les appels reçus et vos émissions, jour par jour. Le journal technique complet (pour un diagnostic) " +
+            "est à un bouton de là, et aussi par un appui long sur le titre « K1 Remote ».", 12f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 6))
+        col.addView(button("Ouvrir le journal des appels") { MemoryBridge.openJournal = true; finish() }, lp(top = 8))
 
         // Touches latérales de la radio (menus 23 à 27), écrites en clair
         col.addView(section("TOUCHES LATÉRALES DE LA RADIO"))

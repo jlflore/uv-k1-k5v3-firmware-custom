@@ -1,4 +1,11 @@
-# K1 Remote · version 0.59 (firmware Fusion PTT r27)
+# K1 Remote · version 0.60 (firmware Fusion PTT r27)
+
+## 0.60
+- Journal des appels : par jour, une ligne par appel (heure, appelant, durée), vos émissions comprises. Les ouvertures brèves du squelch sont ignorées, les reprises d'un même appelant fusionnées ; 300 entrées au plus. « Partager » : appels seuls ou rapport complet. « Effacer » avec confirmation. Le journal technique reste à un bouton (« Technique ») et à l'appui long sur le titre.
+- Mode nuit : couper la bascule automatique rend le jour si c'est elle qui avait mis la nuit (l'écran restait en rouge sur noir).
+- Noms de canaux : les accents sont retirés (« Écoute » → « Ecoute ») au lieu de faire disparaître la lettre.
+- Mes canaux : la phrase « Consultation seulement : rien n'est modifié dans la radio » (d'avant l'éditeur) est remplacée.
+- Contrôle automatique des fonctions (FunctionsTest, 25 contrôles sans radio) à chaque compilation.
 
 ## 0.59
 - Liste des canaux : un canal en écoute seule affiche aussi ses listes de scan (les étiquettes s'empilent à droite au lieu de se remplacer).

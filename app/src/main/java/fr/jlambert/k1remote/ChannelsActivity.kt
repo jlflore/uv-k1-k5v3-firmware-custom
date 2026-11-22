@@ -123,7 +123,7 @@ class ChannelsActivity : Activity() {
         info.addView(countText)
         info.addView(text("Radio : " + mem.firmware.ifEmpty { "?" } +
             " · copie de sa mémoire de configuration active (celle du firmware qui tournait)", 12f, p.muted))
-        info.addView(text("Consultation seulement : rien n'est modifié dans la radio.", 12f, p.muted))
+        info.addView(text("Vos modifications restent dans l'appli tant que vous n'appuyez pas sur « Envoyer … à la radio ».", 12f, p.muted))
         root.addView(info, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
 
         // Recherche
@@ -413,7 +413,7 @@ class ChannelsActivity : Activity() {
         val (numRow, numEdit) = field("Numéro du canal (1 à 1 024)", (i + 1).toString(), "", true)
         numEdit.inputType = android.text.InputType.TYPE_CLASS_NUMBER
         box.addView(numRow)
-        val (nameRow, nameEdit) = field("Nom (10 caractères au plus)", e.name, "Sans nom — ex. : SCORPIO 1", false)
+        val (nameRow, nameEdit) = field("Nom (10 caractères, accents retirés sur la radio)", e.name, "Sans nom — ex. : SCORPIO 1", false)
         nameEdit.filters = arrayOf(android.text.InputFilter.LengthFilter(10))
         box.addView(nameRow)
         box.addView(text("La radio montre le nom en mode canal si son menu ChDisp est sur NAME ou NAME + FREQ.", 12f, p.muted))

@@ -179,6 +179,18 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
         /** Puissances approximatives (UV-K1 / UV-K5 V3, F4HWN), dans l'ordre de [POWER_NAMES]. */
         val POWER_WATTS = listOf("selon SetPwr", "< 20 mW", "≈ 125 mW", "≈ 250 mW", "≈ 500 mW", "≈ 1 W", "≈ 2 W", "≈ 5 W")
         val POWER_LABELS = POWER_NAMES.indices.map { "${POWER_NAMES[it]}  ·  ${POWER_WATTS[it]}" }
+        /**
+         * Nom tel que la radio le stockera : 10 caractères ASCII. Les accents sont retirés
+         * (« Écoute » → « Ecoute ») au lieu de faire disparaître la lettre (avant la 0.60).
+         */
+        fun radioName(s: String): String {
+            val plain = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replace(Regex("\\p{M}+"), "")
+                .replace("Œ", "OE").replace("œ", "oe").replace("Æ", "AE").replace("æ", "ae").replace("ß", "ss")
+                .replace('’', '\'').replace('«', '"').replace('»', '"')
+            return plain.filter { it.code in 32..126 }.take(10)
+        }
+
         fun powerWatts(name: String) = POWER_WATTS.getOrNull(POWER_NAMES.indexOf(name)) ?: ""
         val STEP_KHZ = listOf("2,5", "5", "6,25", "10", "12,5", "25", "8,33", "0,01", "0,05", "0,1", "0,25", "0,5",
             "1", "1,25", "9", "15", "20", "30", "50", "100", "125", "200", "250", "500")
@@ -310,7 +322,7 @@ class RadioMemory(val image: ByteArray, val firmware: String, val date: Long, va
         if (wasEmpty) { image[base + 13] = 0; image[base + 15] = 0 }
         image[base + 14] = e.stepIdx.toByte()
         // Nom : 10 caractères ASCII, complétés par des zéros (comme SETTINGS_SaveChannelName)
-        val nm = e.name.filter { it.code in 32..126 }.take(10).toByteArray(Charsets.US_ASCII)
+        val nm = radioName(e.name).toByteArray(Charsets.US_ASCII)
         for (k in 0 until 16) image[0x4000 + base + k] = if (k < nm.size) nm[k] else 0
         // Attributs : bande (d'après la fréquence), listes de scan
         val band = bandOf(e.rxHz)

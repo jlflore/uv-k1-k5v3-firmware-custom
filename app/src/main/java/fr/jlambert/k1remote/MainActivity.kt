@@ -182,6 +182,7 @@ class MainActivity : Activity() {
         lastCallerCode = code
         lastCallerAt = now
         lastCaller = name ?: code
+        CallLog.caller(name, if (name != null) shown else code, now)
         Journal.add("Appelant : " + (name?.let { "$it ($shown, reçu $code)" } ?: "code $code inconnu") + if (fromRadio) " · radio" else " · écran")
         callerActive = true
         showCallerPill(if (name != null) "Appel de $name" else "Code reçu : $code (inconnu)")
@@ -630,6 +631,7 @@ class MainActivity : Activity() {
         usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
         prefs = Prefs(this)
         Journal.init(this)
+        CallLog.init(this)
         MemoryBridge.writer = { act, base, draft, done -> startMemoryWrite(act, base, draft, done) }
         MemoryBridge.menuSender = { items ->
             val c = cdc
@@ -704,7 +706,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         resumed = true
-        if (MemoryBridge.openJournal) { MemoryBridge.openJournal = false; ui.postDelayed({ showDiagnostic() }, 300) }
+        if (MemoryBridge.openJournal) { MemoryBridge.openJournal = false; ui.postDelayed({ showCallLog() }, 300) }
         applyRelayLed()   // réglage éventuellement changé dans les Préférences
         if (cdc == null && pendingBle == null && !manualOff && prefs.linkMode != Prefs.LINK_USB && prefs.relayAddress != null) ui.post { connect() }
         // Les préférences ont pu changer (thème, raccourcis, étiquettes…)
@@ -1051,6 +1053,22 @@ class MainActivity : Activity() {
     }
 
     /** Journal (appui long sur le titre) : tout ce que l'appli et la radio ont fait, en direct. */
+    /** Journal des appels (lisible) ; le journal technique reste à un bouton. */
+    private fun showCallLog() {
+        CallLogDialog.show(this, onTechnical = { showDiagnostic() }, onShare = { calls -> shareJournal(calls) })
+    }
+
+    private fun shareJournal(callsOnly: Boolean) {
+        val head = "K1 Remote " + appVersion + " · " + (radioInfo ?: "radio ?")
+        val body = if (callsOnly) head + "\n\nJournal des appels\n\n" + CallLog.text()
+            else head + "\n\n=== Journal des appels ===\n" + CallLog.text() + "\n\n=== Journal technique ===\n" + Journal.text()
+        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, if (callsOnly) "Journal des appels K1 Remote" else "Rapport K1 Remote")
+            putExtra(Intent.EXTRA_TEXT, body)
+        }, if (callsOnly) "Envoyer le journal des appels" else "Envoyer le rapport"))
+    }
+
     private fun showDiagnostic() {
         val tv = TextView(this).apply {
             textSize = 12f
@@ -1074,16 +1092,15 @@ class MainActivity : Activity() {
         }
         Journal.listener = { ui.post { tv.text = Journal.text() } }
         android.app.AlertDialog.Builder(this)
-            .setTitle("Journal de la radio")
+            .setTitle("Journal technique")
             .setView(box)
-            .setPositiveButton("Partager") { _, _ ->
-                startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, "Journal K1 Remote")
-                    putExtra(Intent.EXTRA_TEXT, "K1 Remote " + appVersion + " · " + (radioInfo ?: "radio ?") + "\n\n" + Journal.text())
-                }, "Envoyer le journal"))
+            .setPositiveButton("Partager") { _, _ -> shareJournal(false) }
+            .setNeutralButton("Effacer") { _, _ ->
+                android.app.AlertDialog.Builder(this).setTitle("Effacer le journal technique ?")
+                    .setMessage("Le journal des appels n'est pas touché.")
+                    .setPositiveButton("Effacer") { _, _ -> Journal.clear(); toast("Journal technique effacé") }
+                    .setNegativeButton("Annuler", null).show()
             }
-            .setNeutralButton("Effacer") { _, _ -> Journal.clear(); toast("Journal effacé") }
             .setNegativeButton("Fermer", null)
             .setOnDismissListener { Journal.listener = null }
             .show()
@@ -1200,6 +1217,7 @@ class MainActivity : Activity() {
 
     private fun disconnect(msg: String?) {
         pttStop()
+        CallLog.rxEnd(); CallLog.txEnd()
         ui.removeCallbacks(keepAlive)
         cdc?.close()
         cdc = null
@@ -1232,6 +1250,8 @@ class MainActivity : Activity() {
             val ch = flags xor lastFlags
             if (ch and 0x02 != 0) Journal.add("Radio : émission " + (if (flags and 0x02 != 0) "DÉBUT (LED rouge)" else "fin"))
             if (ch and 0x04 != 0) Journal.add("Radio : réception " + (if (flags and 0x04 != 0) "début (LED verte)" else "fin"))
+            if (ch and 0x02 != 0) { if (flags and 0x02 != 0) CallLog.txStart() else CallLog.txEnd() }
+            if (ch and 0x04 != 0) { if (flags and 0x04 != 0) CallLog.rxStart() else CallLog.rxEnd() }
             if (ch and 0x01 != 0) Journal.add("Radio : " + (if (flags and 0x01 != 0) "mise en veille de l'écran" else "réveil de l'écran"))
             lastFlags = flags; refreshLeds()
             watchKick = true
