@@ -729,6 +729,7 @@ bool SETTINGS_FetchChannelScanDisplayInfo(const uint16_t channel, ChannelScanDis
         info->outputPower      = OUTPUT_POWER_LOW1;
         info->busyChannelLock  = false;
         info->txLock           = true;
+        info->rxOnly           = false;
     }
     else
     {
@@ -738,6 +739,7 @@ bool SETTINGS_FetchChannelScanDisplayInfo(const uint16_t channel, ChannelScanDis
         info->outputPower      =   ((d4 >> 2) & 7u);
         info->busyChannelLock  = !!((d4 >> 5) & 1u);
         info->txLock           = !!((d4 >> 6) & 1u);
+        info->rxOnly           = !!((d4 >> 7) & 1u);
     }
 
     switch (info->txOffsetFrequencyDirection)
@@ -787,6 +789,7 @@ void SETTINGS_ApplyChannelScanDisplayInfo(VFO_Info_t *vfo, uint16_t channel, con
     vfo->CHANNEL_BANDWIDTH = info->channelBandwidth;
     vfo->BUSY_CHANNEL_LOCK = info->busyChannelLock;
     vfo->TX_LOCK = info->txLock;
+    vfo->RX_ONLY = info->rxOnly;
 #ifdef ENABLE_DTMF_CALLING
     vfo->DTMF_DECODING_ENABLE = info->dtmfDecodingEnable;
 #endif
@@ -1301,6 +1304,7 @@ void SETTINGS_SaveChannel(uint16_t Channel, uint8_t VFO, const VFO_Info_t *pVFO,
         State[1]._8[2] = (pVFO->freq_config_TX.CodeType << 4) | pVFO->freq_config_RX.CodeType;
         State[1]._8[3] = (pVFO->Modulation << 4) | pVFO->TX_OFFSET_FREQUENCY_DIRECTION;
         State[1]._8[4] = 0
+            | ((pVFO->RX_ONLY & 1u) << 7)
             | (pVFO->TX_LOCK << 6)
             | (pVFO->BUSY_CHANNEL_LOCK << 5)
             | (pVFO->OUTPUT_POWER      << 2)

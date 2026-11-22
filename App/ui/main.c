@@ -1767,7 +1767,7 @@ void UI_DisplayMain(void)
 #endif
         }
 
-        if((gScanStateDir == SCAN_OFF || vfo_num != gEeprom.RX_VFO) && TX_freq_check(frequency) != 0 && displayVfo->TX_LOCK == true)
+        if((gScanStateDir == SCAN_OFF || vfo_num != gEeprom.RX_VFO) && (displayVfo->RX_ONLY || (TX_freq_check(frequency) != 0 && displayVfo->TX_LOCK == true)))
         {
             if (!FUNCTION_IsRx() || RxOnVfofrequency != frequency)
                 FW_ASSETS_COPY(p_line0 + 24, BITMAP_VFO_Lock);

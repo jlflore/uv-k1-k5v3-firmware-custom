@@ -108,6 +108,7 @@ typedef struct VFO_Info_t
 
     STEP_Setting_t STEP_SETTING;
     uint8_t        TX_LOCK;
+    uint8_t        RX_ONLY;        // K1R : canal en écoute seule (octet 12, bit 7), émission toujours refusée
     uint8_t        OUTPUT_POWER;
     uint8_t        TXP_CalculatedSetting;
     bool           FrequencyReverse;

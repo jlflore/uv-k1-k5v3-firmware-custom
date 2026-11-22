@@ -272,6 +272,7 @@ void RADIO_InitInfo(VFO_Info_t *pInfo, const uint16_t ChannelSave, const uint32_
     pInfo->CHANNEL_SAVE             = ChannelSave;
     pInfo->FrequencyReverse         = false;
     pInfo->TX_LOCK                  = true;
+    pInfo->RX_ONLY                  = false;
     pInfo->OUTPUT_POWER             = OUTPUT_POWER_LOW1;
     pInfo->freq_config_RX.Frequency = Frequency;
     pInfo->freq_config_TX.Frequency = Frequency;
@@ -433,6 +434,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
             pVfo->OUTPUT_POWER      = OUTPUT_POWER_LOW1;
             pVfo->BUSY_CHANNEL_LOCK = false;
             pVfo->TX_LOCK = true;
+            pVfo->RX_ONLY = false;
         }
         else
         {
@@ -442,6 +444,7 @@ void RADIO_ConfigureChannel(const unsigned int VFO, const unsigned int configure
             pVfo->OUTPUT_POWER      =   ((d4 >> 2) & 7u);
             pVfo->BUSY_CHANNEL_LOCK = !!((d4 >> 5) & 1u);
             pVfo->TX_LOCK           = !!((d4 >> 6) & 1u);
+            pVfo->RX_ONLY           = !!((d4 >> 7) & 1u);
         }
 
         if (data[5] == 0xFF)
@@ -1270,11 +1273,11 @@ void RADIO_PrepareTX(void)
 
     RADIO_SelectCurrentVfo();
 
-    if(TX_freq_check(gCurrentVfo->pTX->Frequency) != 0
+    if(gCurrentVfo->RX_ONLY || (TX_freq_check(gCurrentVfo->pTX->Frequency) != 0
 #ifdef ENABLE_FEAT_F4HWN
         && gCurrentVfo->TX_LOCK == true
 #endif
-    ){
+    )){
         // TX frequency not allowed
         State = VFO_STATE_TX_DISABLE;
         gVfoConfigureMode = VFO_CONFIGURE;
