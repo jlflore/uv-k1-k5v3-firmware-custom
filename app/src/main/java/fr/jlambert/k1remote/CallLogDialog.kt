@@ -27,7 +27,8 @@ object CallLogDialog {
         }
         fun button(label: String, primary: Boolean, onClick: () -> Unit) = tv(label, 15f, if (primary) p.primaryText else p.text, true).apply {
             gravity = Gravity.CENTER
-            setPadding(dp(14), 0, dp(14), 0)
+            maxLines = 1
+            setPadding(dp(4), 0, dp(4), 0)
             background = Ui.ripple(act, if (primary) p.primaryBg else p.surface, 999f, if (primary) p.primaryBorder else p.border, night = p.night)
             setOnClickListener { onClick() }
         }
@@ -43,8 +44,12 @@ object CallLogDialog {
         card.addView(sub, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(2) })
 
         val list = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = ScrollView(act).apply { addView(list) }
-        card.addView(scroll, LinearLayout.LayoutParams(-1, (act.resources.displayMetrics.heightPixels * 0.55).toInt()).apply { topMargin = dp(10) })
+        // Hauteur ajustée au contenu, plafonnée à 55 % de l'écran (plus de grand vide sous la liste)
+        val maxH = (act.resources.displayMetrics.heightPixels * 0.55).toInt()
+        val scroll = object : ScrollView(act) {
+            override fun onMeasure(w: Int, h: Int) = super.onMeasure(w, android.view.View.MeasureSpec.makeMeasureSpec(maxH, android.view.View.MeasureSpec.AT_MOST))
+        }.apply { addView(list) }
+        card.addView(scroll, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
 
         fun fill() {
             list.removeAllViews()
@@ -71,15 +76,19 @@ object CallLogDialog {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(12), dp(9), dp(12), dp(9))
-                    background = Ui.shape(act, if (rx) p.rxOnBg else p.surface, 12f, if (rx) p.rxOnBorder else p.border)
+                    // De nuit, pas d'aplat rouge vif : un liseré suffit à distinguer les réceptions
+                    background = if (rx && !p.night) Ui.shape(act, p.rxOnBg, 12f, p.rxOnBorder)
+                        else Ui.shape(act, p.surface, 12f, if (rx) p.dot else p.border, if (rx) 1.5f else 1f)
                 }
-                row.addView(tv(CallLog.time(e.start).substring(0, 5), 15f, if (rx) p.rxOnText else p.muted, true).apply {
-                    typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                }, LinearLayout.LayoutParams(dp(56), -2))
-                row.addView(tv(CallLog.label(e), 15f, if (rx) p.rxOnText else p.text, rx && e.name != null),
+                val fg = if (rx && !p.night) p.rxOnText else p.text
+                val fgMuted = if (rx && !p.night) p.rxOnText else p.muted
+                row.addView(tv(CallLog.time(e.start).substring(0, 5), 15f, fgMuted, true).apply {
+                    fontFeatureSettings = "tnum"
+                }, LinearLayout.LayoutParams(dp(54), -2))
+                row.addView(tv(CallLog.label(e), 15f, fg, rx && e.name != null),
                     LinearLayout.LayoutParams(0, -2, 1f))
                 val dur = CallLog.duration(e.durMs)
-                if (dur.isNotEmpty()) row.addView(tv(dur, 13f, if (rx) p.rxOnText else p.muted))
+                if (dur.isNotEmpty()) row.addView(tv(dur, 13f, fgMuted).apply { setPadding(dp(8), 0, 0, 0) })
                 list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(5) })
             }
         }

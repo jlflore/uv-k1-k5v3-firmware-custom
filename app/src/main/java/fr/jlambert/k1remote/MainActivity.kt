@@ -1060,13 +1060,20 @@ class MainActivity : Activity() {
 
     private fun shareJournal(callsOnly: Boolean) {
         val head = "K1 Remote " + appVersion + " · " + (radioInfo ?: "radio ?")
-        val body = if (callsOnly) head + "\n\nJournal des appels\n\n" + CallLog.text()
-            else head + "\n\n=== Journal des appels ===\n" + CallLog.text() + "\n\n=== Journal technique ===\n" + Journal.text()
-        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, if (callsOnly) "Journal des appels K1 Remote" else "Rapport K1 Remote")
-            putExtra(Intent.EXTRA_TEXT, body)
-        }, if (callsOnly) "Envoyer le journal des appels" else "Envoyer le rapport"))
+        // Android refuse (et ferme l'appli) au-delà d'environ 500 Ko passés à une autre appli :
+        // on ne partage que le plus récent, bien en dessous de cette limite (0.60).
+        fun cap(t: String, max: Int) = if (t.length <= max) t
+            else t.substring(0, t.lastIndexOf('\n', max).takeIf { it > 0 } ?: max) + "\n… (plus ancien non joint)"
+        val body = if (callsOnly) head + "\n\nJournal des appels\n\n" + cap(CallLog.text(), 40_000)
+            else head + "\n\n=== Journal des appels ===\n" + cap(CallLog.text(), 20_000) +
+                "\n\n=== Journal technique (le plus récent en haut) ===\n" + cap(Journal.text(), 60_000)
+        runCatching {
+            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, if (callsOnly) "Journal des appels K1 Remote" else "Rapport K1 Remote")
+                putExtra(Intent.EXTRA_TEXT, body)
+            }, if (callsOnly) "Envoyer le journal des appels" else "Envoyer le rapport"))
+        }.onFailure { toast("Partage impossible : " + (it.message ?: it.javaClass.simpleName)) }
     }
 
     private fun showDiagnostic() {

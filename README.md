@@ -5,6 +5,7 @@
 - Mode nuit : couper la bascule automatique rend le jour si c'est elle qui avait mis la nuit (l'écran restait en rouge sur noir).
 - Noms de canaux : les accents sont retirés (« Écoute » → « Ecoute ») au lieu de faire disparaître la lettre.
 - Mes canaux : la phrase « Consultation seulement : rien n'est modifié dans la radio » (d'avant l'éditeur) est remplacée.
+- Partage du journal : limité au plus récent, avec message d'erreur au lieu de fermer l'appli (un journal technique trop long faisait refuser le partage par Android).
 - Contrôle automatique des fonctions (FunctionsTest, 25 contrôles sans radio) à chaque compilation.
 
 ## 0.59
