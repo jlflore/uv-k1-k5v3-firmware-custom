@@ -103,6 +103,7 @@ class MainActivity : Activity() {
     private lateinit var rootFrame: FrameLayout
     private lateinit var overlay: FrameLayout
     private var statusDot: View? = null
+    private var statusPill: LinearLayout? = null
     private var statusText: TextView? = null
     private var rxChip: TextView? = null
     private var txChip: TextView? = null
@@ -185,6 +186,7 @@ class MainActivity : Activity() {
         // Le nom reste tant que la réception dure ; si elle est déjà finie (émission très courte), 3 s
         ui.removeCallbacks(endCaller)
         if (lastFlags and 0x04 == 0) ui.postDelayed(endCaller, 3000)
+        refreshStatus()
         refreshOpBand()
         refreshPttBar()
     }
@@ -197,6 +199,7 @@ class MainActivity : Activity() {
     private val endCaller = Runnable {
         callerActive = false
         callerPill?.visibility = View.GONE
+        refreshStatus()
         refreshOpBand()
         refreshPttBar()
     }
@@ -1373,15 +1376,14 @@ class MainActivity : Activity() {
         opBand = null
         chipsHost = null
         callerPill = null
+        statusPill = null; statusText = null; statusDot = null
+        rxChip = null; txChip = null
         val operation = prefs.uiMode == 1 && !editMode && !helpMode
         if (operation) buildOperation(content, L) else {
         val header = buildHeader(L)
-        // En paysage, l'état de la liaison est dans l'en-tête ; le bandeau d'aide le remplace
-        val status: View? = when {
-            helpMode -> buildHelpBanner()
-            !L -> buildStatusRow()
-            else -> null
-        }
+        // Ligne 2 : pastille d'état + boutons ; en mode aide, le bandeau d'aide vient dessous
+        val controls = buildControlRow(L, null)
+        val helpBanner: View? = if (helpMode) buildHelpBanner() else null
         val lcdFrame = FrameLayout(this).apply {
             background = Ui.shape(this@MainActivity, p.lcdFrame, 18f, p.lcdFrameBorder)
             val side = dp(if (L) 8 else 10)
@@ -1442,7 +1444,8 @@ class MainActivity : Activity() {
 
         if (!L) {
             content.addView(header)
-            if (status != null) content.addView(status, lp(-1, -2, top = 10))
+            content.addView(controls, lp(-1, -2, top = 8))
+            if (helpBanner != null) content.addView(helpBanner, lp(-1, -2, top = 8))
             content.addView(lcdFrame, lp(-1, -2, top = 10))
             if (panel != null) content.addView(panel, lp(-1, -2, top = 10))
             content.addView(topKeys, lp(-1, dp(42), top = 10))
@@ -1452,7 +1455,8 @@ class MainActivity : Activity() {
             val left = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(header)
-                if (status != null) addView(status, lp(-1, -2, top = 6))
+                addView(controls, lp(-1, -2, top = 6))
+                if (helpBanner != null) addView(helpBanner, lp(-1, -2, top = 6))
                 // Les raccourcis s'affichent en entier en bas ; l'écran de la radio prend la place
                 // restante (cadre ajusté à son contenu, centré), quitte à être un peu plus petit.
                 addView(FrameLayout(this@MainActivity).apply {
@@ -1528,68 +1532,99 @@ class MainActivity : Activity() {
             setOnClickListener { onClick() }
         }
 
+    /**
+     * Ligne 1 de l'en-tête : l'identité, sur une seule ligne et en pleine largeur.
+     * Thème camouflage : écusson cousu, drapeau, « K1 REMOTE » au pochoir, version, unité à droite.
+     * Autres thèmes : « K1 Remote », version, radio reconnue à droite.
+     * Les textes sont des CapsLabel (hauteur des lettres réelles) alignés sur leur ligne de base.
+     * Appui long sur le titre : Journal.
+     */
     private fun buildHeader(L: Boolean): LinearLayout {
+        val camo = p.camo
+        val headerBg = p.headerBg
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        val camo = p.camo
-        val headerBg = p.headerBg
         if (camo != null && headerBg != null) {
-            // Thème camouflage : en-tête en écusson cousu, petit drapeau, titre au pochoir
-            row.background = Ui.shape(this, headerBg, 14f, p.headerBorder, 1.5f, dashed = true)
-            // Écusson resserré (0.52) : marges réduites, textes sans l'interligne de la police pochoir
-            row.setPadding(dp(8), dp(if (L) 2 else 4), dp(6), dp(if (L) 2 else 4))
+            row.background = Ui.shape(this, headerBg, 12f, p.headerBorder, 1.5f, dashed = true)
+            row.setPadding(dp(10), dp(if (L) 5 else 7), dp(10), dp(if (L) 5 else 7))
             val flag = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             for ((i, col) in camo.flag.withIndex()) {
                 flag.addView(View(this).apply { setBackgroundColor(col) },
-                    LinearLayout.LayoutParams(dp(5), dp(if (L) 16 else 20)).apply { if (i > 0) marginStart = dp(2) })
+                    LinearLayout.LayoutParams(dp(4), dp(if (L) 12 else 14)).apply { if (i > 0) marginStart = dp(2) })
             }
-            row.addView(flag, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(8) })
+            row.addView(flag, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(10) })
         }
-        val titles = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            if (camo != null) {
-                addView(titleWithVersion(text("K1 REMOTE", if (L) 17f else 20f, p.text, Fonts.stencil(this@MainActivity)).apply {
-                    letterSpacing = 0.02f; includeFontPadding = false }))
-                if (!L) addView(text(camo.unit, 9f, p.muted, Typeface.DEFAULT_BOLD).apply {
-                    letterSpacing = 0.12f; includeFontPadding = false; setPadding(0, dp(1), 0, 0) })
-            } else {
-                addView(titleWithVersion(text("K1 Remote", if (L) 18f else 22f, p.text, Typeface.DEFAULT_BOLD)))
-                if (!L) addView(text(if (p.night) "Mode nuit" else radioSubtitle(), 12f, p.muted))
+        val texts = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            isBaselineAligned = true
+        }
+        val title = CapsLabel(this).apply {
+            text = if (camo != null) "K1 REMOTE" else "K1 Remote"
+            setFont(if (camo != null) Fonts.stencil(this@MainActivity) else Typeface.DEFAULT_BOLD, if (L) 17f else 20f)
+            if (camo != null) letterSpacing = 0.02f
+            color = p.text
+            isLongClickable = true
+            setOnLongClickListener { showDiagnostic(); true }
+        }
+        texts.addView(title, LinearLayout.LayoutParams(-2, -2))
+        if (appVersion.isNotEmpty()) texts.addView(CapsLabel(this).apply {
+            text = appVersion
+            setFont(medium, 11f)
+            // Version lisible sur tous les fonds : couleur du texte à 75 %
+            color = (p.text and 0x00FFFFFF) or (0xBF shl 24)
+        }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(6) })
+        // À droite : l'unité (camouflage) ou la radio reconnue ; tronquée par « … » si la place manque
+        val right = CapsLabel(this).apply {
+            text = when {
+                camo != null -> camo.unit
+                p.night -> "Mode nuit"
+                else -> radioSubtitle()
             }
+            setFont(if (camo != null) Typeface.DEFAULT_BOLD else Typeface.DEFAULT, if (camo != null) 9f else 12f)
+            if (camo != null) letterSpacing = 0.1f
+            color = p.muted
         }
-        // Paysage : c'est la pastille d'état qui se rétrécit (texte tronqué), jamais les boutons
-        val pillFlex = L && !helpMode
-        row.addView(titles, if (pillFlex) LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(8) }
-                            else LinearLayout.LayoutParams(0, -2, 1f))
-        if (L && !helpMode) {
-            row.addView(buildStatusPill(), LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(6) })
-            rxChip = ledChip("RX"); txChip = ledChip("TX")
-            row.addView(rxChip, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(4) })
-            row.addView(txChip, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
+        texts.addView(View(this), LinearLayout.LayoutParams(dp(10), 1))
+        texts.addView(right, LinearLayout.LayoutParams(0, -2, 1f))
+        right.textAlignEnd = true
+        row.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+        return row
+    }
+
+    /**
+     * Ligne 2 de l'en-tête : à gauche la pastille d'état (ou, en interface « En opération », le
+     * lien vers l'interface complète), à droite les cinq boutons ronds.
+     */
+    private fun buildControlRow(L: Boolean, leading: View?): LinearLayout {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
-        val size = dp(if (L) 36 else 40)   // 5 boutons : un peu plus petits
-        row.addView(roundButton("☾", if (p.night) "Quitter le mode furtif" else "Mode furtif : appli en nuit et écran de la radio éteint", p.night) {
+        row.addView(leading ?: buildStatusPill(), LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(8) })
+        val size = dp(if (L) 34 else 38)
+        val gap = dp(5)
+        fun add(v: View, first: Boolean = false) =
+            row.addView(v, LinearLayout.LayoutParams(size, size).apply { if (!first) marginStart = gap })
+        add(roundButton("☾", if (p.night) "Quitter le mode furtif" else "Mode furtif : appli en nuit et écran de la radio éteint", p.night) {
             // Lune = furtif complet. Appli en nuit alors que la radio ne l'est pas (radio absente au
             // moment de l'appui) : on rétablit d'abord l'appli seule.
             if (p.night && !prefs.stealth) { prefs.night = false; buildUi() }
             else toggleStealth(!prefs.stealth)
-        }, LinearLayout.LayoutParams(size, size).apply { marginStart = dp(6) })
-        row.addView(roundButton("▤", "Canaux de la radio : lire, sauvegarder, consulter", false) {
-            openChannels()
-        }, LinearLayout.LayoutParams(size, size).apply { marginStart = dp(6) })
-        row.addView(roundButton("⌖", "Carte d'équipe", TeamMapState.running) {
+        }, first = true)
+        add(roundButton("▤", "Canaux de la radio : lire, sauvegarder, consulter", false) { openChannels() })
+        add(roundButton("⌖", "Carte d'équipe", TeamMapState.running) {
             startActivity(Intent(this, MapActivity::class.java))
-        }, LinearLayout.LayoutParams(size, size).apply { marginStart = dp(6) })
-        row.addView(roundButton("⚙︎", "Préférences", false) {
+        })
+        add(roundButton("⚙︎", "Préférences", false) {
             startActivity(Intent(this, PreferencesActivity::class.java))
-        }, LinearLayout.LayoutParams(size, size).apply { marginStart = dp(6) })
-        row.addView(roundButton("?", if (helpMode) "Quitter le mode aide" else "Mode aide : touchez ensuite une touche", helpMode) {
+        })
+        add(roundButton("?", if (helpMode) "Quitter le mode aide" else "Mode aide : touchez ensuite une touche", helpMode) {
             helpMode = !helpMode
             editMode = false
             buildUi()
-        }, LinearLayout.LayoutParams(size, size).apply { marginStart = dp(6) })
+        })
         return row
     }
 
@@ -1624,6 +1659,7 @@ class MainActivity : Activity() {
         statusDot = dot
         statusText = label
         return LinearLayout(this).apply {
+            statusPill = this
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), dp(7), dp(14), dp(7))
@@ -1637,18 +1673,6 @@ class MainActivity : Activity() {
                 true
             }
         }
-    }
-
-    private fun buildStatusRow(): View {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        row.addView(buildStatusPill(), LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(8) })
-        rxChip = ledChip("RX"); txChip = ledChip("TX")
-        row.addView(rxChip, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) })
-        row.addView(txChip)
-        return row
     }
 
     private fun buildHelpBanner(): View {
@@ -1699,6 +1723,7 @@ class MainActivity : Activity() {
         val rx = lastFlags and 0x04 != 0
         rxChip?.let { styleLed(it, rx, p.rxOnBg, p.rxOnText, p.rxOnBorder) }
         txChip?.let { styleLed(it, tx, p.txOnBg, p.txOnText, p.txOnBorder) }
+        refreshStatus()
         // Fin de réception : le nom de l'appelant s'efface 1,5 s après
         if (prevRx && !rx && callerActive) { ui.removeCallbacks(endCaller); ui.postDelayed(endCaller, 1500) }
         if (rx) ui.removeCallbacks(endCaller)
@@ -1758,20 +1783,22 @@ class MainActivity : Activity() {
             setOnClickListener { opKeypad = !opKeypad; buildUi() }
         }
         val modeLink = TextView(this).apply {
-            text = "Interface complète  ›"
+            text = "‹  Interface complète"
             textSize = 13f
             typeface = medium
-            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
             setTextColor(p.muted)
-            setPadding(dp(8), 0, dp(4), 0)
+            setPadding(dp(4), dp(8), dp(4), dp(8))
             contentDescription = "Revenir à l'interface complète"
             setOnClickListener { prefs.uiMode = 0; buildUi() }
         }
         fun ptt() = buildPttBar().apply { textSize = 22f }
         if (!L) {
             content.addView(header)
-            content.addView(modeLink, lp(-1, dp(30), top = 2))
-            content.addView(band, lp(-1, dp(58), top = 4))
+            content.addView(buildControlRow(false, modeLink), lp(-1, -2, top = 8))
+            content.addView(band, lp(-1, dp(58), top = 8))
             content.addView(lcdFrame, lp(-1, -2, top = 10))
             if (opKeypad) {
                 content.addView(keysToggle, lp(-1, dp(40), top = 10))
@@ -1796,6 +1823,7 @@ class MainActivity : Activity() {
             val left = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(header)
+                addView(buildControlRow(true, modeLink), lp(-1, -2, top = 6))
                 addView(band, lp(-1, dp(44), top = 6))
                 addView(FrameLayout(this@MainActivity).apply {
                     addView(lcdFrame, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
@@ -1803,9 +1831,8 @@ class MainActivity : Activity() {
             }
             val right = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                addView(modeLink, lp(-1, dp(26)))
                 if (opKeypad) {
-                    addView(buildTopKeys(), lp(-1, dp(38), top = 4))
+                    addView(buildTopKeys(), lp(-1, dp(38)))
                     addView(buildPad(true), LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(4) })
                 } else {
                     addView(android.widget.ScrollView(this@MainActivity).apply {
@@ -1857,16 +1884,50 @@ class MainActivity : Activity() {
         refreshStatus()
     }
 
+    /**
+     * Pastille d'état (ligne 2 de l'en-tête) :
+     *  - en émission : fond rouge, « ÉMISSION » ;
+     *  - en réception : fond vert, nom de l'appelant s'il est identifié, sinon « RÉCEPTION » ;
+     *  - sinon : point coloré et état court de la liaison (« Connecté », « Radio en veille »…).
+     */
     private fun refreshStatus() {
         refreshOpBand()
-        statusText?.text = linkText
-        val c = when (link) {
-            Link.OFF -> p.muted
-            Link.WAITING -> if (p.night) p.text else Color.parseColor("#E07B00")
-            Link.ON -> p.dot
-            Link.SLEEP -> if (p.night) p.muted else Color.parseColor("#3C7DD9")
+        val tx = link == Link.ON && lastFlags and 0x02 != 0
+        val rx = link == Link.ON && lastFlags and 0x04 != 0
+        val label = statusText ?: return
+        val pill = statusPill
+        val dot = statusDot
+        when {
+            tx -> {
+                label.text = "ÉMISSION"
+                label.setTextColor(p.txOnText)
+                pill?.background = Ui.ripple(this, p.txOnBg, 999f, p.txOnBorder, night = p.night)
+                dot?.visibility = View.GONE
+            }
+            rx -> {
+                label.text = if (callerActive && lastCaller != null) lastCaller else "RÉCEPTION"
+                label.setTextColor(p.rxOnText)
+                pill?.background = Ui.ripple(this, p.rxOnBg, 999f, p.rxOnBorder, night = p.night)
+                dot?.visibility = View.GONE
+            }
+            else -> {
+                label.text = when (link) {
+                    Link.ON -> "Connecté"
+                    Link.SLEEP -> "Radio en veille"
+                    else -> linkText
+                }
+                label.setTextColor(p.text)
+                pill?.background = Ui.ripple(this, p.surface, 999f, p.border, night = p.night)
+                dot?.visibility = View.VISIBLE
+                val c = when (link) {
+                    Link.OFF -> p.muted
+                    Link.WAITING -> if (p.night) p.text else Color.parseColor("#E07B00")
+                    Link.ON -> p.dot
+                    Link.SLEEP -> if (p.night) p.muted else Color.parseColor("#3C7DD9")
+                }
+                (dot?.background as? GradientDrawable)?.setColor(c)
+            }
         }
-        (statusDot?.background as? GradientDrawable)?.setColor(c)
     }
 
     // ---------------- Raccourcis ----------------
