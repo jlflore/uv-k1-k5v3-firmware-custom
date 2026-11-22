@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB natif UV-K1 / UV-K5 V3 (firmware F4HWN) : VID 0x36B7, PID 0xFFFF -->
+    <usb-device vendor-id="14007" product-id="65535" />
+</resources>
