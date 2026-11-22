@@ -1926,7 +1926,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "23"
+#define K1R_REVISION "24"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -2186,7 +2186,8 @@ static void K1R_RunCommand(void)
 
     // Présence : « K1R », version du protocole, modèle (selon SetNav : 0 = UV-K1, 1 = UV-K5 V3),
     // puis la version du firmware (ex. « v7.0.0 »)
-    uint8_t reply[16] = { c[0], status, 'K', '1', 'R', 2, gEeprom.SET_NAV ? 1 : 0 };
+    // 24 octets : « v7.0.0 r23 » (10 caractères) dépassait l'ancien tampon de 16 → « r2 »
+    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 2, gEeprom.SET_NAV ? 1 : 0 };
     uint8_t len = 2;
     if (c[0] == 0x04) {
         len = 7;
