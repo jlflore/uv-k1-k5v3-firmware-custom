@@ -1,8 +1,13 @@
-# K1 Remote · version 0.57 (firmware Fusion PTT r27)
+# K1 Remote · version 0.58 (firmware Fusion PTT r27)
+
+## 0.58
+- Envoi réussi : une carte de réussite (coche qui se dessine, fond vert clair, rouge sombre en mode nuit) remplace les messages secs, après la configuration d'équipe et après l'envoi des canaux.
+- « Réglage de la radio terminé » ne s'affiche plus quand un réglage a été interrompu : la réussite n'est annoncée que si tout est passé.
+- À propos : « D'jé » dans les crédits.
 
 ## 0.57
 - Interface « En opération » : le bouton Puissance suit de nouveau le passage de la ligne A à la ligne B (sa grille de raccourcis n'était jamais redessinée).
-- Préférences › À propos : version, crédits (Jérôme Lambert, Claude, Armel F4HWN, ChatGPT) et usage d'Internet décrit correctement (l'ancien texte disait à tort que l'appli n'y accède pas).
+- Préférences › À propos : version, crédits (D'jé, Claude, Armel F4HWN, ChatGPT) et usage d'Internet décrit correctement (l'ancien texte disait à tort que l'appli n'y accède pas).
 - Captures automatiques : écran des Préférences en entier ajouté.
 
 ## 0.56

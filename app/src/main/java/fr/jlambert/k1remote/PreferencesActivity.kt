@@ -384,7 +384,7 @@ class PreferencesActivity : Activity() {
             13f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 4))
         about.addView(text("CRÉDITS", 12f, p.muted, Typeface.DEFAULT_BOLD).apply { letterSpacing = 0.08f }, lp(top = 14))
         for ((who, what) in listOf(
-            "Jérôme Lambert" to "Idée, conception, essais sur le terrain",
+            "D'jé" to "Idée, conception, essais sur le terrain",
             "Claude (Anthropic)" to "Développement de l'appli, du firmware Fusion PTT et du boîtier K1 Relais",
             "Armel F4HWN" to "Firmware F4HWN, sur lequel repose Fusion PTT",
             "ChatGPT (OpenAI)" to "Revues de code et propositions de design")) {

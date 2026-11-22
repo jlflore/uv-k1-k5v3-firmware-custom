@@ -515,8 +515,9 @@ class MainActivity : Activity() {
                 }
                 ui.post {
                     dlg.dismiss()
-                    info("Canaux envoyés", "Toutes les modifications ont été écrites puis relues dans la radio.\n\n" +
-                        "Éteignez la radio puis rallumez-la : elle ne prend en compte les nouveaux canaux qu'au démarrage.") { done(true, f) }
+                    SuccessCard.show(act, "Canaux envoyés",
+                        "Toutes les modifications ont été écrites puis relues dans la radio.\n\n" +
+                            "Éteignez la radio puis rallumez-la : elle ne prend les nouveaux canaux qu'au démarrage.") { done(true, f) }
                 }
             } catch (e: Exception) {
                 Journal.add("Écriture des canaux interrompue : ${e.message}")
@@ -1257,7 +1258,8 @@ class MainActivity : Activity() {
 
     @Volatile private var longSequenceRunning = false
 
-    private fun sendSteps(input: List<KeyStep>, restoreBeep: Boolean = true): Boolean {
+    /** [onDone] : appelé (fil principal) seulement si toute la séquence est passée sans erreur. */
+    private fun sendSteps(input: List<KeyStep>, restoreBeep: Boolean = true, onDone: (() -> Unit)? = null): Boolean {
         val c = cdc ?: run { toast("Radio non connectée"); return false }
         Journal.add("Appli : envoi " + input.filter { it.keyId != KeyStep.WAIT }.joinToString(" ") {
             if (it.cmd != null) "[cmd " + it.cmd.joinToString("") { b -> "%02X".format(b) }.drop(8).dropLast(2) + "]"
@@ -1297,6 +1299,7 @@ class MainActivity : Activity() {
                     Thread.sleep(100)
                 }
             }
+            var completed = false
             try {
                 // Une réception pendant un réglage peut faire sortir la radio de son menu :
                 // on attend qu'elle finisse, puis on recommence le réglage depuis le début
@@ -1332,15 +1335,16 @@ class MainActivity : Activity() {
                         if (!c.write(K5ViewerProtocol.keyPress(k.code, st.long))) break@run
                         Thread.sleep(if (st.long) LONG_STEP_MS else STEP_MS)
                     }
-                    if (!disturbed || ++attempt > 3) break
+                    if (!disturbed) { completed = true; break }
+                    if (++attempt > 3) break
                     ui.post { toast("Réception pendant le réglage : reprise dès la fin de l'appel") }
                     waitQuiet()
                 }
             } finally {
-                if (long) {
-                    longSequenceRunning = false
-                    ui.post { toast("Réglage de la radio terminé") }
-                }
+                if (long) longSequenceRunning = false
+                // Réussite annoncée seulement si tout est passé (avant la 0.58, « terminé »
+                // s'affichait même après une interruption)
+                if (completed) ui.post { if (onDone != null) onDone() else if (long) toast("Réglage de la radio terminé") }
             }
         }
         return true
@@ -2434,7 +2438,12 @@ class MainActivity : Activity() {
             t.problem()?.let { toast(it); return }
             if (sendSteps(if (direct) t.directSteps(fromChannelMode = mode == 'M', upCode = prefs.myCallCode.ifEmpty { null },
                               memSaveDirect = fwRevision >= 27)
-                          else t.steps(fromChannelMode = mode == 'M'), restoreBeep = false)) {
+                          else t.steps(fromChannelMode = mode == 'M'), restoreBeep = false, onDone = {
+                    val code = prefs.myCallCode.ifEmpty { null }
+                    SuccessCard.show(this, "Équipe configurée",
+                        "« ${s.name} » est enregistrée dans le canal ${t.channel}." +
+                            (if (direct && code != null) "\nVotre code d'appel $code part au début de chaque émission." else ""))
+                })) {
                 toast(if (direct) "« " + s.name + " » : réglage direct de la radio (quelques secondes)…"
                       else "« " + s.name + " » : réglage de la radio, ne touchez à rien (≈ 25 s)…")
                 if (!direct && prefs.myCallCode.isNotEmpty())

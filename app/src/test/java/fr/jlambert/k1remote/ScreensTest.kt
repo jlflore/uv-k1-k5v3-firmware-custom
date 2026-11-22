@@ -56,6 +56,33 @@ class ScreensTest {
         controller.pause().stop().destroy()
     }
 
+    /** Carte de réussite par-dessus l'écran principal (animation terminée). */
+    private fun captureSuccess(name: String, label: String) {
+        RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val act = controller.get()
+        SuccessCard.show(act, "Équipe configurée", "« Équipe » est enregistrée dans le canal 1.\nVotre code d'appel A1 part au début de chaque émission.")
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1500))
+        val dm = act.resources.displayMetrics
+        val w = dm.widthPixels; val h = dm.heightPixels
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val root = act.window.decorView
+        root.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY))
+        root.layout(0, 0, w, h)
+        root.draw(c)
+        c.drawColor(android.graphics.Color.argb(110, 0, 0, 0))
+        val dlg = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        val dv = dlg.window!!.decorView
+        dv.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.AT_MOST))
+        dv.layout(0, 0, w, dv.measuredHeight)
+        c.save(); c.translate(0f, (h - dv.measuredHeight) / 2f); dv.draw(c); c.restore()
+        File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        shots += name to label
+        dlg.dismiss()
+        controller.pause().stop().destroy()
+    }
+
     /** Préférences en entier (la page défilante est dessinée sur toute sa hauteur). */
     private fun capturePrefs(name: String, label: String) {
         RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
@@ -88,6 +115,10 @@ class ScreensTest {
         for (land in listOf(false, true)) {
             prefs(ThemeId.CIEL, true, 0)
             capture("nuit_complete_${if (land) "paysage" else "portrait"}", "Nuit · complète · ${if (land) "paysage" else "portrait"}", land)
+        }
+        for ((t, night) in listOf(ThemeId.CIEL to false, ThemeId.FRANCE to false, ThemeId.CIEL to true)) {
+            prefs(t, night, 0)
+            captureSuccess("reussite_${if (night) "nuit" else t.name.lowercase()}", "Réussite · ${if (night) "Nuit" else t.label}")
         }
         for (t in listOf(ThemeId.CIEL, ThemeId.FRANCE)) {
             prefs(t, false, 0)
