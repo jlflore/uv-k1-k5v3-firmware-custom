@@ -104,6 +104,7 @@ bool KEYBOARD_ProcessProtocolByte(ParseState_t *state, uint8_t b);
 #endif
 
 KEY_Code_t KEYBOARD_Poll(void);
+KEY_Code_t KEYBOARD_PollHardware(void);   // clavier physique seul (K1 Remote)
 KEY_Code_t KEYBOARD_GetKey(void);
 
 void HideFKeyIcon(void);

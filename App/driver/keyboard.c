@@ -85,36 +85,49 @@ void KEYBOARD_RemotePttTick10ms(void)
         return;
     // En mode « une pression » (SetPTT), app.c traite quand même le PTT à distance
     // en « maintenir pour émettre ».
-    if (++gRemotePttIdle > REMOTE_PTT_IDLE_10MS ||
-        ++gRemotePttHeld > REMOTE_PTT_MAX_10MS)
+    if (++gRemotePttHeld > REMOTE_PTT_MAX_10MS)
     {
-        gRemotePttActive = false;
+        gRemotePttActive  = false;
+        gRemotePttExpired = true;      // durée maximale : il faudra relâcher avant de réémettre
+    }
+    else if (++gRemotePttIdle > REMOTE_PTT_IDLE_10MS)
+    {
+        gRemotePttActive = false;      // plus de nouvelles du téléphone
     }
 }
+
+// Après les 30 s maximum, les « maintenu » suivants sont ignorés jusqu'à un relâchement
+// explicite : un téléphone qui continue d'envoyer « maintenu » ne relance pas l'émission.
+static volatile bool gRemotePttExpired = false;
 
 static void KEYBOARD_RemotePtt(uint8_t v)
 {
     if (v == 1) {
+        if (gRemotePttExpired)
+            return;
         if (!gRemotePttActive)
             gRemotePttHeld = 0;
         gRemotePttIdle = 0;
         gRemotePttActive = true;
     } else {
-        gRemotePttActive = false;
+        gRemotePttActive  = false;
+        gRemotePttExpired = false;
     }
 }
 static   uint8_t    gSerialKeyLong      = 0;  // 0 = short press, 1 = long press
 
 // Inject a short or long press from serial (UART or VCP).
 // KEY_PTT is explicitly blocked — PTT release cannot be guaranteed over serial.
-static inline void KEYBOARD_InjectKey(uint8_t keyCode, bool keyLong)
+static inline bool KEYBOARD_InjectKey(uint8_t keyCode, bool keyLong)
 {
     if (keyCode < KEY_INVALID && keyCode != KEY_PTT) {
         gKeyFromSerial      = (KEY_Code_t)keyCode;
         gSerialQuiet10ms    = 120;     // touche du téléphone : pas de bip (appui et relâchement)
         gSerialKeyHoldCount = 0;
         gSerialKeyLong      = keyLong;
+        return true;
     }
+    return false;
 }
 
 static int32_t KEYBOARD_ReadI32Le(const uint8_t *bytes)
@@ -201,8 +214,8 @@ bool KEYBOARD_ProcessProtocolByte(ParseState_t *state, uint8_t b)
             
         case STATE_KEY_3:
         case STATE_KEY_3L:
-            KEYBOARD_InjectKey(b, state->state == STATE_KEY_3L);
-            connected = true;
+            // Seule une touche acceptée compte comme activité de l'appli
+            connected = KEYBOARD_InjectKey(b, state->state == STATE_KEY_3L);
             state->state = STATE_IDLE;
             break;
 
@@ -340,6 +353,13 @@ KEY_Code_t KEYBOARD_Poll(void)
     }
 #endif
 
+    return KEYBOARD_PollHardware();
+}
+
+// Clavier physique seul (K1 Remote : la sortie de secours du furtif profond ne doit
+// pas pouvoir être masquée par des touches envoyées par le téléphone).
+KEY_Code_t KEYBOARD_PollHardware(void)
+{
     KEY_Code_t Key = KEY_INVALID;
 
     // Scan all 5 columns - never break early to avoid GPIO state issues

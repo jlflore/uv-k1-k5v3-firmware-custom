@@ -1825,9 +1825,14 @@ void CheckKeys(void)
     // maintenue 3 s rallume l'afficheur. Une touche envoyée par l'appli ne dure jamais
     // plus de 0,4 s : seul un appui réel peut déclencher cette sortie.
     {
+        // Touche dédiée : EXIT, lue sur le clavier physique (les touches du téléphone ne peuvent
+        // ni la masquer ni la simuler). En furtif profond, EXIT physique ne fait rien d'autre :
+        // on la retire du traitement normal pour ne déclencher aucune autre fonction.
         static uint16_t stealthHold_10ms = 0;
-        if (gK1R_Stealth && Key != KEY_INVALID && Key != KEY_PTT) {
-            if (++stealthHold_10ms >= 300) {
+        if (gK1R_Stealth && KEYBOARD_PollHardware() == KEY_EXIT) {
+            if (gKeyFromSerial == KEY_INVALID)
+                Key = KEY_INVALID;
+            if (++stealthHold_10ms >= 200) {
                 stealthHold_10ms = 0;
                 K1R_SetStealth(false);
             }
@@ -1921,7 +1926,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "20"
+#define K1R_REVISION "21"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -2019,7 +2024,6 @@ static void K1R_RunCommand(void)
             uint8_t count = 0;
             while (count < 0xFE && MenuListId[count] != 0xFF) count++;   // borné
             if (c[1] < 1 || c[1] > count) { status = 2; break; }
-            gSubMenuSelection = (int32_t)(c[2] | (c[3] << 8));
             const uint8_t id = MenuListId[c[1] - 1];
             // Sécurité : jamais par commande directe ce qui efface la radio, la calibre, change
             // les bandes autorisées en émission ou touche aux mémoires (réservé au clavier).
@@ -2032,12 +2036,18 @@ static void K1R_RunCommand(void)
                 case MENU_200TX:   case MENU_350TX:   case MENU_500TX:
 #endif
                 case MENU_MEM_CH:  case MENU_DEL_CH:  case MENU_MEM_NAME:
+                case MENU_TX_LOCK:          // contournerait le plan de bandes en émission
+                case MENU_BATCAL:           // étalonnage de la batterie
+#ifdef ENABLE_FEAT_F4HWN_MULTIBOOT
+                case MENU_SET_CFG:          // changement de banque de configuration (canaux)
+#endif
                     status = 3;
                     break;
                 default:
                     break;
             }
             if (status) break;
+            gSubMenuSelection = (int32_t)(c[2] | (c[3] << 8));   // seulement après autorisation
             MENU_AcceptSettingId(id);
             // Réglage direct : rien ne « sort du menu », il faut appliquer soi-même ce que la
             // radio applique d'habitude à la sortie (éclairage, inversion/contraste de l'écran).
