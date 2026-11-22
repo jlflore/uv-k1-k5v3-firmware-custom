@@ -1,4 +1,9 @@
-# K1 Remote · version 0.56 (firmware Fusion PTT r27)
+# K1 Remote · version 0.57 (firmware Fusion PTT r27)
+
+## 0.57
+- Interface « En opération » : le bouton Puissance suit de nouveau le passage de la ligne A à la ligne B (sa grille de raccourcis n'était jamais redessinée).
+- Préférences › À propos : version, crédits (Jérôme Lambert, Claude, Armel F4HWN, ChatGPT) et usage d'Internet décrit correctement (l'ancien texte disait à tort que l'appli n'y accède pas).
+- Captures automatiques : écran des Préférences en entier ajouté.
 
 ## 0.56
 - En-tête refait, vérifié sur captures d'écran Android réelles (tous les thèmes, portrait et paysage) :

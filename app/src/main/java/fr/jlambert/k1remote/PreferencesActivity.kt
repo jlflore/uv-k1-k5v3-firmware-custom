@@ -376,10 +376,25 @@ class PreferencesActivity : Activity() {
         col.addView(button("Aide du firmware") {
             startActivity(HelpActivity.intent(this, null, p.night))
         }, lp(top = 8))
-        col.addView(text("K1 Remote · télécommande USB pour Quansheng UV-K1 / UV-K5 V3 sous firmware F4HWN Fusion. " +
-            "Aucune donnée ne quitte le téléphone : l'appli n'a pas accès à Internet.", 12f, p.muted).apply {
-            setLineSpacing(0f, 1.2f)
-        }, lp(top = 10))
+        val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: ""
+        val about = card()
+        about.setPadding(dp(16), dp(14), dp(16), dp(14))
+        about.addView(text("K1 Remote" + if (version.isNotEmpty()) "  v$version" else "", 17f, p.text, Typeface.DEFAULT_BOLD))
+        about.addView(text("Télécommande pour Quansheng UV-K1 / UV-K5 V3 sous firmware F4HWN Fusion, par câble USB ou avec le boîtier K1 Relais.",
+            13f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 4))
+        about.addView(text("CRÉDITS", 12f, p.muted, Typeface.DEFAULT_BOLD).apply { letterSpacing = 0.08f }, lp(top = 14))
+        for ((who, what) in listOf(
+            "Jérôme Lambert" to "Idée, conception, essais sur le terrain",
+            "Claude (Anthropic)" to "Développement de l'appli, du firmware Fusion PTT et du boîtier K1 Relais",
+            "Armel F4HWN" to "Firmware F4HWN, sur lequel repose Fusion PTT",
+            "ChatGPT (OpenAI)" to "Revues de code et propositions de design")) {
+            about.addView(text(who, 15f, p.text, Typeface.DEFAULT_BOLD), lp(top = 8))
+            about.addView(text(what, 13f, p.muted).apply { setLineSpacing(0f, 1.15f) })
+        }
+        about.addView(text("Internet n'est utilisé que par la carte d'équipe (positions chiffrées) et pour télécharger les fonds de carte. " +
+            "Sources publiques : github.com/jlflore/uv-k1-k5v3-firmware-custom (branches k1remote et k1remote-app).",
+            12f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 14))
+        col.addView(about, lp(top = 10))
 
         setContentView(scroll)
         scrollView = scroll

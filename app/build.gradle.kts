@@ -11,8 +11,8 @@ android {
         applicationId = "fr.jlambert.k1remote"
         minSdk = 24
         targetSdk = 35
-        versionCode = 65
-        versionName = "0.56"
+        versionCode = 66
+        versionName = "0.57"
     }
 
     buildTypes {

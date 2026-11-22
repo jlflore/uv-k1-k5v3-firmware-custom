@@ -111,6 +111,8 @@ class MainActivity : Activity() {
     /** Interface « En opération » : bande d'état et clavier replié. */
     private var opBand: TextView? = null
     private var opKeypad = false
+    private var opGrid: LinearLayout? = null
+    private var opGridL = false
     private var toastView: TextView? = null
 
     // Références de l'éditeur
@@ -1375,6 +1377,7 @@ class MainActivity : Activity() {
         }
 
         opBand = null
+        opGrid = null
         chipsHost = null
         callerPill = null
         statusPill = null; statusText = null; statusDot = null
@@ -1762,18 +1765,9 @@ class MainActivity : Activity() {
         }
         // Raccourcis : deux colonnes de gros boutons (la modification se fait dans l'interface complète)
         val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val rows = (shortcuts.size + 1) / 2
-        val rowH = dp(if (L) 38 else if (rows > 3) 42 else 46)
-        for ((r, pair) in shortcuts.chunked(2).withIndex()) {
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            for ((i, s) in pair.withIndex()) {
-                val v = chipView(s, false)
-                (v as? ViewGroup)?.let { g -> for (k in 0 until g.childCount) (g.getChildAt(k) as? TextView)?.textSize = 16f }
-                row.addView(v, LinearLayout.LayoutParams(0, -1, 1f).apply { if (i > 0) marginStart = dp(8) })
-            }
-            if (pair.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, -1, 1f).apply { marginStart = dp(8) })
-            grid.addView(row, lp(-1, rowH, top = if (r == 0) 0 else 8))
-        }
+        opGrid = grid
+        opGridL = L
+        fillOpGrid()
         val keysToggle = TextView(this).apply {
             text = if (opKeypad) "Masquer le clavier  ▴" else "⌨  Clavier de la radio  ▾"
             textSize = 14f
@@ -1984,6 +1978,29 @@ class MainActivity : Activity() {
     private fun refreshChips() {
         refreshOpBand()
         if (chipsHost != null) fillChips(landscape)
+        // Interface « En opération » : sa grille de raccourcis suit aussi la ligne active et la
+        // puissance (avant la 0.57, elle n'était dessinée qu'une fois : le bouton Puissance
+        // gardait l'ancienne ligne A ou B)
+        if (opGrid != null) fillOpGrid()
+    }
+
+    /** Grille de l'interface « En opération » : raccourcis en gros boutons sur deux colonnes. */
+    private fun fillOpGrid() {
+        val grid = opGrid ?: return
+        val L = opGridL
+        grid.removeAllViews()
+        val rows = (shortcuts.size + 1) / 2
+        val rowH = dp(if (L) 38 else if (rows > 3) 42 else 46)
+        for ((r, pair) in shortcuts.chunked(2).withIndex()) {
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            for ((i, s) in pair.withIndex()) {
+                val v = chipView(s, false)
+                (v as? ViewGroup)?.let { g -> for (k in 0 until g.childCount) (g.getChildAt(k) as? TextView)?.textSize = 16f }
+                row.addView(v, LinearLayout.LayoutParams(0, -1, 1f).apply { if (i > 0) marginStart = dp(8) })
+            }
+            if (pair.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, -1, 1f).apply { marginStart = dp(8) })
+            grid.addView(row, lp(-1, rowH, top = if (r == 0) 0 else 8))
+        }
     }
 
     private fun fillChips(L: Boolean) {

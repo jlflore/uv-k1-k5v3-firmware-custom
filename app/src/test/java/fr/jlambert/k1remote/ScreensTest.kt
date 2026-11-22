@@ -56,6 +56,27 @@ class ScreensTest {
         controller.pause().stop().destroy()
     }
 
+    /** Préférences en entier (la page défilante est dessinée sur toute sa hauteur). */
+    private fun capturePrefs(name: String, label: String) {
+        RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
+        val controller = Robolectric.buildActivity(PreferencesActivity::class.java).setup()
+        shadowOf(Looper.getMainLooper()).idle()
+        val content = controller.get().findViewById<android.view.ViewGroup>(android.R.id.content)
+        val scroll = content.getChildAt(0) as android.view.ViewGroup
+        val page = scroll.getChildAt(0)
+        val w = controller.get().resources.displayMetrics.widthPixels
+        page.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        page.layout(0, 0, w, page.measuredHeight)
+        val bmp = Bitmap.createBitmap(w, page.measuredHeight, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        scroll.background?.let { it.setBounds(0, 0, w, page.measuredHeight); it.draw(c) }
+        page.draw(c)
+        File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        shots += name to label
+        controller.pause().stop().destroy()
+    }
+
     @Test
     fun allScreens() {
         val themes = ThemeId.values().filter { it != ThemeId.NUIT }
@@ -67,6 +88,10 @@ class ScreensTest {
         for (land in listOf(false, true)) {
             prefs(ThemeId.CIEL, true, 0)
             capture("nuit_complete_${if (land) "paysage" else "portrait"}", "Nuit · complète · ${if (land) "paysage" else "portrait"}", land)
+        }
+        for (t in listOf(ThemeId.CIEL, ThemeId.FRANCE)) {
+            prefs(t, false, 0)
+            capturePrefs("preferences_${t.name.lowercase()}", "Préférences · ${t.label}")
         }
         File(out, "index.html").writeText(buildString {
             append("<!doctype html><meta charset=utf-8><title>K1 Remote — captures</title>")
