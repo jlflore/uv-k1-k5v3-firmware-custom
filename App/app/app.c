@@ -1702,7 +1702,7 @@ void StopTransmitting(void) {
 
 // called every 10ms
 #ifdef ENABLE_FEAT_F4HWN_K5VIEWER
-static void K1R_SetStealth(bool on);   // plus bas (furtif profond K1 Remote)
+void K1R_SetStealth(bool on);   // plus bas (furtif profond K1 Remote)
 #endif
 
 void CheckKeys(void)
@@ -1926,7 +1926,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "21"
+#define K1R_REVISION "22"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -1946,7 +1946,14 @@ void K1R_LinkAlive(void)
     gK1R_LinkCountdown_500ms = 12;
 }
 
-static void K1R_SetStealth(bool on)
+// Appelé toutes les 500 ms (boucle principale, et aussi depuis le spectre)
+void K1R_Tick500ms(void)
+{
+    if (gK1R_Stealth && gK1R_LinkCountdown_500ms > 0 && --gK1R_LinkCountdown_500ms == 0)
+        K1R_SetStealth(false);   // liaison perdue : l'afficheur revient
+}
+
+void K1R_SetStealth(bool on)
 {
     gK1R_Stealth = on;
     if (on) {
@@ -2377,8 +2384,7 @@ void APP_TimeSlice500ms(void)
 {
     gNextTimeslice_500ms = false;
 #ifdef ENABLE_FEAT_F4HWN_K5VIEWER
-    if (gK1R_Stealth && gK1R_LinkCountdown_500ms > 0 && --gK1R_LinkCountdown_500ms == 0)
-        K1R_SetStealth(false);   // liaison perdue : l'afficheur revient
+    K1R_Tick500ms();
 #endif
 #ifdef ENABLE_FEAT_F4HWN_ACTION_PICKER
     if (gActionPickerKey != 0 && gActionPickerTimeout_500ms > 0 &&

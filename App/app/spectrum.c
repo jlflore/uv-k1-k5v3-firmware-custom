@@ -33,6 +33,11 @@
 
 #ifdef ENABLE_FEAT_F4HWN_K5VIEWER
 #include "k5viewer.h"
+#include "driver/keyboard.h"
+// K1 Remote (app.c) : liaison avec l'appli et furtif profond, aussi pendant le spectre
+void K1R_LinkAlive(void);
+void K1R_Tick500ms(void);
+void K1R_SetStealth(bool on);
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
@@ -2468,16 +2473,53 @@ static void UpdateListening()
     redrawStatus = true;
 }
 
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+// K1 Remote : pendant le spectre, la boucle principale ne tourne plus. On répond ici à
+// l'appli : op 06 décrit le spectre affiché (pour l'aide contextuelle), op 07 garde le
+// furtif profond ; les autres commandes sont refusées (statut 4 : spectre en cours).
+static void K1R_SpectrumCommand(void)
+{
+    uint8_t c[9], n = 0;
+    if (!KEYBOARD_TakeCommand(c, &n))
+        return;
+    K1R_LinkAlive();
+    if (c[0] == 0x06) {
+        const uint32_t f  = currentFreq;
+        const uint32_t pf = peak.f;
+        const uint16_t st = GetScanStep();
+        const uint16_t cnt = GetStepsCount();
+        // 06 0 F0 état manuel écoute modulation bandeÉcoute | f(4) | pas(2) | points(2) | pic(4) | dbMin dbMax | seuil(2)
+        const uint8_t d[24] = { 0x06, 0, 0xF0, (uint8_t)currentState, manualSetFlag, isListening,
+            (uint8_t)settings.modulationType, (uint8_t)settings.listenBw,
+            (uint8_t)f, (uint8_t)(f >> 8), (uint8_t)(f >> 16), (uint8_t)(f >> 24),
+            (uint8_t)st, (uint8_t)(st >> 8), (uint8_t)cnt, (uint8_t)(cnt >> 8),
+            (uint8_t)pf, (uint8_t)(pf >> 8), (uint8_t)(pf >> 16), (uint8_t)(pf >> 24),
+            (uint8_t)(int8_t)settings.dbMin, (uint8_t)(int8_t)settings.dbMax,
+            (uint8_t)settings.rssiTriggerLevel, (uint8_t)(settings.rssiTriggerLevel >> 8) };
+        K5VIEWER_SendReply(d, sizeof(d));
+        return;
+    }
+    uint8_t r[2] = { c[0], 4 };
+    if (c[0] == 0x07 && n >= 2) { K1R_SetStealth(c[1] != 0); r[1] = 0; }
+    K5VIEWER_SendReply(r, sizeof(r));
+}
+#endif
+
 static void Tick()
 {
 #ifdef ENABLE_FEAT_F4HWN_K5VIEWER
     // Parse incoming packets on every tick so serial keys are never missed,
     // regardless of whether the screen needs redrawing.
     K5VIEWER_ParseInput();
+    K1R_SpectrumCommand();
 #endif
 
     if (gNextTimeslice)
     {
+#ifdef ENABLE_FEAT_F4HWN_K5VIEWER
+        static uint8_t k1r10ms = 0;
+        if (++k1r10ms >= 50) { k1r10ms = 0; K1R_Tick500ms(); }   // sécurité du furtif profond
+#endif
         gNextTimeslice = false;
         BACKLIGHT_Update();
     }
