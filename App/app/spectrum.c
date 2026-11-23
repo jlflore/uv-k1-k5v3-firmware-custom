@@ -39,6 +39,10 @@ void K1R_LinkAlive(void);
 void K1R_Tick500ms(void);
 void K1R_SetStealth(bool on);
 void K1R_BuildStatus(uint8_t *d, bool inSpectrum);
+extern volatile bool gK1R_Stealth;
+#include "app/menu.h"
+#include "ui/menu.h"
+#include "driver/st7565.h"
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
@@ -2478,6 +2482,58 @@ static void UpdateListening()
 // K1 Remote : pendant le spectre, la boucle principale ne tourne plus. On répond ici à
 // l'appli : op 06 décrit le spectre affiché (pour l'aide contextuelle), op 07 garde le
 // furtif profond ; les autres commandes sont refusées (statut 4 : spectre en cours).
+/* r29 : réglage de menu reçu pendant le spectre. Liste blanche fermée, par identifiant MENU_*
+ * (pas par position) : éclairage (36 BLTime, 38 BLMax, 39 BLTxRx), inversion (60 SetInv) et
+ * bip (40 Beep). Bornes contrôlées, refus hors bornes (jamais de correction silencieuse).
+ * Statuts : 0 accepté, 1 trame trop courte, 2 n° ou valeur hors bornes, 4 menu refusé pendant le
+ * spectre. L'enregistrement en EEPROM est différé : MENU_AcceptSettingId lève gRequestSaveSettings,
+ * que la boucle principale traite au retour du spectre. */
+static uint8_t K1R_SpectrumSetting(const uint8_t *c, uint8_t n)
+{
+    if (n < 4)
+        return 1;
+    uint8_t count = 0;
+    while (count < 0xFE && MenuListId[count] != 0xFF) count++;
+    if (c[1] < 1 || c[1] > count)
+        return 2;
+    const uint8_t id = MenuListId[c[1] - 1];
+    switch (id) {
+        case MENU_ABR:
+        case MENU_ABR_MAX:
+        case MENU_ABR_ON_TX_RX:
+        case MENU_BEEP:
+#ifdef ENABLE_FEAT_F4HWN
+        case MENU_SET_INV:
+#endif
+            break;
+        default:
+            return 4;
+    }
+    const int32_t v = (int32_t)(c[2] | (c[3] << 8));
+    int32_t mn = 0, mx = 0;
+    if (MENU_GetLimits(id, &mn, &mx) != 0 || v < mn || v > mx)
+        return 2;
+    gSubMenuSelection = v;
+    MENU_AcceptSettingId(id);
+
+    // Effets propres au spectre : il gère lui-même son éclairage (settings.backlightState).
+    // « Écran éteint » (BLTime = OFF) : luminosité vraiment à 0, et pas BACKLIGHT_MIN, qui peut ne
+    // pas être nul (BACKLIGHT_TurnOff n'est volontairement pas modifiée). Furtif profond prioritaire.
+    if (id == MENU_ABR || id == MENU_ABR_MAX || id == MENU_ABR_ON_TX_RX) {
+        settings.backlightState = gEeprom.BACKLIGHT_TIME != 0;
+        BACKLIGHT_SetBrightness((settings.backlightState && !gK1R_Stealth) ? gEeprom.BACKLIGHT_MAX : 0);
+    }
+#ifdef ENABLE_FEAT_F4HWN
+    if (id == MENU_SET_INV) {
+#if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
+        ST7565_ContrastAndInv();
+#endif
+        ST7565_ApplyDisplayOnOff();      // ne rallume pas l'écran en furtif profond
+    }
+#endif
+    return 0;
+}
+
 static void K1R_SpectrumCommand(void)
 {
     uint8_t c[9], n = 0;
@@ -2498,6 +2554,12 @@ static void K1R_SpectrumCommand(void)
             (uint8_t)(int8_t)settings.dbMin, (uint8_t)(int8_t)settings.dbMax,
             (uint8_t)settings.rssiTriggerLevel, (uint8_t)(settings.rssiTriggerLevel >> 8) };
         K5VIEWER_SendReply(d, sizeof(d));
+        return;
+    }
+    if (c[0] == 0x01) {
+        // r29 : réglages d'éclairage pendant le spectre (Écran éteint, Furtif de K1 Remote)
+        const uint8_t r1[2] = { 0x01, K1R_SpectrumSetting(c, n) };
+        K5VIEWER_SendReply(r1, sizeof(r1));
         return;
     }
     if (c[0] == 0x09) {
