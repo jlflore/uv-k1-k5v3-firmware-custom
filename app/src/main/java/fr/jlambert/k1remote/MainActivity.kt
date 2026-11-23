@@ -1202,7 +1202,15 @@ class MainActivity : Activity() {
     /** « F 🔒 » : plus court que l'étiquette normale, donc tient toujours dans la touche. */
     private fun lockedLabel(k: KeyDef): CharSequence = SpannableStringBuilder().apply {
         append(k.main, StyleSpan(Typeface.BOLD), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        append("  🔒")
+        if (p.night) {
+            // Mode nuit / furtif : pas d'emoji jaune (point lumineux), une mention dans le rouge du thème
+            append("  ")
+            val st = length
+            append("VERROU")
+            setSpan(RelativeSizeSpan(0.55f), st, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(StyleSpan(Typeface.BOLD), st, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(ForegroundColorSpan(p.accentText), st, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        } else append("  🔒")
     }
 
     /** « Mes canaux » › Passer la radio sur ce canal : mêmes touches que le raccourci « Aller à un canal ». */

@@ -3,6 +3,7 @@
 ## 0.65-essai
 - Témoin du raccourci Furtif : allumé aussi pour le furtif de l'appli (réglages de menus). Il ne suivait que le furtif profond du firmware (écran entièrement noir), d'où un bouton Furtif qui restait éteint alors que le mode était actif.
 - Toutes les fonctions qui restent actives ont leur témoin : Écran éteint, Furtif, Verrou, Scan, Spectre, et désormais Inv. relais (lu dans l'état 0x09 de la ligne active) et Radio FM (écran FM affiché, commande 06, lue seulement si un raccourci Radio FM existe). En furtif comme en jour.
+- Touche F verrouillée en mode nuit / furtif : « F VERROU » dans le rouge du thème au lieu du cadenas jaune, qui faisait un point lumineux.
 - Règle des témoins isolée (ShortcutStates) et contrôlée dans ses 816 combinaisons d'entrées (ShortcutStatesTest) ; captures avec les 7 témoins allumés (jour, camouflage, nuit/furtif, interfaces complète et en opération).
 
 ## 0.64-essai
