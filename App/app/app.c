@@ -1931,7 +1931,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "28"
+#define K1R_REVISION "29"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -2098,11 +2098,39 @@ static void K1R_StatusLine(uint8_t *o, uint8_t i)
     o[7] = power; o[8] = mod; o[9] = width; o[10] = flags; o[11] = list;
 }
 
-static void K1R_SendStatus(void)
+/* Sous-canal (r29, format 2) : type 0 aucun, 1 CTCSS, 2 DCS N, 3 DCS I, 0xFF inconnu ;
+ * valeur CTCSS en dixièmes de Hz, DCS = code octal pris comme entier (D023 → 0x0013).
+ * L'indice est vérifié AVANT toute lecture de table. */
+static void K1R_StatusTone(uint8_t *o, const FREQ_Config_t *fc)
 {
-    uint8_t d[32];
-    memset(d, 0, sizeof(d));
-    d[0] = 0x09; d[1] = 0; d[2] = 1;
+    uint8_t  type = 0xFF;
+    uint16_t val  = 0xFFFF;
+    switch (fc->CodeType) {
+        case CODE_TYPE_OFF:
+            type = 0; val = 0;
+            break;
+        case CODE_TYPE_CONTINUOUS_TONE:
+            type = 1;
+            if (fc->Code < ARRAY_SIZE(CTCSS_Options)) val = CTCSS_Options[fc->Code];
+            break;
+        case CODE_TYPE_DIGITAL:
+        case CODE_TYPE_REVERSE_DIGITAL:
+            type = (fc->CodeType == CODE_TYPE_DIGITAL) ? 2 : 3;
+            if (fc->Code < DCS_OPTION_COUNT) val = DCS_GetOption(fc->Code);
+            break;
+        default:
+            break;
+    }
+    o[0] = type;
+    o[1] = (uint8_t)val; o[2] = (uint8_t)(val >> 8);
+}
+
+/* Construit la réponse 0x09 au format 2 (48 octets) ; les 32 premiers ont le sens du format 1.
+ * Contexte explicite : inSpectrum = appelé depuis la boucle du spectre (APP_RunSpectrum). */
+void K1R_BuildStatus(uint8_t *d, bool inSpectrum)
+{
+    memset(d, 0, 48);
+    d[0] = 0x09; d[1] = 0; d[2] = 2;
     d[3] = gEeprom.TX_VFO ? 1 : 0;
 
     uint8_t flags = 0;
@@ -2131,6 +2159,8 @@ static void K1R_SendStatus(void)
     }
     if ((fn == 0 || fn == 4) && gScanStateDir != SCAN_OFF)
         fn = 5;                                                // balayage en cours
+    if (inSpectrum)
+        fn = 5;                                                // appli spectre : information sûre
     d[5] = fn;
 
     K1R_StatusLine(&d[6], 0);
@@ -2139,7 +2169,7 @@ static void K1R_SendStatus(void)
     // Ligne en réception : d'après l'adresse réelle de la ligne écoutée (gRxVfo), pas RX_VFO,
     // que la veille étendue et les applis en surimpression peuvent rendre trompeur.
     uint8_t rx = 0xFF;
-    if (fn == 2 || fn == 3) {
+    if (!inSpectrum && (fn == 2 || fn == 3)) {
         if (gRxVfo == &gEeprom.VfoInfo[0]) rx = 0;
         else if (gRxVfo == &gEeprom.VfoInfo[1]) rx = 1;
 #ifdef ENABLE_FEAT_F4HWN_FULL_WATCH
@@ -2149,6 +2179,27 @@ static void K1R_SendStatus(void)
     }
     d[30] = rx;
     d[31] = 0;
+
+    // ---- Format 2 ----
+    // Octet 32 : bit 0 réservé (radio FM : appli en surimpression dans Fusion, non observable),
+    //            bit 1 = appli spectre active.
+    d[32] = inSpectrum ? 0x02 : 0x00;
+    for (uint8_t i = 0; i < 2; i++) {
+        uint8_t *o = &d[33 + i * 6];
+        if (d[6 + i * 12] == 0xFF) {            // ligne de type inconnu : sous-canaux inconnus
+            o[0] = 0xFF; o[1] = 0xFF; o[2] = 0xFF; o[3] = 0xFF; o[4] = 0xFF; o[5] = 0xFF;
+            continue;
+        }
+        K1R_StatusTone(&o[0], &gEeprom.VfoInfo[i].freq_config_RX);
+        K1R_StatusTone(&o[3], &gEeprom.VfoInfo[i].freq_config_TX);
+    }
+    // 45 à 47 : réservés, 0
+}
+
+static void K1R_SendStatus(void)
+{
+    uint8_t d[48];
+    K1R_BuildStatus(d, false);
     K5VIEWER_SendReply(d, sizeof(d));
 }
 
@@ -2327,7 +2378,7 @@ static void K1R_RunCommand(void)
     // Présence : « K1R », version du protocole, modèle (selon SetNav : 0 = UV-K1, 1 = UV-K5 V3),
     // puis la version du firmware (ex. « v7.0.0 »)
     // 24 octets : « v7.0.0 r23 » (10 caractères) dépassait l'ancien tampon de 16 → « r2 »
-    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 3, gEeprom.SET_NAV ? 1 : 0 };   // protocole 3 : 0x09 disponible (r28)
+    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 4, gEeprom.SET_NAV ? 1 : 0 };   // protocole 4 : 0x09 format 2 (r29)
     uint8_t len = 2;
     if (c[0] == 0x04) {
         len = 7;

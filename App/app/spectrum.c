@@ -38,6 +38,7 @@
 void K1R_LinkAlive(void);
 void K1R_Tick500ms(void);
 void K1R_SetStealth(bool on);
+void K1R_BuildStatus(uint8_t *d, bool inSpectrum);
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN_SPECTRUM
@@ -2496,6 +2497,13 @@ static void K1R_SpectrumCommand(void)
             (uint8_t)pf, (uint8_t)(pf >> 8), (uint8_t)(pf >> 16), (uint8_t)(pf >> 24),
             (uint8_t)(int8_t)settings.dbMin, (uint8_t)(int8_t)settings.dbMax,
             (uint8_t)settings.rssiTriggerLevel, (uint8_t)(settings.rssiTriggerLevel >> 8) };
+        K5VIEWER_SendReply(d, sizeof(d));
+        return;
+    }
+    if (c[0] == 0x09) {
+        // r29 : état de la radio aussi pendant le spectre (fonction 5, octet 32 bit 1)
+        uint8_t d[48];
+        K1R_BuildStatus(d, true);
         K5VIEWER_SendReply(d, sizeof(d));
         return;
     }
