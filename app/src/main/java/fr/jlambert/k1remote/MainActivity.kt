@@ -972,7 +972,7 @@ class MainActivity : Activity() {
             // on vérifiera de nouveau son firmware à la première image.
             direct = false
             radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false)
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null
             lastProbeAt = 0L
             watcherFor = null
             lcd.placeholder = "Allumez la radio et branchez-la sur le boîtier"
@@ -1289,6 +1289,8 @@ class MainActivity : Activity() {
     // ---- 0.72 : éclairage lu dans la radio (firmware r31, protocole 6) ----
     @Volatile private var startupReading = false
     @Volatile private var lightsReadAt = 0L
+    /** 0.74 (r32) : liste de scan par défaut lue dans la radio (1..24, 25 ALL, 26 MIX) ; null = inconnue. */
+    @Volatile private var radioScanList: Int? = null
 
     /** Écran de démarrage : spinner sur la vitre, touches et PTT de l'appli bloqués (3 s au plus). */
     private fun setStartupReading(on: Boolean) {
@@ -1312,9 +1314,15 @@ class MainActivity : Activity() {
         val now = System.currentTimeMillis()
         if (!startupReading && (!resumed || now - lightsReadAt < 15_000)) return
         lightsReadAt = now
-        val raw = request(c, RadioSettings.request(RadioSettings.LIGHTS), 800)
-        val r = raw?.let { RadioSettings.decode(it, RadioSettings.LIGHTS) } as? RadioSettings.Result.Ok
+        val asked = RadioSettings.backgroundReads(fwProtocol)
+        val raw = request(c, RadioSettings.request(asked), 800)
+        val r = raw?.let { RadioSettings.decode(it, asked) } as? RadioSettings.Result.Ok
         val values = r?.entries?.associate { it.position to (it.value as? RadioSettings.Value.Num)?.v }
+        // r32 : liste de scan réglée (bouton Scan) ; inconnue si absente ou illisible
+        if (fwProtocol >= RadioSettings.PROTOCOL_SCANLIST) {
+            val scan = values?.get(RadioSettings.SCAN_LIST)
+            if (scan != radioScanList) { radioScanList = scan; ui.post { if (cdc === c && editor == null) buildUi() } }
+        }
         val radioStealth = synchronized(rstate) { rstate.snapshot }?.stealth == true
         val dark = LightPlan.screenDarkFromRadio(values?.get(RadioSettings.BL_TIME), values?.get(RadioSettings.BL_TXRX),
             stealth = prefs.stealth || radioStealth)
@@ -1597,7 +1605,7 @@ class MainActivity : Activity() {
         synchronized(rstate) { rstate.reset() }
         lastStatusAt = 0L
         radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false)
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null
         lastProbeAt = 0L
         parser.reset()
         lastFlags = 0
@@ -2489,7 +2497,9 @@ class MainActivity : Activity() {
                 box.addView(text("●", if (L) 9f else 10f, p.accentText, Typeface.DEFAULT_BOLD),
                     LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(4) })
             }
-            box.addView(text((if (editMode) "✎ " else "") + s.name, if (L) 11f else 12f,
+            // 0.74 : la liste de scan réglée s'affiche sur le bouton Scan (lue avec le firmware r32)
+            val scanTag = if (s.isScan && !editMode) radioScanList?.let { " · " + RadioSettings.scanShort(it) } ?: "" else ""
+            box.addView(text((if (editMode) "✎ " else "") + s.name + scanTag, if (L) 11f else 12f,
                 if (darkOn) p.accentText else p.chipText, Typeface.DEFAULT_BOLD).apply {
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
@@ -2505,6 +2515,7 @@ class MainActivity : Activity() {
             }
         }
         if (s.isPower && !helpMode && !editMode) attachPowerPicker(box)
+        else if (s.isScan && !helpMode && !editMode) attachScanPicker(box)
         else slowLongPress(box) {
             longPressFeedback(it)
             if (helpMode) openSheet("sc:" + s.id) else openSheet("act:" + s.id)
@@ -2559,6 +2570,58 @@ class MainActivity : Activity() {
         }
     }
 
+    /**
+     * Colonne « glisser » sous le doigt, commune à la puissance et aux listes de scan (0.74).
+     * [labels] de haut en bas ; [current] = ligne placée sous le doigt à l'ouverture.
+     */
+    private class DragSpec(
+        val labels: List<String>,
+        val current: Int,
+        val style: (TextView, Int, Boolean) -> Unit,
+        val apply: (Int) -> Unit,
+        val widthDp: Int = 196)
+
+    private var dragSpec: DragSpec? = null
+
+    /**
+     * Appui long = colonne ; appui bref = clic normal du bouton. [spec] peut renvoyer null : il a
+     * alors affiché autre chose (message, fenêtre) et le relâchement ne fait rien de plus.
+     */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun attachDragPicker(v: View, spec: () -> DragSpec?) {
+        var fired = false
+        var picking = false
+        var downX = 0f; var downY = 0f; var rawX = 0f; var rawY = 0f
+        val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop.toFloat()
+        val open = Runnable {
+            fired = true
+            v.isPressed = false
+            longPressFeedback(v)
+            picking = spec()?.let { showDragPicker(it, rawX, rawY) } ?: false
+            if (picking) v.parent?.requestDisallowInterceptTouchEvent(true)
+        }
+        v.setOnTouchListener { _, ev ->
+            rawX = ev.rawX; rawY = ev.rawY
+            when (ev.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> { fired = false; picking = false; downX = ev.x; downY = ev.y; v.postDelayed(open, LONG_PRESS_MS) }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    if (picking) { moveDragPicker(ev.rawY); return@setOnTouchListener true }
+                    if (Math.abs(ev.x - downX) > slop || Math.abs(ev.y - downY) > slop) v.removeCallbacks(open)
+                }
+                android.view.MotionEvent.ACTION_UP -> {
+                    v.removeCallbacks(open)
+                    if (picking) { picking = false; releaseDragPicker(true); return@setOnTouchListener true }
+                    if (fired) { v.isPressed = false; return@setOnTouchListener true }
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    v.removeCallbacks(open)
+                    if (picking) { picking = false; releaseDragPicker(false); return@setOnTouchListener true }
+                }
+            }
+            false
+        }
+    }
+
     // ---- Puissance « glisser » : appui long sur le raccourci Puissance ----
     // Une petite colonne de puissances s'ouvre sous le doigt ; on glisse sans lâcher jusqu'à la
     // puissance voulue, qui clignote quand on lève le doigt ; la colonne se ferme et la radio change.
@@ -2570,39 +2633,15 @@ class MainActivity : Activity() {
     private var pickerTop = 0f
     private var pickerItemH = 1
 
-    @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private fun attachPowerPicker(v: View) {
-        var fired = false
-        var picking = false
-        var downX = 0f; var downY = 0f; var rawX = 0f; var rawY = 0f
-        val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop.toFloat()
-        val open = Runnable {
-            fired = true
-            v.isPressed = false
-            longPressFeedback(v)
-            picking = showPowerPicker(rawX, rawY)
-            if (picking) v.parent?.requestDisallowInterceptTouchEvent(true)
-        }
-        v.setOnTouchListener { _, ev ->
-            rawX = ev.rawX; rawY = ev.rawY
-            when (ev.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> { fired = false; picking = false; downX = ev.x; downY = ev.y; v.postDelayed(open, LONG_PRESS_MS) }
-                android.view.MotionEvent.ACTION_MOVE -> {
-                    if (picking) { movePowerPicker(ev.rawY); return@setOnTouchListener true }
-                    if (Math.abs(ev.x - downX) > slop || Math.abs(ev.y - downY) > slop) v.removeCallbacks(open)
-                }
-                android.view.MotionEvent.ACTION_UP -> {
-                    v.removeCallbacks(open)
-                    if (picking) { picking = false; releasePowerPicker(true); return@setOnTouchListener true }
-                    if (fired) { v.isPressed = false; return@setOnTouchListener true }
-                }
-                android.view.MotionEvent.ACTION_CANCEL -> {
-                    v.removeCallbacks(open)
-                    if (picking) { picking = false; releasePowerPicker(false); return@setOnTouchListener true }
-                }
-            }
-            false
-        }
+    private fun attachPowerPicker(v: View) = attachDragPicker(v) {
+        val cur = powerLevels.indexOf(reading.mainPower ?: "").let { if (it < 0) 2 else it }
+        // HIGH en haut, LOW 1 en bas : on monte pour plus de puissance
+        val order = powerLevels.indices.reversed().toList()
+        DragSpec(
+            labels = order.map { i -> ScreenReader.pretty(powerLevels[i]).let { n -> n + "  ·  " + RadioMemory.powerWatts(n) } },
+            current = order.indexOf(cur),
+            style = { t, k, on -> stylePickerItem(t, powerLevels[order[k]], on) },
+            apply = { k -> applyPower(order[k]) })
     }
 
     private fun stylePickerItem(t: TextView, level: String, on: Boolean) {
@@ -2614,26 +2653,32 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showPowerPicker(rawX: Float, rawY: Float): Boolean {
-        if (picker != null) return false
-        val cur = powerLevels.indexOf(reading.mainPower ?: "").let { if (it < 0) 2 else it }
+    /** Ligne choisie d'une colonne sans code couleur propre (listes de scan) : pastille du thème. */
+    private fun styleAccentItem(t: TextView, on: Boolean) {
+        if (on) {
+            t.background = Ui.shape(this, p.accentBg, 12f, p.accentBorder)
+            t.setTextColor(p.accentText); t.textSize = 17f
+        } else { t.background = null; t.setTextColor(p.text); t.textSize = 15f }
+    }
+
+    private fun showDragPicker(spec: DragSpec, rawX: Float, rawY: Float): Boolean {
+        if (picker != null || spec.labels.isEmpty()) return false
         val itemH = dp(46)
         val pad = dp(5)
-        val w = dp(196)
+        val w = dp(spec.widthDp)
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad, pad, pad)
             background = Ui.shape(this@MainActivity, p.surface, 18f, p.border, 1.5f)
             elevation = dp(14).toFloat()
         }
-        // HIGH en haut, LOW 1 en bas : on monte pour plus de puissance
-        val order = powerLevels.indices.reversed().toList()
-        val items = order.map { i ->
-            val name = ScreenReader.pretty(powerLevels[i])
+        val items = spec.labels.map { label ->
             TextView(this).apply {
-                text = name + "  ·  " + RadioMemory.powerWatts(name)
+                text = label
                 gravity = Gravity.CENTER
                 typeface = Typeface.DEFAULT_BOLD
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
                 setTextColor(p.text)
             }
         }
@@ -2641,46 +2686,103 @@ class MainActivity : Activity() {
         val totalH = itemH * items.size + 2 * pad
         val loc = IntArray(2)
         overlay.getLocationOnScreen(loc)
-        val row = order.indexOf(cur)
+        val row = spec.current.coerceIn(0, items.size - 1)
         val top = (rawY - loc[1] - pad - row * itemH - itemH / 2f).toInt().coerceIn(0, maxOf(0, overlay.height - totalH))
         val left = (rawX - loc[0] - w / 2f).toInt().coerceIn(0, maxOf(0, overlay.width - w))
         overlay.addView(box, FrameLayout.LayoutParams(w, totalH).apply { leftMargin = left; topMargin = top })
         picker = box
+        dragSpec = spec
         pickerItems = items
         pickerTop = (loc[1] + top + pad).toFloat()
         pickerItemH = itemH
         pickerSel = row
-        items.forEachIndexed { k, t -> stylePickerItem(t, powerLevels[order[k]], k == row) }
+        items.forEachIndexed { k, t -> spec.style(t, k, k == row) }
         return true
     }
 
-    private fun movePowerPicker(rawY: Float) {
+    private fun moveDragPicker(rawY: Float) {
+        val spec = dragSpec ?: return
         if (picker == null) return
         val row = Math.floor(((rawY - pickerTop) / pickerItemH).toDouble()).toInt().coerceIn(0, pickerItems.size - 1)
         if (row == pickerSel) return
-        val order = powerLevels.indices.reversed().toList()
-        stylePickerItem(pickerItems[pickerSel], powerLevels[order[pickerSel]], false)
+        spec.style(pickerItems[pickerSel], pickerSel, false)
         pickerSel = row
-        stylePickerItem(pickerItems[row], powerLevels[order[row]], true)
+        spec.style(pickerItems[row], row, true)
         picker?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
 
-    private fun releasePowerPicker(apply: Boolean) {
+    private fun releaseDragPicker(apply: Boolean) {
         val box = picker ?: return
-        if (!apply) { overlay.removeView(box); picker = null; return }
-        val order = powerLevels.indices.reversed().toList()
-        val target = order[pickerSel]
-        val item = pickerItems[pickerSel]
+        val spec = dragSpec
+        if (!apply || spec == null) { overlay.removeView(box); picker = null; dragSpec = null; return }
+        val chosen = pickerSel
+        val item = pickerItems[chosen]
         var n = 0
-        // La puissance choisie clignote trois fois, puis la colonne se ferme et la radio change
+        // Le choix clignote trois fois, puis la colonne se ferme et la radio change
         ui.post(object : Runnable {
             override fun run() {
                 n++
                 item.alpha = if (n % 2 == 1) 0.15f else 1f
                 if (n < 6) ui.postDelayed(this, 90)
-                else { overlay.removeView(box); picker = null; applyPower(target) }
+                else { overlay.removeView(box); picker = null; dragSpec = null; spec.apply(chosen) }
             }
         })
+    }
+
+    // ---- 0.74 : listes de scan « glisser » : appui long sur le raccourci Scan ----
+
+    private fun attachScanPicker(v: View) = attachDragPicker(v) { scanSpec() }
+
+    /** Colonne des listes de scan, ou null après avoir expliqué pourquoi elle ne s'ouvre pas. */
+    private fun scanSpec(): DragSpec? {
+        val c = cdc
+        if (c == null || (c is BleLink && !relayRadio)) { toast("Radio non connectée"); return null }
+        if (!direct) { toast("Choix de la liste de scan : il faut le firmware Fusion PTT"); return null }
+        val kind = synchronized(rstate) { rstate.snapshot }?.selectedLine?.kind
+        val channelMode = kind?.let { it == RadioStatus.LineKind.MEMORY } ?: (live.mainMode == 'M')
+        if (!channelMode) { toast("Listes de scan : passez la ligne active en mode canal"); return null }
+        val last = RadioMemory.list(this).firstOrNull()
+        val mem = last?.let { runCatching { RadioMemory.load(it) }.getOrNull() }
+        if (mem == null) {
+            ChoiceSheet.show(this, "Listes de scan",
+                "Pour proposer vos listes avec leur nom, l'appli a besoin des canaux de la radio. Lisez-les une fois : quelques secondes par câble.",
+                listOf(ChoiceSheet.Option("⇩", "Lire la radio", "Puis refaites un appui long sur Scan", primary = true) { startMemoryRead(c) }),
+                "Annuler")
+            return null
+        }
+        val used = mem.channels().map { it.scanList }.filter { it in 1..24 }.toSet()
+        val cur = radioScanList
+        val choices = RadioSettings.scanChoices(used, cur)
+        fun label(v: Int) = when (v) {
+            RadioSettings.SCAN_ALL -> "ALL · toutes les listes"
+            RadioSettings.SCAN_MIX -> "MIX · listes combinées"
+            else -> "L$v" + (mem.listName(v)?.let { " · $it" } ?: "")
+        }
+        return DragSpec(
+            labels = choices.map { label(it) },
+            current = cur?.let { choices.indexOf(it) }?.takeIf { it >= 0 } ?: 0,
+            style = { t, _, on -> styleAccentItem(t, on) },
+            apply = { k -> applyScanList(choices[k], label(choices[k])) },
+            widthDp = 220)
+    }
+
+    /** Captures automatiques uniquement : ouvre la colonne des listes de scan au centre de l'écran. */
+    internal fun captureScanPicker(labels: List<String>, current: Int) {
+        val loc = IntArray(2); overlay.getLocationOnScreen(loc)
+        showDragPicker(DragSpec(labels, current, { t, _, on -> styleAccentItem(t, on) }, {}, 220),
+            loc[0] + overlay.width / 2f, loc[1] + overlay.height * 0.55f)
+    }
+
+    private fun applyScanList(v: Int, label: String) {
+        if (v == radioScanList) return
+        if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); return }
+        if (sendSteps(listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(RadioSettings.SCAN_LIST, v))), onDone = {
+                // Relue dans la radio pour confirmer (r32) ; sinon, on affiche ce qui a été accepté
+                if (fwProtocol < RadioSettings.PROTOCOL_SCANLIST) radioScanList = v
+                lightsReadAt = 0L
+                toast("Liste de scan : $label")
+                if (editor == null) buildUi()
+            })) Journal.add("Appli : liste de scan → $label")
     }
 
     private fun applyPower(target: Int) {

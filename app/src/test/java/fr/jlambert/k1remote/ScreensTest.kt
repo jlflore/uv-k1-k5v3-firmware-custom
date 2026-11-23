@@ -152,6 +152,9 @@ class ScreensTest {
                 ChoiceSheet.Option("✎", "Nommer", "Ex. Airsoft, Écoute aviation…") {},
                 ChoiceSheet.Option("✕", "Supprimer", "Efface le fichier du téléphone, la radio n'est pas concernée", danger = true) {}), "Retour")
         }
+        captureDialog("scan_listes_$tag", "Appui long sur Scan · $label") { act ->
+            act.captureScanPicker(listOf("ALL · toutes les listes", "L1 · EQUI", "L2 · AIR", "L5 · PMR"), 1)
+        }
         captureDialog("demarrage_$tag", "Lecture de l'état à la connexion · $label") { act ->
             val f = MainActivity::class.java.getDeclaredField("lcd").apply { isAccessible = true }
             (f.get(act) as LcdView).busyText = "Lecture de l'état de la radio…"

@@ -95,6 +95,7 @@ class Shortcut(
     var team: TeamProfile? = null
 ) {
     val isPower: Boolean get() = type == "action" && action == "power"
+    val isScan: Boolean get() = type == "action" && action == "scan"
 
     fun copy(): Shortcut = Shortcut(id, name, type, action, menu, value, channel, seq.toMutableList(), team?.copy2())
 

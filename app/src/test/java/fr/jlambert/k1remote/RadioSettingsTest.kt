@@ -150,6 +150,20 @@ class RadioSettingsTest {
         assertTrue(!RadioSettings.applies(r.copy(key = null), snap, now = 2_000))                               // lecture non validée
     }
 
+    /** 0.74 : choix de l'appui long sur Scan, et réglages relus selon le firmware. */
+    @Test fun listes_de_scan_proposees() {
+        assertEquals(listOf(25, 1, 3, 7), RadioSettings.scanChoices(listOf(7, 3, 1, 3, 0, 25), current = 3))
+        assertEquals(listOf(25, 2, 26), RadioSettings.scanChoices(listOf(2), current = 26))     // MIX seulement s'il est réglé
+        assertEquals(listOf(25, 2, 9), RadioSettings.scanChoices(listOf(2), current = 9))       // liste réglée mais vide : montrée
+        assertEquals(listOf(25), RadioSettings.scanChoices(emptyList(), current = null))
+        assertEquals("ALL", RadioSettings.scanShort(25)); assertEquals("L4", RadioSettings.scanShort(4)); assertEquals("MIX", RadioSettings.scanShort(26))
+        assertEquals(emptyList<Int>(), RadioSettings.backgroundReads(5))
+        assertEquals(listOf(36, 39), RadioSettings.backgroundReads(6))
+        assertEquals(listOf(36, 39, 18), RadioSettings.backgroundReads(7))
+        assertTrue(RadioSettings.backgroundReads(7).size <= RadioSettings.MAX_PER_REQUEST)
+        assertTrue(RadioSettings.SCAN_LIST !in RadioSettings.WHITELIST)   // pas un réglage d'équipe
+    }
+
     /** 0.73 : seuls les envois qui peuvent toucher un réglage d'équipe effacent la lecture 0x0A. */
     @Test fun envois_qui_effacent_la_lecture() {
         fun set(menu: Int, v: Int) = KeyStep("CMD", false, K5ViewerProtocol.setMenu(menu, v))

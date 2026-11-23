@@ -29,6 +29,31 @@ object RadioSettings {
     const val BL_TXRX = 39
     const val PROTOCOL_LIGHTS = 6
     val LIGHTS = listOf(BL_TIME, BL_TXRX)
+    // r32 (protocole 7) : liste de scan par défaut (menu 18 ScList) ; 1..24, 25 ALL, 26 MIX
+    const val SCAN_LIST = 18
+    const val PROTOCOL_SCANLIST = 7
+    const val SCAN_ALL = 25
+    const val SCAN_MIX = 26
+
+    /** Réglages relus avec l'éclairage, selon le protocole du firmware. */
+    fun backgroundReads(protocol: Int): List<Int> = when {
+        protocol >= PROTOCOL_SCANLIST -> LIGHTS + SCAN_LIST
+        protocol >= PROTOCOL_LIGHTS -> LIGHTS
+        else -> emptyList()
+    }
+
+    /**
+     * 0.74 : choix proposés par l'appui long sur Scan, de haut en bas. ALL, puis les listes qui
+     * contiennent des canaux (d'après la dernière sauvegarde), puis MIX seulement si la radio y est
+     * déjà réglée. [used] = numéros 1..24 utilisés ; [current] = valeur lue (null : inconnue).
+     */
+    fun scanChoices(used: Collection<Int>, current: Int?): List<Int> =
+        listOf(SCAN_ALL) + used.filter { it in 1..24 }.distinct().sorted() +
+            (if (current == SCAN_MIX) listOf(SCAN_MIX) else emptyList()) +
+            (if (current != null && current in 1..24 && current !in used) listOf(current) else emptyList())
+
+    /** Libellé court (bouton) d'une liste de scan. */
+    fun scanShort(v: Int): String = when (v) { SCAN_ALL -> "ALL"; SCAN_MIX -> "MIX"; in 1..24 -> "L$v"; else -> "?" }
 
     /** Les 10 réglages de la liste blanche r30, dans l'ordre des deux requêtes (5 + 5). */
     val WHITELIST = listOf(STEP, BEEP, UPCODE, PTT_ID, D_ST, D_PRE, D_LIVE, SQL, SET_OFF, SET_NFM)
@@ -37,7 +62,7 @@ object RadioSettings {
         STEP to "pas", BEEP to "bip", UPCODE to "code d'appel", PTT_ID to "envoi du code (PTT ID)",
         D_ST to "écoute de son code (D ST)", D_PRE to "préambule du code (D Prel)",
         D_LIVE to "affichage des codes (D Live)", SQL to "squelch", SET_OFF to "veille (SetOff)",
-        SET_NFM to "SetNFM", BL_TIME to "durée d'éclairage (BLTime)", BL_TXRX to "éclairage en émission/réception (BLTxRx)")
+        SET_NFM to "SetNFM", BL_TIME to "durée d'éclairage (BLTime)", BL_TXRX to "éclairage en émission/réception (BLTxRx)", SCAN_LIST to "liste de scan")
 
     /**
      * Résumé court des réglages vérifiés, pour l'affichage. N'énumère que [keys] (jamais plus) ;
