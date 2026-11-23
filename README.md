@@ -2,6 +2,8 @@
 
 ## 0.65-essai
 - Témoin du raccourci Furtif : allumé aussi pour le furtif de l'appli (réglages de menus). Il ne suivait que le furtif profond du firmware (écran entièrement noir), d'où un bouton Furtif qui restait éteint alors que le mode était actif.
+- Toutes les fonctions qui restent actives ont leur témoin : Écran éteint, Furtif, Verrou, Scan, Spectre, et désormais Inv. relais (lu dans l'état 0x09 de la ligne active) et Radio FM (écran FM affiché, commande 06, lue seulement si un raccourci Radio FM existe). En furtif comme en jour.
+- Règle des témoins isolée (ShortcutStates) et contrôlée dans ses 816 combinaisons d'entrées (ShortcutStatesTest) ; captures avec les 7 témoins allumés (jour, camouflage, nuit/furtif, interfaces complète et en opération).
 
 ## 0.64-essai
 - Mes canaux : « Passer la radio sur ce canal » (appui long sur un canal, ou bouton dans sa fiche). Mêmes touches que le raccourci « Aller à un canal », passage en mode canal compris ; avec le r28, le passage est confirmé par la radio. Si le canal a été modifié sans être envoyé, l'appli prévient que la radio utilisera la version enregistrée chez elle.

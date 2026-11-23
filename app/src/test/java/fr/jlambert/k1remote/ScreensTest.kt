@@ -181,6 +181,23 @@ class ScreensTest {
             prefs(ThemeId.CIEL, true, 0)
             capture("nuit_complete_${if (land) "paysage" else "portrait"}", "Nuit · complète · ${if (land) "paysage" else "portrait"}", land)
         }
+        // Témoins des raccourcis : les 7 fonctions qui restent actives, allumées (0.65)
+        for ((t, night, ui) in listOf(Triple(ThemeId.CIEL, false, 0), Triple(ThemeId.OTAN, false, 0),
+                Triple(ThemeId.CIEL, true, 0), Triple(ThemeId.CIEL, false, 1), Triple(ThemeId.CIEL, true, 1))) {
+            prefs(t, night, ui)
+            val pr = Prefs(RuntimeEnvironment.getApplication())
+            pr.screenDarkOffered = true
+            Shortcut.save(pr, listOf(
+                Shortcut(1, "Écran éteint", "action", "screendark"), Shortcut(2, "Furtif", "action", "stealth"),
+                Shortcut(3, "Verrou", "action", "lock"), Shortcut(4, "Scan", "action", "scan"),
+                Shortcut(5, "Spectre", "action", "spectrum"), Shortcut(6, "Inv. relais", "action", "reverse"),
+                Shortcut(7, "Radio FM", "action", "fm"), Shortcut(8, "A ⇄ B", "action", "ab"),
+                Shortcut(9, "Appel", "action", "call")))
+            MainActivity.captureActive = ShortcutStates.TOGGLES.toSet()
+            val tag = (if (night) "nuit" else t.name.lowercase()) + (if (ui == 0) "_complete" else "_operation")
+            capture("temoins_$tag", "Témoins allumés · ${if (night) "Nuit (furtif)" else t.label} · ${if (ui == 0) "complète" else "en opération"}", false)
+            MainActivity.captureActive = null
+        }
         for ((t, night) in listOf(ThemeId.CIEL to false, ThemeId.FRANCE to false, ThemeId.CIEL to true)) {
             prefs(t, night, 0)
             captureCallLog("appels_${if (night) "nuit" else t.name.lowercase()}", "Journal des appels · ${if (night) "Nuit" else t.label}")

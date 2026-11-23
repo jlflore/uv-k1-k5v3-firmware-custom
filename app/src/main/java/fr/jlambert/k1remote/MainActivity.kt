@@ -43,6 +43,8 @@ import java.util.concurrent.Executors
 class MainActivity : Activity() {
 
     companion object {
+        /** Captures automatiques : témoins des raccourcis forcés (null en usage normal). */
+        @JvmStatic var captureActive: Set<String>? = null
         private const val ACTION_PERMISSION = "fr.jlambert.k1remote.USB_PERMISSION"
         private const val VID = 0x36B7
         private const val REQ_BLE = 41
@@ -1119,6 +1121,11 @@ class MainActivity : Activity() {
             RadioState.Change.STATE -> ui.post { applyFirmwareState() }
             RadioState.Change.NONE -> if (raw == null && synchronized(rstate) { rstate.usesFirmware }) ui.post { refreshChips() }
         }
+        val hasFm = runCatching { shortcuts.toList() }.getOrDefault(emptyList()).any { it.type == "action" && it.action == "fm" }
+        if (hasFm && !pttOn) {
+            val d = request(c, K5ViewerProtocol.command(0x06), 700)
+            fmScreen = if (d != null && d.size >= 3 && (d[1].toInt() and 0xFF) == 0) (d[2].toInt() and 0xFF) == 3 else null
+        }
         ui.post { refreshIfActiveChanged() }
     }
 
@@ -1168,25 +1175,23 @@ class MainActivity : Activity() {
      * verrou, furtif, scan et spectre viennent de la radio ; sinon, ce que l'appli sait déjà.
      */
     private fun shortcutActive(action: String): Boolean {
+        captureActive?.let { return action in it }            // captures automatiques uniquement
         val now = System.currentTimeMillis()
         val (snap, busy) = synchronized(rstate) {
             (if (rstate.usesFirmware) rstate.snapshot else null) to rstate.isBusy(now)
         }
-        return when (action) {
-            "screendark" -> prefs.screenDark
-            "lock" -> snap?.keyLocked ?: live.locked
-            // Furtif de l'appli (réglages de menus) ou furtif profond du firmware (commande 07, indicateur 0x09)
-            "stealth" -> prefs.stealth || snap?.stealth == true
-            "scan" -> snap != null && !busy && snap.function == RadioStatus.Function.SCAN_OR_SPECTRUM
-            "spectrum" -> busy
-            else -> false
-        }
+        return ShortcutStates.active(action, ShortcutStates.Inputs(
+            appScreenDark = prefs.screenDark, appStealth = prefs.stealth, pixelLocked = live.locked,
+            snapshot = snap, busy = busy, fmScreen = fmScreen))
     }
+
+    /** Écran radio FM affiché (commande 06), lu seulement si un raccourci Radio FM est présent. */
+    @Volatile private var fmScreen: Boolean? = null
 
     /** Signature des témoins : les raccourcis sont redessinés seulement quand elle change. */
     private var activeSig = ""
     private fun refreshIfActiveChanged() {
-        val sig = listOf("screendark", "lock", "stealth", "scan", "spectrum").joinToString("") { if (shortcutActive(it)) "1" else "0" }
+        val sig = ShortcutStates.TOGGLES.joinToString("") { if (shortcutActive(it)) "1" else "0" }
         if (sig != activeSig) {
             activeSig = sig; refreshChips()
             val k = fKeyDef
