@@ -65,7 +65,7 @@ object ChoiceSheet {
                 setOnClickListener { dialog.dismiss(); o.onClick() }
             }
             // Icône dans une pastille ronde
-            row.addView(tv(o.icon, 18f, if (o.primary) p.accentText else fg, true).apply {
+            row.addView(tv(o.icon, 18f, when { o.primary -> p.accentText; o.danger -> p.danger; else -> p.chipText }, true).apply {
                 gravity = Gravity.CENTER
                 background = Ui.shape(act, if (o.primary) p.accentBg else p.chipBg, 999f, if (o.primary) p.accentBorder else p.chipBorder)
             }, LinearLayout.LayoutParams(dp(40), dp(40)))

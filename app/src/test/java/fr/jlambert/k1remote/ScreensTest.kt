@@ -137,7 +137,7 @@ class ScreensTest {
         captureDialog("choix_bibliotheque_$tag", "Bibliothèque · $label") { act ->
             ChoiceSheet.show(act, "Bibliothèque",
                 "Listes de fréquences toutes prêtes. Touchez-en une pour voir ses canaux avant de l'ajouter au brouillon : rien n'est écrasé.",
-                ChannelLibrary.PRESETS.map { pr -> ChoiceSheet.Option("+", pr.title, "${pr.channels.size} canaux · ${pr.source}") {} })
+                ChannelLibrary.PRESETS.map { pr -> ChoiceSheet.Option("+", pr.title, "${pr.channels.size} canaux" + (if (pr.channels.all { it.rxOnly }) " · écoute seule" else "") + " · voir le détail") {} })
         }
         captureDialog("choix_sauvegardes_$tag", "Sauvegardes · $label") { act ->
             ChoiceSheet.show(act, "Sauvegardes", "Touchez une sauvegarde pour l'ouvrir, la nommer ou la supprimer. La plus récente est en haut.", listOf(

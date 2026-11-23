@@ -543,7 +543,7 @@ class ChannelsActivity : Activity() {
         ChoiceSheet.show(this, "Bibliothèque",
             "Listes de fréquences toutes prêtes. Touchez-en une pour voir ses canaux avant de l'ajouter au brouillon : rien n'est écrasé.",
             presets.map { pr ->
-                ChoiceSheet.Option("+", pr.title, "${pr.channels.size} canaux · ${pr.source}") { addPreset(pr) }
+                ChoiceSheet.Option("+", pr.title, "${pr.channels.size} canaux" + (if (pr.channels.all { it.rxOnly }) " · écoute seule" else "") + " · voir le détail") { addPreset(pr) }
             })
     }
 
