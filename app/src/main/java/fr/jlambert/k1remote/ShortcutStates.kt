@@ -43,3 +43,21 @@ object ShortcutStates {
         }
     }
 }
+
+/**
+ * Éclairage de la radio voulu selon la combinaison furtif × écran éteint (0.66).
+ * Une seule règle, appliquée à l'entrée comme à la sortie de chacun des deux modes :
+ * sortir de l'un ne défait plus l'autre (bug 0.65 : sortir du furtif rallumait l'écran
+ * alors que « Écran éteint » restait actif). Contrôlée dans toutes ses combinaisons par LightPlanTest.
+ */
+object LightPlan {
+    /** Réglages normaux de la radio (Préférences › Réglages normaux). */
+    data class Day(val blTxRx: Int, val blTime: Int, val blMax: Int, val inv: Boolean)
+
+    /** Valeurs des menus 39 BLTxRx, 36 BLTime, 38 BLMax, 60 SetInv. */
+    fun target(stealth: Boolean, screenDark: Boolean, stealthLight: Int, stealthInvert: Boolean, day: Day): List<Pair<Int, String>> = listOf(
+        Shortcut.MENU_BLTXRX to (if (stealth || screenDark) "0" else day.blTxRx.toString()),
+        Shortcut.MENU_BLTIME to (if (screenDark || (stealth && stealthLight >= 1)) "00" else Shortcut.pad2(day.blTime.toString())),
+        Shortcut.MENU_BLMAX to (if (stealth && stealthLight == 0) "01" else Shortcut.pad2(day.blMax.toString())),
+        Shortcut.MENU_SETINV to (if (stealth && stealthInvert) "1" else if (day.inv) "1" else "0"))
+}

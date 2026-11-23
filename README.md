@@ -1,4 +1,9 @@
-# K1 Remote Essai · version 0.65-essai (firmware Fusion PTT r28)
+# K1 Remote Essai · version 0.66-essai (firmware Fusion PTT r28)
+
+## 0.66-essai
+- Écran éteint + Furtif : une seule règle calcule l'éclairage de la radio pour la combinaison des deux (LightPlan). Sortir du furtif ne rallume plus l'écran quand « Écran éteint » est actif ; rallumer l'écran pendant le furtif ne casse plus le furtif. Contrôlée dans ses 72 combinaisons et dans toutes les suites de 4 appuis (LightPlanTest).
+- Écran éteint et Furtif ne sont notés (témoin, thème nuit) qu'une fois tous les réglages acceptés par la radio : un refus ne laisse plus un témoin allumé sans effet réel.
+- Spectre ouvert : la radio refuse les réglages ; l'appli le dit clairement (« Spectre ouvert… quittez-le (EXIT) ») au lieu du message erroné « fréquence hors des bandes », et n'envoie rien.
 
 ## 0.65-essai
 - Témoin du raccourci Furtif : allumé aussi pour le furtif de l'appli (réglages de menus). Il ne suivait que le furtif profond du firmware (écran entièrement noir), d'où un bouton Furtif qui restait éteint alors que le mode était actif.

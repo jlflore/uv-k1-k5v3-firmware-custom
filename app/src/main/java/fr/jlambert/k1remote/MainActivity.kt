@@ -1512,7 +1512,10 @@ class MainActivity : Activity() {
                                     null -> "pas de réponse de la radio"
                                     3 -> if (op == 0x01) "réglage réservé au clavier de la radio (sécurité du firmware)"
                                          else "la ligne active n'est pas en mode fréquence"
-                                    4 -> "fréquence hors des bandes de la radio"
+                                    // 4 : « spectre en cours » pour toute commande refusée pendant le spectre ;
+                                    // « hors des bandes » seulement pour un changement de fréquence (op 02) hors spectre
+                                    4 -> if (op == 0x02 && !spectrumOpen()) "fréquence hors des bandes de la radio"
+                                         else "spectre ouvert sur la radio : quittez-le (EXIT), puis réessayez"
                                     else -> "réglage refusé (code ${r[1]})"
                                 }
                                 // Refus prouvé par l'accusé (statut non nul) : la commande attendue est refusée
@@ -2505,11 +2508,20 @@ class MainActivity : Activity() {
         // séquence attendait des réponses qui ne viennent pas et bloquait le retour au normal).
         val radioHere = cdc != null && (cdc !is BleLink || relayRadio)
         if (radioHere) {
-            if (!sendSteps(stealthSteps(entering))) return
-            prefs.stealth = entering
+            if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); return }
+            // Le furtif n'est noté (témoin, thème nuit) qu'une fois TOUS les réglages acceptés par la
+            // radio (0.66) : un refus ne laisse plus un témoin allumé sans effet réel.
+            if (!sendSteps(stealthSteps(entering), onDone = {
+                    prefs.stealth = entering
+                    prefs.night = entering
+                    applyRelayLed()
+                    buildUi()
+                    toast(if (entering) "Mode furtif actif" else "Sortie du furtif terminée")
+                })) return
             toast(if (entering && prefs.stealthLight == 2 && fwRevision >= 18) "Furtif profond : écran de la radio noir, voyants éteints (quelques secondes)…"
                   else if (entering) "Mode furtif : écran de la radio éteint (quelques secondes)…"
                   else "Sortie du furtif : réglages normaux rétablis (quelques secondes)…")
+            return
         } else if (!entering && prefs.stealth) {
             toast("La radio est restée en furtif : rebranchez-la puis touchez la lune pour la rétablir")
         }
@@ -2526,33 +2538,31 @@ class MainActivity : Activity() {
     private fun toggleScreenDark(enter: Boolean) {
         val radioHere = cdc != null && (cdc !is BleLink || relayRadio)
         if (!radioHere) { toast("Radio non connectée"); return }
-        val items = if (enter) listOf(Shortcut.MENU_BLTXRX to "0", Shortcut.MENU_BLTIME to "00")
-            else listOf(Shortcut.MENU_BLTXRX to prefs.dayBlTxRx.toString(),
-                        Shortcut.MENU_BLTIME to Shortcut.pad2(prefs.dayBlTime.toString()))
-        if (!sendSteps(settingSteps(items))) return
-        prefs.screenDark = enter
-        toast(if (enter) "Éclairage de la radio coupé (même pendant les appels)" else "Éclairage de la radio rétabli")
-        buildUi()
+        // Éclairage voulu pour la combinaison (furtif actuel × écran éteint demandé) : en furtif,
+        // rallumer l'écran ne rétablit pas l'éclairage normal, le furtif garde la main (0.66)
+        val items = lightTarget(stealth = prefs.stealth, screenDark = enter)
+            .filter { it.first == Shortcut.MENU_BLTXRX || it.first == Shortcut.MENU_BLTIME }
+        if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); return }
+        // Noté seulement quand la radio a accepté les réglages (0.66)
+        sendSteps(settingSteps(items), onDone = {
+            prefs.screenDark = enter
+            toast(when {
+                enter -> "Éclairage de la radio coupé (même pendant les appels)"
+                prefs.stealth -> "Écran éteint désactivé : l'éclairage reviendra à la sortie du furtif"
+                else -> "Éclairage de la radio rétabli"
+            })
+            buildUi()
+        })
     }
 
     /** Réglages envoyés à la radio pour entrer dans le furtif ou en sortir. */
     private fun stealthSteps(enter: Boolean): List<KeyStep> {
-        val items = mutableListOf<Pair<Int, String>>()
-        if (enter) {
-            items += Shortcut.MENU_BLTXRX to "0"                                   // pas d'éclairage aux appels
-            if (prefs.stealthLight >= 1) items += Shortcut.MENU_BLTIME to "00"     // jamais d'éclairage
-            else items += Shortcut.MENU_BLMAX to "01"                              // éclairage au minimum
-            if (prefs.stealthInvert) items += Shortcut.MENU_SETINV to "1"          // fond noir
-            items += Shortcut.MENU_BEEP to "0"                                      // touches muettes
-        } else {
-            // En sortie, on rétablit tout : robuste même si les préférences ont changé entre-temps
-            items += Shortcut.MENU_BLTXRX to prefs.dayBlTxRx.toString()
-            items += Shortcut.MENU_BLTIME to Shortcut.pad2(prefs.dayBlTime.toString())
-            items += Shortcut.MENU_BLMAX to Shortcut.pad2(prefs.dayBlMax.toString())
-            items += Shortcut.MENU_SETINV to (if (prefs.dayInv) "1" else "0")
-            // Le bip n'est rétabli que si l'utilisateur l'a explicitement voulu (inutile en airsoft)
-            if (prefs.dayBeep) items += Shortcut.MENU_BEEP to "1"
-        }
+        // Éclairage : la même règle que l'écran éteint (LightPlan). En sortie, « Écran éteint »
+        // reste respecté s'il est actif (0.66) ; les 4 réglages sont toujours tous envoyés.
+        val items = lightTarget(stealth = enter, screenDark = prefs.screenDark).toMutableList()
+        if (enter) items += Shortcut.MENU_BEEP to "0"                               // touches muettes
+        // Le bip n'est rétabli que si l'utilisateur l'a explicitement voulu (inutile en airsoft)
+        else if (prefs.dayBeep) items += Shortcut.MENU_BEEP to "1"
         val steps = settingSteps(items).toMutableList()
         // r17 : afficheur LCD et voyants coupés (entrée, en dernier) / rétablis (sortie, en premier)
         // Furtif profond (r18+) : écran de la radio entièrement noir et voyants éteints. En sortie,
@@ -2563,6 +2573,14 @@ class MainActivity : Activity() {
         }
         return steps
     }
+
+    /** Spectre ouvert : la radio refuse les réglages (statut 4), connu grâce à l'état 0x09 (r28). */
+    private fun spectrumOpen(): Boolean = synchronized(rstate) { rstate.isBusy(System.currentTimeMillis()) }
+
+    private val SPECTRUM_REFUSAL = "Spectre ouvert : la radio n'accepte pas ce réglage. Quittez le spectre (EXIT), puis réessayez."
+
+    private fun lightTarget(stealth: Boolean, screenDark: Boolean) = LightPlan.target(stealth, screenDark,
+        prefs.stealthLight, prefs.stealthInvert, LightPlan.Day(prefs.dayBlTxRx, prefs.dayBlTime, prefs.dayBlMax, prefs.dayInv))
 
     /** Réglages de menu : commandes directes si le firmware les comprend, sinon touches. */
     private fun settingSteps(items: List<Pair<Int, String>>): List<KeyStep> =
