@@ -1175,7 +1175,8 @@ class MainActivity : Activity() {
         return when (action) {
             "screendark" -> prefs.screenDark
             "lock" -> snap?.keyLocked ?: live.locked
-            "stealth" -> snap?.stealth ?: prefs.stealth
+            // Furtif de l'appli (réglages de menus) ou furtif profond du firmware (commande 07, indicateur 0x09)
+            "stealth" -> prefs.stealth || snap?.stealth == true
             "scan" -> snap != null && !busy && snap.function == RadioStatus.Function.SCAN_OR_SPECTRUM
             "spectrum" -> busy
             else -> false
@@ -1185,7 +1186,7 @@ class MainActivity : Activity() {
     /** Signature des témoins : les raccourcis sont redessinés seulement quand elle change. */
     private var activeSig = ""
     private fun refreshIfActiveChanged() {
-        val sig = listOf("lock", "stealth", "scan", "spectrum").joinToString("") { if (shortcutActive(it)) "1" else "0" }
+        val sig = listOf("screendark", "lock", "stealth", "scan", "spectrum").joinToString("") { if (shortcutActive(it)) "1" else "0" }
         if (sig != activeSig) {
             activeSig = sig; refreshChips()
             val k = fKeyDef
