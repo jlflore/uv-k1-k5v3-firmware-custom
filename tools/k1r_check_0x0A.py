@@ -18,7 +18,11 @@ show = menu[menu.index("void MENU_ShowCurrentSetting"):]
 shown = dict(re.findall(r"case (MENU_\w+):\s*gSubMenuSelection = ([^;]+);", show))
 table = {m: v.strip() for m, v in re.findall(r"MENU_SETTING\((MENU_\w+),\s*([^,]+),", defs)}
 
-norm = lambda s: re.sub(r"\(uint16_t\)|\s", "", s)
+# 0x0A lit les réglages de ligne sur vfo = &gEeprom.VfoInfo[TX_VFO] (revue r30, point a) ;
+# le menu passe par gTxVfo, que RADIO_SelectVfos() fait pointer sur ce même VFO.
+if not re.search(r"gTxVfo\s*=\s*&gEeprom\.VfoInfo\[gEeprom\.TX_VFO\]", (root / "App/radio.c").read_text(encoding="utf-8")):
+    sys.exit("RADIO_SelectVfos ne fait plus pointer gTxVfo sur VfoInfo[TX_VFO] : revoir l'équivalence vfo/gTxVfo")
+norm = lambda s: re.sub(r"\(uint16_t\)|\s", "", s).replace("vfo->", "gTxVfo->").replace("ggTxVfo->", "gTxVfo->")
 errors = []
 cases = set(re.findall(r"case (MENU_\w+):", body))
 if cases != set(WHITELIST):

@@ -69,6 +69,7 @@
 #include "misc.h"
 #include "radio.h"
 #include "settings.h"
+#include "app/k1r_upcode.h"
 
 #if defined(ENABLE_OVERLAY)
     #include "sram-overlay.h"
@@ -2210,6 +2211,9 @@ static void K1R_SendStatus(void)
  * Renvoie le nombre d'octets de valeur écrits dans out (au plus 16), ou -1 si non lisible. */
 static int8_t K1R_ReadSetting(uint8_t id, uint8_t *out)
 {
+    // Réglages de ligne lus sur le VFO annoncé dans la réponse (v = TX_VFO), et non via gTxVfo :
+    // même indice pour l'identifiant renvoyé et pour les valeurs (revue r30, point a).
+    const VFO_Info_t *vfo = &gEeprom.VfoInfo[gEeprom.TX_VFO < 2 ? gEeprom.TX_VFO : 0];
     uint16_t v;
     switch (id) {
         case MENU_SQL:        v = gEeprom.SQUELCH_LEVEL; break;
@@ -2222,19 +2226,11 @@ static int8_t K1R_ReadSetting(uint8_t id, uint8_t *out)
 #ifdef ENABLE_FEAT_F4HWN_NARROWER
         case MENU_SET_NFM:    v = gSetting_set_nfm; break;
 #endif
-        case MENU_STEP:       v = FREQUENCY_GetSortedIdxFromStepIdx(gTxVfo->STEP_SETTING); break;
-        case MENU_PTT_ID:     v = (uint16_t)gTxVfo->DTMF_PTT_ID_TX_MODE; break;
+        case MENU_STEP:       v = FREQUENCY_GetSortedIdxFromStepIdx(vfo->STEP_SETTING); break;
+        case MENU_PTT_ID:     v = (uint16_t)vfo->DTMF_PTT_ID_TX_MODE; break;
         case MENU_D_LIVE_DEC: v = gSetting_live_DTMF_decoder; break;
-        case MENU_UPCODE: {
-            // Champ de 16 octets sans terminateur garanti : jamais de strlen.
-            uint8_t len = 0;
-            while (len < sizeof(gEeprom.DTMF_UP_CODE) && len < 16) {
-                const uint8_t ch = (uint8_t)gEeprom.DTMF_UP_CODE[len];
-                if (ch == 0x00 || ch == 0xFF) break;
-                out[len++] = ch;
-            }
-            return (int8_t)len;
-        }
+        case MENU_UPCODE:
+            return (int8_t)K1R_CopyUpCode(gEeprom.DTMF_UP_CODE, sizeof(gEeprom.DTMF_UP_CODE), out);
         default:
             return -1;
     }
@@ -2245,8 +2241,9 @@ static int8_t K1R_ReadSetting(uint8_t id, uint8_t *out)
 
 static void K1R_ReadSettings(const uint8_t *c, uint8_t n)
 {
-    // Pire cas : 4 + 7 × (3 + 16) = 137 octets
-    uint8_t r[4 + 7 * (3 + 16)];
+    // Pire cas : 4 + 7 × (3 + 16) = 137 octets (7 demandes du code d'appel)
+    uint8_t r[4 + 7 * (3 + K1R_UPCODE_MAX)];
+    _Static_assert(sizeof(r) >= 4 + 7 * (3 + 16), "tampon 0x0A trop petit pour le pire cas");
     r[0] = 0x0A;
     const uint8_t count = (n >= 2) ? c[1] : 0;
     if (n < 2 || count < 1 || count > 7 || n != (uint8_t)(count + 2)) {
@@ -2257,7 +2254,7 @@ static void K1R_ReadSettings(const uint8_t *c, uint8_t n)
     uint8_t menus = 0;
     while (menus < 0xFE && MenuListId[menus] != 0xFF) menus++;   // borné, comme l'op 01
     r[1] = 0;
-    r[2] = gEeprom.TX_VFO;                          // VFO des réglages de ligne (STEP, PTT ID)
+    r[2] = gEeprom.TX_VFO < 2 ? gEeprom.TX_VFO : 0; // VFO des réglages de ligne (STEP, PTT ID)
     r[3] = count;
     uint8_t off = 4;
     for (uint8_t i = 0; i < count; i++) {
@@ -2271,7 +2268,13 @@ static void K1R_ReadSettings(const uint8_t *c, uint8_t n)
             st = (len < 0) ? 3 : 0;
         }
         if (st != 0) len = 0;
-        if ((uint16_t)off + 3 + (uint16_t)len > sizeof(r)) break;   // impossible par construction
+        if ((uint16_t)off + 3 + (uint16_t)len > sizeof(r)) {
+            // Impossible par construction (assertion ci-dessus). Jamais de réponse qui annoncerait
+            // n entrées sans les contenir : on répond « commande non traitée » sur 2 octets.
+            r[1] = 1;
+            K5VIEWER_SendReply(r, 2);
+            return;
+        }
         r[off++] = p;
         r[off++] = st;
         r[off++] = (uint8_t)len;
