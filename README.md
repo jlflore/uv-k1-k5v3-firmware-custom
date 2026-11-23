@@ -1,4 +1,9 @@
-# K1 Remote Essai · version 0.70-essai (firmware Fusion PTT r30)
+# K1 Remote Essai · version 0.71-essai (firmware Fusion PTT r30)
+
+## 0.71-essai — retours des premiers essais r30 (23/11)
+- Équipe sur les deux lignes A et B : en changeant de ligne, les réglages sont relus aussitôt (avant : jusqu'à 15 s de bouton éteint).
+- Réglages corrigés par la configuration d'équipe : la carte « Équipe configurée » dit ce qui a été remis aux valeurs de l'équipe (ex. « squelch »), et le journal le note. Avant, l'information passait dans un message aussitôt recouvert.
+- Journal technique : plus de ligne « État radio : économie » répétée toutes les 1,5 s. Les registres de la puce radio, qui changent à chaque réveil en économie, ne comptent plus comme un changement hors émission (ils restent affichés).
 
 ## 0.70-essai — avec le firmware Fusion PTT r30 (commande 0x0A)
 - Témoin d'équipe complet : avec r30, l'appli relit aussi dans la radio les 10 réglages généraux que la configuration d'équipe écrit (pas, bip, code d'appel, PTT ID, D ST, D Prel, D Live, squelch, veille SetOff, SetNFM). Le bouton d'équipe ne s'allume que si la ligne active ET ces réglages sont ceux du profil. Lecture toutes les 15 s au plus, seulement quand la ligne correspond déjà ; une lecture de plus de 45 s, refusée ou faite pendant un changement de ligne compte comme inconnue (témoin éteint).

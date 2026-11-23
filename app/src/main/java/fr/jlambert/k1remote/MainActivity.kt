@@ -1059,9 +1059,15 @@ class MainActivity : Activity() {
             val r70 = w(31); val r71 = w(33)
             sb.append("\nBK4819 : tonalité 1 ").append(if (r70 and 0x8000 != 0) "ACTIVE (%d Hz)".format((r71 / 10.32444).toInt()) else "off")
                 .append(" · tonalité 2 ").append(if (r70 and 0x0080 != 0) "ACTIVE" else "off")
-            sb.append("\nREG 70=%04X 71=%04X 47=%04X 30=%04X 50=%04X 31=%04X".format(r70, r71, w(35), w(37), w(39), w(41)))
         }
-        val key = sb.toString()
+        // 0.71 : les registres du BK4819 n'entrent dans la comparaison que pendant une émission.
+        // En économie, REG 30 alterne à chaque réveil de la puce : sans cela, le journal se
+        // remplissait d'un « État radio » identique toutes les 1,5 s.
+        val key = sb.toString() + (if (r.size >= 43 && u(8) == 1) "|" + (31 until 43).joinToString(",") { u(it).toString() } else "")
+        if (r.size >= 43) {
+            fun w(i: Int) = u(i) or (u(i + 1) shl 8)
+            sb.append("\nREG 70=%04X 71=%04X 47=%04X 30=%04X 50=%04X 31=%04X".format(w(31), w(33), w(35), w(37), w(39), w(41)))
+        }
         if (r.size >= 28) sb.append("\nchrono TX ").append(u(27) / 2).append(" s")
         return key to sb.toString()
     }
@@ -1163,7 +1169,13 @@ class MainActivity : Activity() {
             RadioState.Change.NONE -> if (raw == null && synchronized(rstate) { rstate.usesFirmware }) ui.post { refreshChips() }
         }
         // Ligne changée depuis la lecture 0x0A : elle est abandonnée (jamais réutilisée au retour)
-        teamSettings?.let { r -> if (r.key != synchronized(rstate) { rstate.snapshot }?.let { RadioSettings.stableKey(it) }) teamSettings = null }
+        // 0.71 : et elle est relue tout de suite (pas d'attente de 15 s), sinon passer de A à B
+        // quand les deux lignes ont les réglages d'équipe éteignait le bouton plusieurs secondes.
+        teamSettings?.let { r ->
+            if (r.key != synchronized(rstate) { rstate.snapshot }?.let { RadioSettings.stableKey(it) }) {
+                teamSettings = null; teamSettingsAskedAt = 0L
+            }
+        }
         ui.post { refreshIfActiveChanged() }
         if (raw != null && change != RadioState.Change.SUPPORT_SCREEN) maybeReadTeamSettings(c)
     }
@@ -2839,17 +2851,18 @@ class MainActivity : Activity() {
                     "Annuler")
                 return
             }
-            if (!force && fwProtocol >= RadioSettings.PROTOCOL && teamLineMatches(t)) {
-                teamSettingsDiff(t)?.takeIf { it.isNotEmpty() }?.let { d ->
-                    toast("Différent de l'équipe : " + d.joinToString(", ") + ". Réglage envoyé.")
-                }
-            }
+            // 0.71 : ce qui différait de l'équipe (lu par 0x0A) est dit dans la carte de réussite et
+            // noté au journal (un toast était aussitôt recouvert par celui de l'envoi).
+            val fixed = if (fwProtocol >= RadioSettings.PROTOCOL && teamLineMatches(t))
+                teamSettingsDiff(t)?.takeIf { it.isNotEmpty() } else null
+            fixed?.let { Journal.add("« ${s.name} » : réglages remis aux valeurs de l'équipe : " + it.joinToString(", ")) }
             if (sendSteps(if (direct) t.directSteps(fromChannelMode = mode == 'M', upCode = prefs.myCallCode.ifEmpty { null },
                               memSaveDirect = fwRevision >= 27)
                           else t.steps(fromChannelMode = mode == 'M'), restoreBeep = false, onDone = {
                     val code = prefs.myCallCode.ifEmpty { null }
                     SuccessCard.show(this, "Équipe configurée",
                         "« ${s.name} » est enregistrée dans le canal ${t.channel}." +
+                            (fixed?.let { "\nRemis aux valeurs de l'équipe : " + it.joinToString(", ") + "." } ?: "") +
                             (if (direct && code != null) "\nVotre code d'appel $code part au début de chaque émission." else ""))
                 })) {
                 toast(if (direct) "« " + s.name + " » : réglage direct de la radio (quelques secondes)…"
