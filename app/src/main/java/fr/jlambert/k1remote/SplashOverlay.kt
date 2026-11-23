@@ -34,16 +34,18 @@ class SplashOverlay(context: Context, private val status: () -> String) : View(c
      * [land] null : photo trop haute pour le paysage (visages coupés), jamais tirée en paysage.
      * Points vérifiés sur des recadrages réels (retour de D'jé : paysage mal découpé).
      */
-    private class Shot(val file: String, val port: Pair<Float, Float>, val land: Pair<Float, Float>?)
+    private class Shot(val file: String, val port: Pair<Float, Float>, val land: Pair<Float, Float>?,
+                       /** Titre en haut (ciel libre) plutôt qu'en bas, où il cacherait les personnages. */
+                       val topPort: Boolean = false, val topLand: Boolean = false)
 
     companion object {
         private val SHOTS = listOf(
-            Shot("splash/glacier.jpg", 0.60f to 0.60f, 0.50f to 0.70f),
-            Shot("splash/montee-soleil.jpg", 0.52f to 0.50f, 0.50f to 0.50f),
-            Shot("splash/montee-seracs.jpg", 0.38f to 0.50f, 0.45f to 0.50f),
+            Shot("splash/glacier.jpg", 0.60f to 0.60f, 0.50f to 0.70f, topPort = true),
+            Shot("splash/montee-soleil.jpg", 0.52f to 0.50f, 0.50f to 0.50f, topPort = true),
+            Shot("splash/montee-seracs.jpg", 0.38f to 0.50f, 0.45f to 0.50f, topPort = true, topLand = true),
             Shot("splash/ski.jpg", 0.50f to 0.50f, 0.50f to 0.55f),
-            Shot("splash/foret.jpg", 0.55f to 0.40f, null),
-            Shot("splash/tireur.jpg", 0.55f to 0.40f, 0.55f to 0.20f),
+            Shot("splash/foret.jpg", 0.55f to 0.40f, null, topPort = true),
+            Shot("splash/tireur.jpg", 0.55f to 0.40f, 0.55f to 0.20f, topLand = true),
         )
         const val SHOW_MS = 2_000L
         /** Faux pendant les captures automatiques (sinon il recouvrirait tous les écrans). */
@@ -79,11 +81,19 @@ class SplashOverlay(context: Context, private val status: () -> String) : View(c
     private val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
     private val shade = Paint()
     private val topShade = Paint()
-    private val title = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(245, 245, 240); typeface = Fonts.stencil(context) }
-    private val small = Paint(Paint.ANTI_ALIAS_FLAG).apply { typeface = Fonts.stencilLight(context) }
+    // Ombre portée : texte lisible même sur la neige
+    private val title = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(245, 245, 240); typeface = Fonts.stencil(context)
+        setShadowLayer(6 * resources.displayMetrics.density, 0f, 1.5f * resources.displayMetrics.density, Color.argb(160, 0, 0, 0))
+    }
+    private val small = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = Fonts.stencilLight(context)
+        setShadowLayer(4 * resources.displayMetrics.density, 0f, 1f * resources.displayMetrics.density, Color.argb(170, 0, 0, 0))
+    }
     private val bar = Paint(Paint.ANTI_ALIAS_FLAG)
     private val start = SystemClock.uptimeMillis()
     private var closing = false
+    private var top = false
 
     init {
         isClickable = true
@@ -112,11 +122,18 @@ class SplashOverlay(context: Context, private val status: () -> String) : View(c
         val dy = (h / 2f - fy * sh).coerceIn(h - sh, 0f)
         matrix.setScale(scale, scale); matrix.postTranslate(dx, dy)
         val ink = Color.rgb(8, 12, 10)
-        shade.shader = LinearGradient(0f, h * 0.42f, 0f, h.toFloat(),
-            intArrayOf(Color.TRANSPARENT, (ink and 0x00FFFFFF) or (0xB0 shl 24), (ink and 0x00FFFFFF) or (0xF0 shl 24)),
-            floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
-        topShade.shader = LinearGradient(0f, 0f, 0f, h * 0.16f,
-            (ink and 0x00FFFFFF) or (0x70 shl 24), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+        fun a(x: Int) = (ink and 0x00FFFFFF) or (x shl 24)
+        top = if (w > h) shot.topLand else shot.topPort
+        if (top) {
+            // Titre en haut : voile en haut, et un voile léger en bas pour la barre d'état
+            topShade.shader = LinearGradient(0f, 0f, 0f, h * 0.50f, intArrayOf(a(0xE0), a(0x90), Color.TRANSPARENT),
+                floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
+            shade.shader = LinearGradient(0f, h * 0.78f, 0f, h.toFloat(), Color.TRANSPARENT, a(0xC8), Shader.TileMode.CLAMP)
+        } else {
+            shade.shader = LinearGradient(0f, h * 0.42f, 0f, h.toFloat(), intArrayOf(Color.TRANSPARENT, a(0xB0), a(0xF0)),
+                floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+            topShade.shader = LinearGradient(0f, 0f, 0f, h * 0.16f, a(0x70), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+        }
     }
 
     override fun onDraw(c: Canvas) {
@@ -125,7 +142,7 @@ class SplashOverlay(context: Context, private val status: () -> String) : View(c
         val b = photo
         if (b != null) c.drawBitmap(b, matrix, bmpPaint) else c.drawColor(Color.rgb(28, 36, 30))
         c.drawRect(0f, 0f, w, h, shade)
-        c.drawRect(0f, 0f, w, h * 0.16f, topShade)
+        c.drawRect(0f, 0f, w, h * (if (top) 0.50f else 0.16f), topShade)
 
         val m = (if (landscape) 40 else 28) * d
         // Bloc de texte en bas à gauche, mêmes proportions en portrait et en paysage
@@ -134,9 +151,17 @@ class SplashOverlay(context: Context, private val status: () -> String) : View(c
         if (title.measureText("UV-Kx OPS") > maxTitle) title.textSize *= maxTitle / title.measureText("UV-Kx OPS")
         val bottom = h - (if (landscape) 34 else 48) * d
         val barY = bottom - 30 * d
-        val byY = barY - (if (landscape) 26 else 34) * d
-        val titleY = byY - 26 * d
-        val kickerY = titleY - title.textSize - 4 * d
+        val kickerY: Float; val titleY: Float; val byY: Float
+        if (top) {
+            // Sous la barre d'état du téléphone
+            kickerY = (if (landscape) 44 else 72) * d
+            titleY = kickerY + title.textSize + 2 * d
+            byY = titleY + 30 * d
+        } else {
+            byY = barY - (if (landscape) 26 else 34) * d
+            titleY = byY - 26 * d
+            kickerY = titleY - title.textSize - 4 * d
+        }
 
         small.textSize = 14 * d
         small.color = Color.rgb(240, 170, 60)
