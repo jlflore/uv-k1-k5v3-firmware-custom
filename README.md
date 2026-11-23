@@ -1,4 +1,9 @@
-# K1 Remote Essai · version 0.74-essai (firmware Fusion PTT r32)
+# K1 Remote Essai · version 0.75-essai (firmware Fusion PTT r32)
+
+## 0.75-essai — revue ChatGPT de r32 / 0.74
+- Numéro de liaison : une réponse arrivée après une déconnexion ou une reconnexion (même boîtier Bluetooth) ne modifie plus aucun témoin.
+- Statut 5 traduit selon la commande : liste de scan pendant un scan (op 01) ou code d'appel invalide (op 03).
+- Bouton Scan : une lecture manquée ne fait plus disparaître la liste affichée (oubliée après 45 s sans lecture réussie). Une liste demandée non confirmée en 20 s est notée « non confirmée » au journal, au lieu d'attendre indéfiniment.
 
 ## 0.74-essai — choix de la liste de scan au doigt (firmware r32)
 - Raccourci Scan : appui bref = scan avec la liste réglée (inchangé) ; appui long = colonne sous le doigt, comme la puissance : on glisse jusqu'à la liste voulue et on lâche. Choix proposés : ALL, les listes qui contiennent des canaux (avec leur nom, d'après la dernière sauvegarde de « Mes canaux »), et MIX seulement si la radio y est déjà réglée.

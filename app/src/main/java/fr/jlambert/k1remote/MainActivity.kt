@@ -939,6 +939,7 @@ class MainActivity : Activity() {
                 if (pendingBle === link) {
                     pendingBle = null
                     cdc = link
+                    linkGen++
                     lastFrameAt = 0L
                     setLink(Link.WAITING, "Boîtier connecté")
                     applyRelayLed()
@@ -972,7 +973,7 @@ class MainActivity : Activity() {
             // on vérifiera de nouveau son firmware à la première image.
             direct = false
             radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; linkGen++
             lastProbeAt = 0L
             watcherFor = null
             lcd.placeholder = "Allumez la radio et branchez-la sur le boîtier"
@@ -1017,6 +1018,7 @@ class MainActivity : Activity() {
         )
         if (!ok) return
         cdc = link
+        linkGen++
         lastFrameAt = 0L
         lcd.placeholder = "Connexion…"
         setLink(Link.WAITING, "Connecté, attente de l'écran")
@@ -1288,6 +1290,11 @@ class MainActivity : Activity() {
      */
     // ---- 0.72 : éclairage lu dans la radio (firmware r31, protocole 6) ----
     @Volatile private var startupReading = false
+    /** Revue 0.74 : numéro de liaison, changé à chaque connexion et déconnexion. Une réponse
+     *  d'une liaison précédente (même objet BleLink réutilisé) ne modifie rien. */
+    @Volatile private var linkGen = 0
+    @Volatile private var scanReadAt = 0L
+    @Volatile private var scanRequestedAt = 0L
     @Volatile private var lightsReadAt = 0L
     /** 0.74 (r32) : liste de scan par défaut lue dans la radio (1..24, 25 ALL, 26 MIX) ; null = inconnue. */
     @Volatile private var radioScanList: Int? = null
@@ -1314,17 +1321,31 @@ class MainActivity : Activity() {
         val now = System.currentTimeMillis()
         if (!startupReading && (!resumed || now - lightsReadAt < 15_000)) return
         lightsReadAt = now
+        val gen = linkGen
         val asked = RadioSettings.backgroundReads(fwProtocol)
         val raw = request(c, RadioSettings.request(asked), 800)
+        // Revue 0.74 (P1) : liaison changée pendant la lecture → rien n'est modifié
+        if (cdc !== c || gen != linkGen) return     // le verrou de démarrage est géré par la liaison suivante
         val r = raw?.let { RadioSettings.decode(it, asked) } as? RadioSettings.Result.Ok
         val values = r?.entries?.associate { it.position to (it.value as? RadioSettings.Value.Num)?.v }
         // r32 : liste de scan réglée (bouton Scan) ; inconnue si absente ou illisible
         if (fwProtocol >= RadioSettings.PROTOCOL_SCANLIST) {
             val scan = values?.get(RadioSettings.SCAN_LIST)
-            if (scan != radioScanList) { radioScanList = scan; ui.post { if (cdc === c && editor == null) buildUi() } }
+            // Revue 0.74 (P2) : une lecture manquée ne fait pas disparaître la liste du bouton ;
+            // elle n'est oubliée qu'après 45 s sans lecture réussie
+            val shown = when {
+                scan != null -> { scanReadAt = now; scan }
+                now - scanReadAt > 45_000 -> null
+                else -> radioScanList
+            }
+            if (shown != radioScanList) { radioScanList = shown; ui.post { if (cdc === c && editor == null) buildUi() } }
             // Revue 0.74 : la radio peut garder une autre liste (liste demandée vide…) : on le dit
             scanRequested?.let { (want, label) ->
-                if (scan != null) {
+                if (scan == null && now - scanRequestedAt > 20_000) {
+                    // Revue 0.74 (P2) : pas d'attente illimitée, résultat « non confirmé »
+                    scanRequested = null
+                    Journal.add("Liste de scan : $label demandée, non confirmée (radio non relue)")
+                } else if (scan != null) {
                     scanRequested = null
                     if (scan != want) {
                         val got = RadioSettings.scanShort(scan)
@@ -1340,7 +1361,7 @@ class MainActivity : Activity() {
         val first = startupReading
         ui.post {
             // Revue 0.72 : une réponse d'une liaison qui n'est plus active ne recale rien
-            if (cdc !== c) return@post
+            if (cdc !== c || gen != linkGen) return@post
             if (dark != null && dark != prefs.screenDark) {
                 prefs.screenDark = dark
                 Journal.add("Écran éteint : la radio est " + (if (dark) "sans éclairage" else "éclairée") + ", témoin recalé sur la radio")
@@ -1616,7 +1637,7 @@ class MainActivity : Activity() {
         synchronized(rstate) { rstate.reset() }
         lastStatusAt = 0L
         radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; linkGen++
         lastProbeAt = 0L
         parser.reset()
         lastFlags = 0
@@ -1759,7 +1780,13 @@ class MainActivity : Activity() {
                                     // « hors des bandes » seulement pour un changement de fréquence (op 02) hors spectre
                                     4 -> if (op == 0x02 && !spectrumOpen()) "fréquence hors des bandes de la radio"
                                          else "spectre ouvert sur la radio : quittez-le (EXIT), puis réessayez"
-                                    5 -> "scan en cours sur la radio : arrêtez le scan avant de changer de liste"
+                                    // 5 dépend de l'op : liste de scan pendant un scan (op 01, r32) ou
+                                    // caractère refusé dans un code (op 03 / 08) — revue 0.74
+                                    5 -> when (op) {
+                                        0x01 -> "scan en cours sur la radio : arrêtez le scan avant de changer de liste"
+                                        0x03 -> "code d'appel invalide (0-9, A-D, * et # seulement)"
+                                        else -> "réglage refusé (code 5)"
+                                    }
                                     else -> "réglage refusé (code ${r[1]})"
                                 }
                                 // Refus prouvé par l'accusé (statut non nul) : la commande attendue est refusée
@@ -2826,7 +2853,7 @@ class MainActivity : Activity() {
         if (sendSteps(listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(RadioSettings.SCAN_LIST, v))), onDone = {
                 // Relue dans la radio pour confirmer (r32) ; sinon, on affiche ce qui a été accepté
                 if (fwProtocol < RadioSettings.PROTOCOL_SCANLIST) radioScanList = v
-                else scanRequested = v to label
+                else { scanRequested = v to label; scanRequestedAt = System.currentTimeMillis() }
                 lightsReadAt = 0L
                 toast("Liste de scan demandée : $label")
                 if (editor == null) buildUi()
