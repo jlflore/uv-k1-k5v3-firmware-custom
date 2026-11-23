@@ -170,6 +170,9 @@ class ScreensTest {
         captureDialog("confirmation_$tag", "Confirmation · $label") { act ->
             Sheet.confirm(act, "Supprimer le canal 12 ?", "Il sera retiré du brouillon. La radio n'est modifiée qu'à l'envoi.", "Supprimer") {}
         }
+        captureDialog("heure_$tag", "Choix d'une heure · $label") { act ->
+            Sheet.time(act, "Début du mode nuit", 21 * 60 + 30) {}
+        }
         captureDialog("choix_liste_$tag", "Choix dans une liste · $label") { act ->
             Sheet.pick(act, "Puissance (valeurs approximatives)",
                 listOf("LOW 1 · 0,1 W", "LOW 2 · 0,5 W", "LOW 3 · 1 W", "MID · 2 W", "HIGH · 5 W"), 3) {}

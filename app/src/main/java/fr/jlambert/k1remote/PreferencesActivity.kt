@@ -1,7 +1,6 @@
 package fr.jlambert.k1remote
 
 import android.app.Activity
-import android.app.TimePickerDialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
@@ -530,7 +529,7 @@ class PreferencesActivity : Activity() {
         row.addView(labels(title, null), LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(text(Prefs.hhmm(minutes), 16f, p.text, Typeface.DEFAULT_BOLD))
         row.setOnClickListener {
-            TimePickerDialog(this, { _, h, m -> onPick(h * 60 + m) }, minutes / 60, minutes % 60, true).show()
+            Sheet.time(this, title, minutes) { onPick(it) }
         }
         return row
     }

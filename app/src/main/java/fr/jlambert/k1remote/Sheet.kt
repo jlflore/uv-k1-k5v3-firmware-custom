@@ -70,7 +70,9 @@ object Sheet {
         if (list.isEmpty()) return
         val row = LinearLayout(act).apply { orientation = if (list.size <= 2) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL }
         list.forEachIndexed { i, b ->
-            val v = pill(act, c.p, b) { c.dialog.dismiss(); b.onClick() }
+            // L'action d'abord, la fermeture ensuite : onDismiss voit toujours l'action déjà faite
+            // (Sheet.message s'appuie dessus pour ne pas appeler onClose en plus de l'action)
+            val v = pill(act, c.p, b) { b.onClick(); runCatching { c.dialog.dismiss() } }
             row.addView(v, if (list.size <= 2) LinearLayout.LayoutParams(0, c.dp(46), 1f).apply { if (i > 0) marginStart = c.dp(8) }
                            else LinearLayout.LayoutParams(-1, c.dp(46)).apply { if (i > 0) topMargin = c.dp(8) })
         }
@@ -118,6 +120,48 @@ object Sheet {
     fun confirm(act: Activity, title: String, message: CharSequence, confirm: String, danger: Boolean = true,
                 cancel: String = "Annuler", onConfirm: () -> Unit): Dialog? =
         show(act, title, message, null, listOf(Btn(cancel), Btn(confirm, if (danger) Style.DANGER else Style.PRIMARY, onConfirm)))
+
+    /**
+     * Choix d'une heure (mode nuit automatique…) : heures et minutes en gros chiffres, chacune
+     * avec ▲ / ▼ (appui long : défilement rapide). Minutes par pas de [stepMin].
+     */
+    fun time(act: Activity, title: String, minutes: Int, stepMin: Int = 5, onPick: (Int) -> Unit): Dialog? {
+        if (act.isFinishing) return null
+        val p = Prefs(act).palette()
+        val d = act.resources.displayMetrics.density
+        fun dp(v: Int) = (v * d).toInt()
+        var h = (minutes / 60).coerceIn(0, 23)
+        var m = ((minutes % 60) / stepMin * stepMin).coerceIn(0, 59)
+        fun two(v: Int) = v.toString().padStart(2, '0')
+        val row = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        fun column(get: () -> Int, change: (Int) -> Unit): Pair<View, TextView> {
+            val value = text(act, two(get()), 44f, p.text, true).apply { gravity = Gravity.CENTER }
+            fun arrow(sym: String, delta: Int) = text(act, sym, 20f, p.text, true).apply {
+                gravity = Gravity.CENTER
+                background = Ui.ripple(act, p.surface, 999f, p.border, night = p.night)
+                contentDescription = if (delta > 0) "plus" else "moins"
+                val repeat = object : Runnable { override fun run() { change(delta); value.text = two(get()); postDelayed(this, 90) } }
+                setOnClickListener { change(delta); value.text = two(get()) }
+                setOnLongClickListener { post(repeat); true }
+                setOnTouchListener { v, e ->
+                    if (e.actionMasked == android.view.MotionEvent.ACTION_UP || e.actionMasked == android.view.MotionEvent.ACTION_CANCEL) v.removeCallbacks(repeat)
+                    false
+                }
+            }
+            val col = LinearLayout(act).apply {
+                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
+                addView(arrow("▲", +1), LinearLayout.LayoutParams(dp(64), dp(44)))
+                addView(value, LinearLayout.LayoutParams(dp(96), -2).apply { topMargin = dp(6); bottomMargin = dp(6) })
+                addView(arrow("▼", -1), LinearLayout.LayoutParams(dp(64), dp(44)))
+            }
+            return col to value
+        }
+        row.addView(column({ h }) { h = (h + it + 24) % 24 }.first)
+        row.addView(text(act, ":", 40f, p.muted, true).apply { gravity = Gravity.CENTER },
+            LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(4); marginEnd = dp(4) })
+        row.addView(column({ m }) { m = (m + it * stepMin + 60) % 60 }.first)
+        return show(act, title, null, row, listOf(Btn("Annuler"), Btn("Valider", Style.PRIMARY) { onPick(h * 60 + m) }))
+    }
 
     /** Choix dans une liste : tuiles, la valeur actuelle pleine et cochée. */
     fun pick(act: Activity, title: String, options: List<String>, selected: Int, message: String? = null,

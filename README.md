@@ -4,7 +4,9 @@
 - Nouveaux composants (Sheet.kt) : carte commune aux couleurs du thème pour les messages, confirmations (action rouge pour les suppressions), choix dans une liste (tuiles, valeur actuelle cochée) et fenêtres à contenu libre ; ProgressSheet pour la lecture et l'envoi des canaux (barre aux couleurs du thème, pourcentage, étape en cours, bouton Annuler qui disparaît quand l'annulation n'est plus possible).
 - Converties : envoi des canaux (progression et messages), lecture des canaux (progression, « Lecture interrompue » avec « Réessayer »), journal technique, rapport de plantage, rejoindre une équipe carte, rappel du furtif, choix des valeurs (équipe, Préférences, éditeur de canal, liste de scan), suppression d'un canal, canal modifié non envoyé, modifications non envoyées, sauvegarde illisible, journal des appels (Partager, Effacer), raccourcis par défaut, nouvelle équipe carte, QR d'équipe (sur fond blanc, lisible même en mode nuit).
 - Éditeur de canal, envoi et détail d'une liste : même carte et mêmes boutons que les autres fenêtres.
-- Captures ajoutées : progression (envoi, lecture), message, confirmation, choix dans une liste, dans les trois thèmes.
+- Choix d'une heure (mode nuit automatique) : fenêtre de l'appli, heures et minutes en gros chiffres avec ▲ / ▼ (appui long : défilement rapide), à la place de l'horloge Android.
+- Revue ChatGPT : l'annulation de l'envoi des canaux n'est acceptée qu'avant le début de l'écriture ; le passage à l'écriture est atomique (plus de « Annulation… » affichée pendant que l'écriture continue). Un envoi rend toujours un seul résultat, même si l'écran « Mes canaux » a disparu entre-temps.
+- Captures ajoutées : progression (envoi, lecture), message, confirmation, choix dans une liste, choix d'une heure, dans les trois thèmes.
 
 ## 0.75-essai — revue ChatGPT de r32 / 0.74
 - Numéro de liaison : une réponse arrivée après une déconnexion ou une reconnexion (même boîtier Bluetooth) ne modifie plus aucun témoin.

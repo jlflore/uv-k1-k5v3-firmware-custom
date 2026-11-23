@@ -408,7 +408,9 @@ class MainActivity : Activity() {
      * Hors du fil principal.
      */
     private fun writeRadioMemory(c: RadioLink, base: RadioMemory, draft: RadioMemory,
-                                 cancelled: () -> Boolean, step: (String, Int) -> Unit): File {
+                                 cancelled: () -> Boolean, step: (String, Int) -> Unit,
+                                 /** Passage atomique à l'écriture ; faux = annulation demandée juste avant (revue 0.76). */
+                                 beginWriting: () -> Boolean = { !cancelled() }): File {
         val blocks = draft.diff(base)
         if (blocks.isEmpty()) error("Aucune modification à envoyer")
         if (c is BleLink) {
@@ -462,7 +464,9 @@ class MainActivity : Activity() {
                     "emplacement Multiboot ou autre appli). Rien n'a été écrit. Relisez la radio : vos modifications " +
                     "restent dans le brouillon de l'ancienne sauvegarde.")
             before = now.save(this)
-            if (cancelled()) throw WriteCancelled()
+            // Dernier contrôle, atomique : après ce point, plus aucune annulation n'est acceptée
+            if (!beginWriting()) throw WriteCancelled()
+            step("Écriture des canaux… 0 / ${blocks.size}", 50)
             // 4. Écriture vérifiée, bloc par bloc
             for ((off, data) in blocks) {
                 var ok = false
@@ -501,40 +505,51 @@ class MainActivity : Activity() {
     }
 
     /** Appelé par l'écran « Mes canaux » (via [MemoryBridge]) ; les dialogues s'affichent sur [act]. */
-    private fun startMemoryWrite(act: Activity, base: RadioMemory, draft: RadioMemory, done: (Boolean, File?) -> Unit) {
+    private fun startMemoryWrite(act: Activity, base: RadioMemory, draft: RadioMemory, doneOnce: (Boolean, File?) -> Unit) {
+        // Revue 0.76 : un envoi, un résultat — jamais zéro, jamais deux, indépendamment des fenêtres
+        val reported = java.util.concurrent.atomic.AtomicBoolean(false)
+        val done: (Boolean, File?) -> Unit = { ok, f -> if (reported.compareAndSet(false, true)) doneOnce(ok, f) }
+        fun alive() = !act.isFinishing && !act.isDestroyed
         fun info(title: String, msg: String, then: () -> Unit = {}) {
-            if (act.isFinishing) { then(); return }
+            if (!alive()) { then(); return }
             Sheet.message(act, title, msg, onClose = then)
         }
         val c = cdc
         if (c == null || !direct || (c is BleLink && !relayRadio)) {
             info("Radio non connectée", "Connectez la radio (firmware Fusion PTT) à l'appli, puis renvoyez les modifications. " +
-                "Elles restent dans l'écran « Mes canaux » tant que vous ne le quittez pas.")
+                "Elles restent dans l'écran « Mes canaux » tant que vous ne le quittez pas.") { done(false, null) }
             return
         }
-        if (pttOn) { info("PTT", "Relâchez le PTT d'abord."); return }
+        if (pttOn) { info("PTT", "Relâchez le PTT d'abord.") { done(false, null) }; return }
         if (c is BleLink && !c.canProgram) {
             info("Boîtier à mettre à jour", "L'écriture des canaux par Bluetooth demande K1 Relais 1.5 ou plus " +
                 "(boîtier actuel : ${c.relayVersion ?: "ancienne version"}). Flashez k1-relais-v1.5.bin, " +
-                "ou branchez la radio directement au téléphone en USB.")
+                "ou branchez la radio directement au téléphone en USB.") { done(false, null) }
             return
         }
-        val cancel = java.util.concurrent.atomic.AtomicBoolean(false)
+        // État de l'opération (revue 0.76) : 0 préparation, 1 écriture commencée, 2 annulation demandée.
+        // Annuler n'est accepté qu'en préparation ; le passage à l'écriture est atomique.
+        val state = java.util.concurrent.atomic.AtomicInteger(0)
         lateinit var sheet: ProgressSheet
         sheet = ProgressSheet(act, "Envoi à la radio",
             "Seuls les canaux modifiés sont écrits, puis relus pour vérification. Ne débranchez pas la radio.",
-            cancelLabel = "Annuler") { cancel.set(true); sheet.cancelText("Annulation…") }.show()
+            cancelLabel = "Annuler") {
+            if (state.compareAndSet(0, 2)) sheet.cancelText("Annulation…")
+            else { sheet.cancelVisible(false); toast("Écriture commencée : elle va jusqu'au bout") }
+        }.show()
         Thread {
             try {
-                val f = writeRadioMemory(c, base, draft, { cancel.get() }) { msg, pct ->
+                val f = writeRadioMemory(c, base, draft, { state.get() == 2 }, { msg, pct ->
                     ui.post {
+                        if (!alive()) return@post
                         sheet.update(msg, pct)
                         // Plus d'annulation une fois l'écriture commencée : chaque bloc est vérifié
-                        if (pct > 50) sheet.cancelVisible(false)
+                        if (state.get() == 1) sheet.cancelVisible(false)
                     }
-                }
+                }, beginWriting = { state.compareAndSet(0, 1) })
                 ui.post {
                     sheet.dismiss()
+                    if (!alive()) { done(true, f); return@post }
                     SuccessCard.show(act, "Canaux envoyés",
                         "Toutes les modifications ont été écrites puis relues dans la radio.\n\n" +
                             "Éteignez la radio puis rallumez-la : elle ne prend les nouveaux canaux qu'au démarrage.") { done(true, f) }
