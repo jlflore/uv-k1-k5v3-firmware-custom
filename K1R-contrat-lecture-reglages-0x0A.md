@@ -1,4 +1,4 @@
-# Contrat K1R op 0x0A « lire des réglages » — v1.1 (r30, validé par ChatGPT le 23/11/2026)
+# Contrat K1R op 0x0A « lire des réglages » — v1.2 (r30, approuvé par ChatGPT le 23/11/2026)
 
 0x0A renvoie les réglages **actuellement chargés** dans le firmware. Pour STEP et PTT ID, ce sont les valeurs du VFO sélectionné, pas forcément celles enregistrées dans le canal mémoire. Le contenu mémorisé se contrôle à part (voir plus bas).
 
@@ -18,7 +18,7 @@ Lecture seule. Aucune écriture, aucune reconfiguration radio, aucune actualisat
   | g | Sens | Suite de la réponse |
   |---|---|---|
   | 0 | Commande traitée | Les entrées suivent |
-  | 1 | Trame mal formée (n hors 1..7 ou longueur ≠ n + 2) | Réponse réduite à `0A 01` |
+  | 1 | Trame mal formée (n hors 1..7 ou longueur ≠ n + 2) | Réponse réduite à `0A 01`. Seulement pour une trame acceptée par l'analyseur bas niveau : une charge de plus de 9 octets y est rejetée sans réponse 0x0A. |
   | 4 | Spectre ouvert | Réponse réduite à `0A 04` |
 
 - **v** = VFO concerné par les réglages de ligne (STEP, PTT ID), soit `gEeprom.TX_VFO`. Valeurs : 0 = A, 1 = B.
@@ -45,6 +45,13 @@ Lecture seule. Aucune écriture, aucune reconfiguration radio, aucune actualisat
 
 Les valeurs numériques sont celles que l'op 01 accepte pour le même menu : une lecture renvoie ce qu'il faut écrire pour retrouver le même réglage.
 
+**Exception : MENU_UPCODE.**
+- Le code se lit sur 16 caractères au plus.
+- L'op 0x03 actuelle n'en écrit que 8 au plus (le tampon de 9 octets moins l'octet d'op).
+- Un code de plus de 8 caractères reste lisible, mais l'op 0x03 ne peut pas le rétablir en entier.
+- Le comparateur d'équipe vérifie toute la longueur lue.
+- r30 ne change pas l'op 0x03.
+
 ## Taille
 - Pire cas : 4 + 7 × (3 + 16) = 137 octets (doublons de MENU_UPCODE). Le tampon de réponse fait au moins 137 octets.
 - Avant chaque écriture d'entrée, le firmware vérifie que `offset + 3 + len` reste dans le tampon.
@@ -61,7 +68,7 @@ Le protocole passe à 5. L'appli n'envoie 0x0A que si le protocole est au moins 
   - `v` est le même dans les deux réponses 0x0A ;
   - le VFO de 0x09 correspond à `v` ;
   - toutes les entrées ont s = 0 et la valeur attendue.
-- Un changement de VFO pendant la séquence invalide le contrôle.
+- Un changement de VFO pendant la séquence invalide le contrôle, s'il se voit dans les valeurs lues. Un aller-retour A → B → A entre deux lectures peut passer inaperçu. Ce risque résiduel est accepté pour une vérification de configuration, mais le contrôle **n'est pas atomique** et ne doit pas être présenté comme tel.
 - Une donnée absente, inconnue ou incohérente laisse le témoin éteint.
 - Tant que le canal mémoire n'a pas été relu, l'appli ne présente pas son contenu comme vérifié.
 
