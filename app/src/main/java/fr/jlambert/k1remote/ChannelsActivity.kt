@@ -86,9 +86,19 @@ class ChannelsActivity : Activity() {
         build()
     }
 
+    /** 0.82 : rotation sans recréer l'activité (configChanges) : on reconstruit la mise en page. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::mem.isInitialized) build()
+    }
+
     private fun build() {
+        // 0.82 (retour de D'jé) : en paysage, la liste n'avait plus de hauteur (en-tête, bandeau,
+        // recherche, filtres et boutons prenaient tout). Paysage : deux colonnes, commandes à gauche
+        // (défilantes), liste à droite sur toute la hauteur.
+        val land = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+            orientation = if (land) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
             setBackgroundColor(p.bg)
             setPadding(dp(14), dp(10), dp(14), dp(10))
             setOnApplyWindowInsetsListener { v, insets ->
@@ -99,6 +109,7 @@ class ChannelsActivity : Activity() {
             }
         }
 
+        val col = if (land) LinearLayout(this).apply { orientation = LinearLayout.VERTICAL } else root
         // En-tête
         val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         head.addView(text("←", 20f, p.text).apply {
@@ -112,7 +123,7 @@ class ChannelsActivity : Activity() {
         val date = SimpleDateFormat("d MMM yyyy 'à' HH:mm", Locale.FRANCE).format(Date(mem.date))
         titles.addView(text((if (mem.label.isNotEmpty()) mem.label + " · " else "") + "lu le $date", 12f, p.muted))
         head.addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
-        root.addView(head)
+        col.addView(head)
 
         // Bandeau d'information : d'où viennent ces canaux, et qu'on ne modifie rien
         val info = LinearLayout(this).apply {
@@ -126,7 +137,7 @@ class ChannelsActivity : Activity() {
             " · copie de sa mémoire de configuration active (celle du firmware qui tournait)", 12f, p.muted))
         info.addView(text("Vos modifications restent dans l'appli tant que vous n'appuyez pas sur « Envoyer … à la radio ».", 12f, p.muted))
         info.addView(text("Toucher un canal : le modifier. Appui long : passer la radio dessus.", 12f, p.muted))
-        root.addView(info, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+        col.addView(info, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
 
         // Recherche
         val search = EditText(this).apply {
@@ -144,7 +155,7 @@ class ChannelsActivity : Activity() {
                 override fun afterTextChanged(s: Editable?) { query = s?.toString().orEmpty(); refresh() }
             })
         }
-        root.addView(search, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+        col.addView(search, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
 
         // Filtres
         val chipRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -158,7 +169,7 @@ class ChannelsActivity : Activity() {
             chips += c
             chipRow.addView(c, LinearLayout.LayoutParams(-2, dp(36)).apply { marginEnd = dp(8) })
         }
-        root.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(chipRow) },
+        col.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(chipRow) },
             LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
 
         // Liste (virtualisée : 1 024 canaux possibles)
@@ -174,17 +185,22 @@ class ChannelsActivity : Activity() {
             }
             selector = android.graphics.drawable.ColorDrawable(0)
         }
-        root.addView(list, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(8) })
+        if (!land) root.addView(list, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(8) })
 
         // Actions, à portée du pouce
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         actions.addView(actionButton("Sauvegardes", false) { showBackups() }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(6) })
         actions.addView(actionButton("Bibliothèque", false) { showLibrary() }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(6) })
         actions.addView(actionButton("+ Nouveau", false) { newChannel() }, LinearLayout.LayoutParams(0, dp(48), 1f))
-        root.addView(actions, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+        col.addView(actions, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         sendButton = actionButton("", true) { prepareSend() }
-        root.addView(sendButton, LinearLayout.LayoutParams(-1, dp(50)).apply { topMargin = dp(8) })
+        col.addView(sendButton, LinearLayout.LayoutParams(-1, dp(50)).apply { topMargin = dp(8) })
 
+        if (land) {
+            root.addView(android.widget.ScrollView(this).apply { isVerticalScrollBarEnabled = false; addView(col) },
+                LinearLayout.LayoutParams(0, -1, 0.42f).apply { marginEnd = dp(12) })
+            root.addView(list, LinearLayout.LayoutParams(0, -1, 0.58f))
+        }
         setContentView(root)
         refresh()
     }

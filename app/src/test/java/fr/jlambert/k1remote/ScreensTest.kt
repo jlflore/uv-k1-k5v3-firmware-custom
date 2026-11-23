@@ -67,8 +67,8 @@ class ScreensTest {
     }
 
     /** Liste des canaux à partir d'une mémoire d'exemple (cas : écoute seule + listes). */
-    private fun captureChannels(name: String, label: String) {
-        RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
+    private fun captureChannels(name: String, label: String, landscape: Boolean = false) {
+        RuntimeEnvironment.setQualifiers(if (landscape) "w780dp-h360dp-land-xxhdpi" else "w360dp-h780dp-port-xxhdpi")
         val ctx = RuntimeEnvironment.getApplication()
         val mem = RadioMemory(ByteArray(RadioMemory.SIZE) { 0xFF.toByte() }, "F4HWN Fusion PTT r27", 0L, "Exemple")
         for (i in 0 until RadioMemory.CHANNELS) mem.deleteChannel(i)
@@ -303,6 +303,7 @@ class ScreensTest {
         for (t in listOf(ThemeId.CIEL, ThemeId.FRANCE)) {
             prefs(t, false, 0)
             captureChannels("canaux_${t.name.lowercase()}", "Canaux · ${t.label}")
+            captureChannels("canaux_${t.name.lowercase()}_paysage", "Canaux · ${t.label} · paysage", landscape = true)
         }
         for ((t, night) in listOf(ThemeId.CIEL to false, ThemeId.FRANCE to false, ThemeId.CIEL to true)) {
             prefs(t, night, 0)
