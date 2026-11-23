@@ -9,7 +9,8 @@ menu = (root / "App/app/menu.c").read_text(encoding="utf-8")
 defs = (root / "App/app/menu_settings.def").read_text(encoding="utf-8")
 
 WHITELIST = ["MENU_SQL", "MENU_BEEP", "MENU_SET_OFF", "MENU_SET_NFM", "MENU_STEP",
-             "MENU_UPCODE", "MENU_PTT_ID", "MENU_D_ST", "MENU_D_PRE", "MENU_D_LIVE_DEC"]
+             "MENU_UPCODE", "MENU_PTT_ID", "MENU_D_ST", "MENU_D_PRE", "MENU_D_LIVE_DEC",
+             "MENU_ABR", "MENU_ABR_ON_TX_RX"]   # r31 : éclairage
 
 body = app[app.index("static int8_t K1R_ReadSetting"):]
 body = body[:body.index("\n}\n")]
@@ -27,6 +28,15 @@ errors = []
 cases = set(re.findall(r"case (MENU_\w+):", body))
 if cases != set(WHITELIST):
     errors.append(f"liste blanche app.c {sorted(cases)} ≠ contrat {sorted(WHITELIST)}")
+# MENU_ABR : branche #ifdef dans les deux fichiers, comparée explicitement (r31).
+ABR_MENU = "gSubMenuSelection = gBacklightTimeOriginal;"
+ABR_APP = "v = gBackLight ? gBacklightTimeOriginal : gEeprom.BACKLIGHT_TIME;"
+abr_show = show[show.index("case MENU_ABR:"):show.index("case MENU_ABR:") + 400]
+if ABR_MENU not in abr_show or "if(gBackLight)" not in abr_show.replace(" ", "") or "gSubMenuSelection = gEeprom.BACKLIGHT_TIME;" not in abr_show:
+    errors.append("MENU_ABR : la logique du menu (gBackLight / gBacklightTimeOriginal / BACKLIGHT_TIME) a changé")
+if ABR_APP not in body:
+    errors.append("MENU_ABR : la lecture 0x0A ne suit plus la logique du menu")
+reads.pop("MENU_ABR", None)
 for m, src in reads.items():
     ref = table.get(m) or shown.get(m)
     if ref is None:

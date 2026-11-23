@@ -1,4 +1,4 @@
-# Contrat K1R op 0x0A « lire des réglages » — v1.4 (r30 ; v1.2 approuvée par ChatGPT le 23/11/2026 ; v1.3 corrige la liste blanche ; v1.4 intègre la revue du code r30)
+# Contrat K1R op 0x0A « lire des réglages » — v2.0 (r31, en revue ; v1.4 = r30 approuvée par ChatGPT le 23/11/2026)
 
 0x0A renvoie les réglages **actuellement chargés** dans le firmware. Pour STEP et PTT ID, ce sont les valeurs du VFO sélectionné, pas forcément celles enregistrées dans le canal mémoire. Le contenu mémorisé se contrôle à part (voir plus bas).
 
@@ -30,7 +30,7 @@ Lecture seule. Aucune écriture, aucune reconfiguration radio, aucune actualisat
   | 2 | Position hors liste | 0 |
   | 3 | Menu hors liste blanche, ou fonction non compilée | 0 |
 
-## Liste blanche r30 (10 réglages, figée pour r30)
+## Liste blanche (r30 : 10 réglages ; r31 : 12 avec l'éclairage)
 
 Correction v1.3 : la configuration d'équipe règle **SetOff** (veille, menu 67), et non **BatSav** (MENU_SAVE), qui sort de la liste. Elle règle aussi **D ST** et **D Prel**, qui y entrent. La liste correspond désormais exactement aux réglages généraux envoyés par la configuration d'équipe.
 
@@ -43,6 +43,8 @@ Correction v1.3 : la configuration d'équipe règle **SetOff** (veille, menu 67)
 | MENU_D_ST (48) | `gEeprom.DTMF_SIDE_TONE` (menu_settings.def) | u16 LE |
 | MENU_D_PRE (49) | `gEeprom.DTMF_PRELOAD_TIME / 10` (unité du menu, 10 ms) | u16 LE |
 | MENU_D_LIVE_DEC (50) | `gSetting_live_DTMF_decoder` | u16 LE |
+| MENU_ABR (36), r31 | `gBackLight ? gBacklightTimeOriginal : gEeprom.BACKLIGHT_TIME` (comme le menu : réglage d'origine si l'éclairage est surchargé) | u16 LE |
+| MENU_ABR_ON_TX_RX (39), r31 | `gSetting_backlight_on_tx_rx` | u16 LE |
 | MENU_SQL (54) | `gEeprom.SQUELCH_LEVEL` | u16 LE |
 | MENU_SET_OFF (67) | `gSetting_set_off` (menu_settings.def, si ENABLE_FEAT_F4HWN_SLEEP) | u16 LE |
 | MENU_SET_NFM (68) | `gSetting_set_nfm` (si ENABLE_FEAT_F4HWN_NARROWER) | u16 LE |
@@ -66,7 +68,11 @@ Les valeurs numériques sont celles que l'op 01 accepte pour le même menu : une
 - Ces 137 octets sont à vérifier sur les deux transports, USB et UART (boîtier).
 
 ## Ping
-Le protocole passe à 5. L'appli n'envoie 0x0A que si le protocole est au moins 5.
+Protocole 5 = r30 (10 réglages) ; protocole 6 = r31 (12 réglages). L'appli n'envoie 0x0A que si le protocole est au moins 5, et ne demande l'éclairage qu'à partir de 6.
+
+## Usage de l'éclairage (r31, appli 0.72)
+- Lecture de [36, 39] à chaque connexion, derrière un écran de démarrage (touches et PTT de l'appli bloqués, 3 s au plus), puis toutes les 15 s au plus, appli à l'écran, jamais pendant le PTT.
+- Écran éteint = BLTime 0 et BLTxRx 0. En furtif (préférence ou drapeau 0x10 de 0x09), l'état est ambigu : l'appli garde sa préférence.
 
 ## Côté appli : règle du témoin d'équipe
 - La séquence de contrôle est : lecture 0x09, deux requêtes 0x0A (5 + 5 réglages), puis nouvelle lecture 0x09.

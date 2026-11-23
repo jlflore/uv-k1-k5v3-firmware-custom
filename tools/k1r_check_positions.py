@@ -11,10 +11,12 @@ import json, re, shlex, sys, pathlib
 
 root = pathlib.Path(__file__).resolve().parent.parent
 REFERENCE = {1: "MENU_STEP", 40: "MENU_BEEP", 45: "MENU_UPCODE", 47: "MENU_PTT_ID", 48: "MENU_D_ST",
-             49: "MENU_D_PRE", 50: "MENU_D_LIVE_DEC", 54: "MENU_SQL", 67: "MENU_SET_OFF", 68: "MENU_SET_NFM"}
+             49: "MENU_D_PRE", 50: "MENU_D_LIVE_DEC", 54: "MENU_SQL", 67: "MENU_SET_OFF", 68: "MENU_SET_NFM",
+             36: "MENU_ABR", 39: "MENU_ABR_ON_TX_RX"}   # r31 : éclairage
 APP_NAMES = {"STEP": "MENU_STEP", "BEEP": "MENU_BEEP", "UPCODE": "MENU_UPCODE", "PTT_ID": "MENU_PTT_ID",
              "D_ST": "MENU_D_ST", "D_PRE": "MENU_D_PRE", "D_LIVE": "MENU_D_LIVE_DEC", "SQL": "MENU_SQL",
-             "SET_OFF": "MENU_SET_OFF", "SET_NFM": "MENU_SET_NFM"}
+             "SET_OFF": "MENU_SET_OFF", "SET_NFM": "MENU_SET_NFM",
+             "BL_TIME": "MENU_ABR", "BL_TXRX": "MENU_ABR_ON_TX_RX"}
 
 cc = json.loads(pathlib.Path(sys.argv[1]).read_text())
 entry = next(e for e in cc if e["file"].replace("\\", "/").endswith("App/ui/menu.c"))
