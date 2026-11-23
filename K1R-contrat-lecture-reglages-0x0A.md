@@ -113,4 +113,7 @@ Trois contrôles tournent à chaque compilation du firmware :
 
 ## Liste de scan (r32, appli 0.74)
 - Lue avec l'éclairage (requête [36, 39, 18]), aux mêmes moments. Elle n'est pas un réglage d'équipe et n'entre pas dans le témoin d'équipe.
-- Écrite par l'op 0x01 (menu 18), comme au menu ScList. Refusée pendant le spectre (hors liste blanche du spectre).
+- Écrite par l'op 0x01 (menu 18), comme au menu ScList. Refusée pendant le spectre (statut 4, hors liste blanche du spectre).
+- **Nouveau statut de l'op 0x01 : 5 = refusé pendant un scan.** Seul MENU_S_LIST l'utilise, quand `gScanStateDir != SCAN_OFF` : la liste est consultée pendant le balayage.
+- Une liste vide est acceptée à l'écriture. Au lancement du scan, `CHFRSCANNER_Start` peut passer à la liste valide suivante (comportement existant, non modifié). L'appli ne présente donc le choix que comme « demandé », et affiche la valeur relue ; si la radio en a gardé une autre, elle le dit.
+- Les listes proposées et leurs noms viennent de la dernière sauvegarde de « Mes canaux », pas d'une lecture en direct. Seul le numéro réglé est relu.

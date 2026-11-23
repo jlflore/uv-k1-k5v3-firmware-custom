@@ -2307,6 +2307,9 @@ static void K1R_RunCommand(void)
             while (count < 0xFE && MenuListId[count] != 0xFF) count++;   // borné
             if (c[1] < 1 || c[1] > count) { status = 2; break; }
             const uint8_t id = MenuListId[c[1] - 1];
+            // r32 (revue) : la liste de scan est consultée pendant le balayage (NextMemChannel) ;
+            // la changer en plein scan fausserait la séquence. Statut 5 = refusé pendant un scan.
+            if (id == MENU_S_LIST && gScanStateDir != SCAN_OFF) { status = 5; break; }
             // Sécurité : jamais par commande directe ce qui efface la radio, la calibre, change
             // les bandes autorisées en émission ou touche aux mémoires (réservé au clavier).
             switch (id) {
