@@ -1,4 +1,8 @@
-# K1 Remote Essai · version 0.67-essai (firmware Fusion PTT r29)
+# K1 Remote Essai · version 0.68-essai (firmware Fusion PTT r29)
+
+## 0.68-essai
+- Mes canaux › « Passer la radio sur ce canal » : ne bute plus sur « Écran principal fermé ». Le lien avec l'écran principal est réinscrit à chaque retour au premier plan, et seul l'écran qui l'a créé peut l'effacer ; si Android l'a quand même fermé (mémoire, rotation), la demande n'est plus perdue : retour à l'écran principal, qui passe sur le canal dès que la radio est prête.
+- Configuration d'équipe : réglage du pas de fréquence (menu 01 Step), « Automatique » par défaut (le plus grand pas compatible, comme avant) ou l'un des 24 pas du firmware. Un pas incompatible avec la fréquence est refusé. Enregistré dans le profil et dans le lien de partage (les anciens profils et liens restent valables).
 
 ## 0.67-essai — avec le firmware Fusion PTT r29 (état 0x09 format 2)
 - Témoin « réglages d'équipe identiques » sur les boutons d'équipe : allumé seulement si la ligne active a exactement les réglages du profil (canal ou mode fréquence, fréquence, puissance, largeur, sous-canaux en réception et en émission, sans décalage ni inversion). Une seule donnée inconnue l'éteint. Firmware r29 nécessaire.

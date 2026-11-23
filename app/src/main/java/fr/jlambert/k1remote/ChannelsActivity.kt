@@ -508,7 +508,18 @@ class ChannelsActivity : Activity() {
     /** Passe la radio sur le canal n, tel qu'il est enregistré dans la radio (0.64). */
     private fun selectOnRadio(n: Int) {
         fun go() {
-            val why = MemoryBridge.channelSelector?.invoke(n) ?: "Écran principal fermé : revenez-y, puis réessayez"
+            val sel = MemoryBridge.channelSelector
+            if (sel == null) {
+                // Écran principal fermé par Android : on y retourne, il passera sur le canal dès que la radio est prête
+                MemoryBridge.pendingChannel = n
+                Journal.add("Mes canaux : écran principal fermé, canal $n transmis à son retour")
+                toast("Retour à l'écran principal : passage au canal $n dès que la radio est prête")
+                startActivity(android.content.Intent(this, MainActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                finish()
+                return
+            }
+            val why = sel(n)
             if (why == null) { toast("Radio : passage au canal $n"); finish() } else toast(why)
         }
         if (changed(n)) {

@@ -265,6 +265,7 @@ class MainActivity : Activity() {
                         if (model != null) prefs.k1Arrows = model == "UV-K1"
                         toast("$radioInfo reconnu : réglages directs et silencieux")
                         if (editor == null) buildUi()
+                        applyPendingChannel()
                     }
                     return@run
                 }
@@ -653,17 +654,7 @@ class MainActivity : Activity() {
         prefs = Prefs(this)
         Journal.init(this)
         CallLog.init(this)
-        MemoryBridge.writer = { act, base, draft, done -> startMemoryWrite(act, base, draft, done) }
-        MemoryBridge.channelSelector = { n -> selectChannel(n) }
-        MemoryBridge.menuSender = { items ->
-            val c = cdc
-            when {
-                c == null || (c is BleLink && !relayRadio) -> "Radio non connectée"
-                !direct -> "Réglage direct impossible : il faut le firmware Fusion PTT sur la radio"
-                progSession -> "Lecture ou écriture des canaux en cours"
-                else -> if (sendSteps(settingSteps(items.map { (m, v) -> m to v.toString() }))) null else "Envoi refusé par l'appli (voir le message)"
-            }
-        }
+        registerBridge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         lcd = LcdView(this)
         // Toucher l'écran de la radio : haut = ligne A, bas = ligne B
@@ -725,9 +716,39 @@ class MainActivity : Activity() {
         android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * Fonctions offertes à « Mes canaux ». Réinscrites à chaque retour au premier plan : si Android a
+     * fermé puis recréé l'écran principal, le lien est toujours là (bug 0.67 : « Écran principal fermé »).
+     */
+    private fun registerBridge() {
+        MemoryBridge.owner = this
+        MemoryBridge.writer = { act, base, draft, done -> startMemoryWrite(act, base, draft, done) }
+        MemoryBridge.channelSelector = { n -> selectChannel(n) }
+        MemoryBridge.menuSender = { items ->
+            val c = cdc
+            when {
+                c == null || (c is BleLink && !relayRadio) -> "Radio non connectée"
+                !direct -> "Réglage direct impossible : il faut le firmware Fusion PTT sur la radio"
+                progSession -> "Lecture ou écriture des canaux en cours"
+                else -> if (sendSteps(settingSteps(items.map { (m, v) -> m to v.toString() }))) null else "Envoi refusé par l'appli (voir le message)"
+            }
+        }
+    }
+
+    /** Canal demandé pendant que l'écran principal était fermé : appliqué dès que la radio est là. */
+    private fun applyPendingChannel() {
+        val n = MemoryBridge.pendingChannel ?: return
+        if (cdc == null || live.mainMode == null) return      // radio pas encore prête (mode de la ligne inconnu)
+        MemoryBridge.pendingChannel = null
+        val why = selectChannel(n)
+        toast(if (why == null) "Radio : passage au canal $n" else "Canal $n non envoyé : $why")
+    }
+
     override fun onResume() {
         super.onResume()
         resumed = true
+        registerBridge()
+        ui.postDelayed({ applyPendingChannel() }, 800)
         if (MemoryBridge.openJournal) { MemoryBridge.openJournal = false; ui.postDelayed({ showCallLog() }, 300) }
         applyRelayLed()   // réglage éventuellement changé dans les Préférences
         if (cdc == null && pendingBle == null && !manualOff && prefs.linkMode != Prefs.LINK_USB && prefs.relayAddress != null) ui.post { connect() }
@@ -768,9 +789,13 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
-        MemoryBridge.writer = null
-        MemoryBridge.menuSender = null
-        MemoryBridge.channelSelector = null
+        // Seul l'écran qui a inscrit les fonctions peut les effacer (une instance recréée les a déjà reprises)
+        if (MemoryBridge.owner === this) {
+            MemoryBridge.writer = null
+            MemoryBridge.menuSender = null
+            MemoryBridge.channelSelector = null
+            MemoryBridge.owner = null
+        }
         disconnect(null)
         runCatching { unregisterReceiver(usbReceiver) }
         sender.shutdownNow()
@@ -1139,6 +1164,7 @@ class MainActivity : Activity() {
     /** Recopie l'état 0x09 dans la lecture consultée par tout l'affichage. */
     private fun applyFirmwareState() {
         val fw = synchronized(rstate) { rstate.reading() } ?: return
+        if (MemoryBridge.pendingChannel != null) ui.post { applyPendingChannel() }
         val old = reading
         reading = fw
         live = fw.copy(dtmf = live.dtmf)
@@ -3474,6 +3500,12 @@ class MainActivity : Activity() {
         panel.addView(fieldLabel("PUISSANCE D'ÉMISSION"), lp(-1, -2, top = 14))
         panel.addView(pickerButton("Puissance (valeurs approximatives)", TeamProfile.POWER_LABELS, t.power - 1) {
             t.power = it + 1; renderEditor()
+        }, lp(-1, dp(44), top = 6))
+
+        panel.addView(fieldLabel("PAS DE FRÉQUENCE (MENU 01 STEP)"), lp(-1, -2, top = 14))
+        val autoStep = t.freqHz()?.let { TeamProfile.STEP_LABELS[TeamProfile.tuning(it).first] } ?: "?"
+        panel.addView(pickerButton("Pas de fréquence", listOf("Automatique ($autoStep)") + TeamProfile.STEP_LABELS, t.step + 1) {
+            t.step = it - 1; renderEditor()
         }, lp(-1, dp(44), top = 6))
 
         panel.addView(fieldLabel("SQUELCH (0 = OUVERT, 9 = TRÈS FERMÉ)"), lp(-1, -2, top = 14))

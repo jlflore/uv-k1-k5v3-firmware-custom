@@ -28,7 +28,8 @@ data class TeamProfile(
     var txTone: String = "none",    // émission
     var txIdx: Int = 0,
     var beep: Boolean = false,      // menu 40 Beep (OFF par défaut : jamais utile en airsoft)
-    var endChannel: Boolean = false // false = la radio reste en mode fréquence après le réglage
+    var endChannel: Boolean = false, // false = la radio reste en mode fréquence après le réglage
+    var step: Int = -1              // menu 01 Step : -1 = automatique, sinon 0..23 (liste triée du firmware)
 ) {
     fun copy2() = copy()
 
@@ -68,8 +69,13 @@ data class TeamProfile(
     }.getOrNull()
 
     /** Message d'erreur, ou null si le profil est utilisable. */
+    /** Pas envoyé à la radio (menu 01) : celui choisi, sinon le plus grand compatible avec la fréquence. */
+    fun stepFor(hz: Long): Int = if (step in STEP_HZ.indices) step else tuning(hz).first
+
     fun problem(): String? {
         val hz = freqHz() ?: return "Fréquence invalide (ex. 446.00625)"
+        if (step in STEP_HZ.indices && !onStepGrid(hz, step))
+            return "La fréquence n'est pas sur la grille du pas de ${STEP_LABELS[step]} : choisissez un autre pas, ou « Automatique »"
         if (hz < 18_000_000L || hz >= 1_000_000_000L) return "Fréquence hors des limites de la radio (18 à 999 MHz)"
         if (tone == "ctcss" && toneIdx !in 1..50) return "Choisissez une tonalité CTCSS en réception"
         if (tone == "dcs" && toneIdx !in 1..208) return "Choisissez un code DCS en réception"
@@ -82,13 +88,15 @@ data class TeamProfile(
     }
 
     fun signature(): String = "t:" + (freqHz() ?: freq) + "/" + tone + toneIdx + "/" + txTone + txIdx + "/" + power +
-        (if (narrow) "N" else "W") + squelch + "@" + channel + (if (beep) "B" else "") + (if (endChannel) "C" else "F")
+        (if (narrow) "N" else "W") + squelch + "@" + channel + (if (beep) "B" else "") + (if (endChannel) "C" else "F") +
+        (if (step in STEP_HZ.indices) "S$step" else "")
 
     fun toneLabel(): String = if (sameTone) toneText(tone, toneIdx)
         else "réception " + toneText(tone, toneIdx) + ", émission " + toneText(txTone, txIdx)
 
     fun summary(): String = prettyHz(tunedHz() ?: 0) + " MHz · sous-canal " + toneLabel() + " · " + POWER_SHORT[power.coerceIn(1, 7) - 1] +
         " · " + (if (narrow) "étroit" else "large") + " · squelch " + squelch + " · bip " + (if (beep) "ON" else "OFF") +
+        " · pas " + (if (step in STEP_HZ.indices) STEP_LABELS[step] else "auto (" + (freqHz()?.let { STEP_LABELS[tuning(it).first] } ?: "?") + ")") +
         " · canal " + channel + (if (endChannel) " (radio sur le canal)" else " (radio en mode fréquence)")
 
     fun prettyFreq(): String = freqHz()?.let { prettyHz(it) } ?: freq
@@ -119,7 +127,7 @@ data class TeamProfile(
 
         k("EXIT"); k("EXIT")
         if (fromChannelMode) { k("F"); k("3"); wait() }
-        val (step, _) = tuning(hz)
+        val step = stepFor(hz)
         // 1) Pas de fréquence, avant de taper la fréquence (l'arrondi en dépend)
         k("MENU"); item(1, step.toString().padStart(2, '0')); k("EXIT"); k("EXIT"); wait()
         // 2) Fréquence (6 chiffres, en kHz, arrondie au kHz le plus proche)
@@ -161,8 +169,7 @@ data class TeamProfile(
         fun m(menu: Int, v: Int) = c(K5ViewerProtocol.setMenu(menu, v))
         k("EXIT"); k("EXIT")
         if (fromChannelMode) { k("F"); k("3"); out += KeyStep(KeyStep.WAIT, false) }
-        val (step, _) = tuning(hz)
-        m(1, step)
+        m(1, stepFor(hz))
         c(K5ViewerProtocol.setFreq(hz))
         m(2, power); m(9, if (narrow) 1 else 0); m(7, 0)
         fun tones(t: String, idx: Int, ctcssMenu: Int, dcsMenu: Int) = when (t) {
@@ -215,6 +222,7 @@ data class TeamProfile(
         put("f", freq); put("t", tone); put("i", toneIdx); put("tt", txTone); put("ti", txIdx); put("p", power)
         put("w", if (narrow) "n" else "w"); put("s", squelch); put("c", channel)
         put("b", beep); put("m", if (endChannel) "c" else "f")
+        if (step in STEP_HZ.indices) put("st", step)
     }
 
     /** Lien de partage : k1remote://equipe?n=…&f=…&t=c5&p=1&w=n&s=3&c=1 */
@@ -229,6 +237,7 @@ data class TeamProfile(
         .appendQueryParameter("c", channel.toString())
         .appendQueryParameter("b", if (beep) "1" else "0")
         .appendQueryParameter("m", if (endChannel) "c" else "f")
+        .apply { if (step in STEP_HZ.indices) appendQueryParameter("st", step.toString()) }
         .build().toString()
 
     companion object {
@@ -284,6 +293,24 @@ data class TeamProfile(
             return 5 to typed
         }
 
+        /**
+         * Pas du menu 01 Step, dans l'ordre de la liste triée du firmware (StepSortedIndexes,
+         * App/frequencies.c) : la valeur envoyée est l'indice dans cette liste.
+         */
+        val STEP_HZ = longArrayOf(10, 50, 100, 250, 500, 1_000, 1_250, 2_500, 5_000, 6_250, 8_330, 9_000, 10_000,
+            12_500, 15_000, 20_000, 25_000, 30_000, 50_000, 100_000, 125_000, 200_000, 250_000, 500_000)
+        val STEP_LABELS = listOf("0,01 kHz", "0,05 kHz", "0,1 kHz", "0,25 kHz", "0,5 kHz", "1 kHz", "1,25 kHz", "2,5 kHz",
+            "5 kHz", "6,25 kHz", "8,33 kHz", "9 kHz", "10 kHz", "12,5 kHz", "15 kHz", "20 kHz", "25 kHz", "30 kHz",
+            "50 kHz", "100 kHz", "125 kHz", "200 kHz", "250 kHz", "500 kHz")
+
+        /** Fréquence atteignable avec ce pas ? Même règle que tuning() : demi-pas à partir de 10 kHz ; 8,33 kHz non vérifié. */
+        fun onStepGrid(hz: Long, idx: Int): Boolean {
+            val st = STEP_HZ.getOrNull(idx) ?: return false
+            if (idx == 10) return true
+            val grid = if (st >= 10_000L) st / 2 else st
+            return hz % grid == 0L
+        }
+
         /** CTCSS_Options du firmware, en dixièmes de Hz. */
         private val CTCSS = intArrayOf(
             670, 693, 719, 744, 770, 797, 825, 854, 885, 915,
@@ -327,7 +354,8 @@ data class TeamProfile(
                 o.optString("f", "446.00625"), rx, ri, o.optInt("p", 1),
                 o.optString("w", "n") != "w", o.optInt("s", 3), o.optInt("c", 1),
                 o.optString("tt", rx), o.optInt("ti", ri),
-                o.optBoolean("b", false), o.optString("m", "f") == "c")   // anciens profils : même sous-canal dans les deux sens
+                o.optBoolean("b", false), o.optString("m", "f") == "c",   // anciens profils : même sous-canal dans les deux sens
+                o.optInt("st", -1).let { if (it in STEP_HZ.indices) it else -1 })
         }
 
         /** Lit un lien k1remote://equipe?… ; renvoie (nom, profil) ou null. */
@@ -342,7 +370,8 @@ data class TeamProfile(
                 u.getQueryParameter("w") != "w",
                 u.getQueryParameter("s")?.toIntOrNull() ?: 3,
                 u.getQueryParameter("c")?.toIntOrNull() ?: 1, txTone, txIdx,
-                u.getQueryParameter("b") == "1", u.getQueryParameter("m") == "c")
+                u.getQueryParameter("b") == "1", u.getQueryParameter("m") == "c",
+                u.getQueryParameter("st")?.toIntOrNull()?.let { if (it in STEP_HZ.indices) it else -1 } ?: -1)
             if (p.problem() != null) return null
             val name = (u.getQueryParameter("n") ?: "Équipe").take(14)
             return name to p

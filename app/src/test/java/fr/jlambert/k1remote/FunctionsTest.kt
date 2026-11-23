@@ -246,6 +246,30 @@ class FunctionsTest {
         assertEquals(0, f[6].toInt())
     }
 
+    private fun menuValue(steps: List<KeyStep>, menu: Int): Int? = steps.mapNotNull { it.cmd }
+        .firstOrNull { it[4].toInt() == 1 && (it[5].toInt() and 0xFF) == menu }?.let { (it[6].toInt() and 0xFF) or ((it[7].toInt() and 0xFF) shl 8) }
+
+    @Test fun equipe_pas_automatique_et_choisi() {
+        assertEquals(13, menuValue(TeamProfile(freq = "446.00625").directSteps(false, null, true), 1))          // auto : 12,5 kHz
+        assertEquals(9, menuValue(TeamProfile(freq = "446.00625", step = 9).directSteps(false, null, true), 1))  // choisi : 6,25 kHz
+        val keys = TeamProfile(freq = "446.00625", step = 9).steps(false).map { it.keyId }
+        assertEquals(listOf("MENU", "0", "1", "MENU", "0", "9", "MENU"), keys.drop(2).take(7))                   // 01 Step = 09
+    }
+
+    @Test fun equipe_pas_incompatible_refuse() {
+        assertNotNull(TeamProfile(freq = "446.00625", step = 16).problem())                                      // 25 kHz
+        assertNull(TeamProfile(freq = "446.00625", step = 13).problem())                                         // 12,5 kHz (demi-pas)
+        assertNull(TeamProfile(freq = "118.3", step = 10).problem())                                             // 8,33 kHz non vérifié
+    }
+
+    @Test fun equipe_pas_enregistre_partage_et_anciens_profils() {
+        val t = TeamProfile(freq = "446.00625", step = 9)
+        assertEquals(9, TeamProfile.fromJson(t.toJson())!!.step)
+        assertEquals(9, TeamProfile.fromLink(t.toLink("Scorpio"))!!.second.step)
+        assertEquals(-1, TeamProfile.fromJson(org.json.JSONObject("{\"f\":\"446.00625\"}"))!!.step)     // ancien profil
+        assertFalse(TeamProfile(freq = "446.00625").toLink("A").contains("st="))                             // auto : lien inchangé
+    }
+
     @Test fun equipe_controle_des_saisies() {
         assertNull(TeamProfile().problem())
         assertNotNull(TeamProfile(freq = "abc").problem())

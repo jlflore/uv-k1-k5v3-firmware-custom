@@ -17,6 +17,15 @@ object MemoryBridge {
     /** Passe la radio sur le canal mémoire n (1..1024) ; renvoie null si envoyé, sinon la raison (0.64). */
     @Volatile var channelSelector: ((Int) -> String?)? = null
 
+    /** Écran principal propriétaire des fonctions ci-dessus : lui seul peut les effacer (0.68). */
+    @Volatile var owner: Any? = null
+
+    /**
+     * Canal demandé depuis « Mes canaux » alors que l'écran principal avait été fermé par Android
+     * (mémoire, rotation) : il l'applique à son retour, dès que la liaison avec la radio est prête.
+     */
+    @Volatile var pendingChannel: Int? = null
+
     /** Demande d'ouverture du Journal au retour sur l'écran principal (bouton des Préférences). */
     @Volatile var openJournal = false
 }
