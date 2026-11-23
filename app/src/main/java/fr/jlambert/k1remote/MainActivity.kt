@@ -257,6 +257,8 @@ class MainActivity : Activity() {
                     val ver = if (r.size > 7) String(r, 7, r.size - 7) else ""
                     fwRevision = Regex("""r(\d+)""").find(ver)?.groupValues?.get(1)?.toIntOrNull() ?: 0
                     fwProtocol = if (r.size >= 6) r[5].toInt() and 0xFF else 0
+                    // 0.72 : r31 et plus, l'état de l'éclairage est lu avant de rendre la main
+                    if (fwProtocol >= RadioSettings.PROTOCOL_LIGHTS) { lightsReadAt = 0L; ui.post { setStartupReading(true) } }
                     // Firmwares r10 à r23 : réponse limitée à 16 octets, « r23 » arrivait tronqué en « r2 ».
                     // Réponse pleine et un seul chiffre : c'est au moins la dizaine (r2 → r20 et plus).
                     if (r.size == 16 && fwRevision in 1..9) fwRevision *= 10
@@ -964,6 +966,7 @@ class MainActivity : Activity() {
             // on vérifiera de nouveau son firmware à la première image.
             direct = false
             radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
+        lightsReadAt = 0L; setStartupReading(false)
             lastProbeAt = 0L
             watcherFor = null
             lcd.placeholder = "Allumez la radio et branchez-la sur le boîtier"
@@ -1177,7 +1180,10 @@ class MainActivity : Activity() {
             }
         }
         ui.post { refreshIfActiveChanged() }
-        if (raw != null && change != RadioState.Change.SUPPORT_SCREEN) maybeReadTeamSettings(c)
+        if (raw != null && change != RadioState.Change.SUPPORT_SCREEN) {
+            maybeReadLights(c)
+            maybeReadTeamSettings(c)
+        }
     }
 
     /** Recopie l'état 0x09 dans la lecture consultée par tout l'affichage. */
@@ -1274,6 +1280,51 @@ class MainActivity : Activity() {
      * 0x09 ; les champs stables de la ligne doivent être identiques avant et après, et la ligne
      * sélectionnée doit être celle des réglages de ligne. Sinon : lecture rejetée.
      */
+    // ---- 0.72 : éclairage lu dans la radio (firmware r31, protocole 6) ----
+    @Volatile private var startupReading = false
+    @Volatile private var lightsReadAt = 0L
+
+    /** Écran de démarrage : spinner sur la vitre, touches et PTT de l'appli bloqués (3 s au plus). */
+    private fun setStartupReading(on: Boolean) {
+        startupReading = on
+        if (!::lcd.isInitialized) return
+        lcd.busyText = if (on) "Lecture de l'état de la radio…" else null
+        ui.removeCallbacks(startupTimeout)
+        if (on) ui.postDelayed(startupTimeout, 3_000)
+    }
+    private val startupTimeout = Runnable {
+        if (startupReading) { Journal.add("Éclairage : lecture de démarrage trop longue, témoin laissé sur la préférence"); setStartupReading(false) }
+    }
+
+    /**
+     * Lit BLTime et BLTxRx (0x0A) : à la connexion (derrière l'écran de démarrage), puis toutes
+     * les 15 s au plus, seulement à l'écran et jamais pendant le PTT. Le témoin « Écran éteint »
+     * est recalé sur la radio quand l'état n'est pas ambigu (LightPlan.screenDarkFromRadio).
+     */
+    private fun maybeReadLights(c: RadioLink) {
+        if (fwProtocol < RadioSettings.PROTOCOL_LIGHTS || pttOn) return
+        val now = System.currentTimeMillis()
+        if (!startupReading && (!resumed || now - lightsReadAt < 15_000)) return
+        lightsReadAt = now
+        val raw = request(c, RadioSettings.request(RadioSettings.LIGHTS), 800)
+        val r = raw?.let { RadioSettings.decode(it, RadioSettings.LIGHTS) } as? RadioSettings.Result.Ok
+        val values = r?.entries?.associate { it.position to (it.value as? RadioSettings.Value.Num)?.v }
+        val radioStealth = synchronized(rstate) { rstate.snapshot }?.stealth == true
+        val dark = LightPlan.screenDarkFromRadio(values?.get(RadioSettings.BL_TIME), values?.get(RadioSettings.BL_TXRX),
+            stealth = prefs.stealth || radioStealth)
+        val first = startupReading
+        ui.post {
+            if (dark != null && dark != prefs.screenDark) {
+                prefs.screenDark = dark
+                Journal.add("Écran éteint : la radio est " + (if (dark) "sans éclairage" else "éclairée") + ", témoin recalé sur la radio")
+                if (editor == null) buildUi()
+            } else if (first && r == null) {
+                Journal.add("Éclairage : lecture impossible à la connexion, témoin laissé sur la préférence")
+            }
+            if (first) setStartupReading(false)
+        }
+    }
+
     /**
      * Test d'intégration du contrat 0x0A, une fois par connexion : 7 demandes du code d'appel,
      * soit la réponse la plus longue possible (4 + 7 × (3 + longueur du code)). Vérifie qu'elle
@@ -1446,6 +1497,7 @@ class MainActivity : Activity() {
         if (pttOn) return
         if (longSequenceRunning) { toast("Émission bloquée : réglage de la radio en cours"); return }
         if (progSession) { toast("Émission bloquée : lecture des canaux en cours"); return }
+        if (startupReading) { toast("Patientez : lecture de l'état de la radio"); return }
         if (cdc == null) { toast("Radio non connectée"); return }
         pttOn = true
         pttSince = System.currentTimeMillis()
@@ -1537,6 +1589,7 @@ class MainActivity : Activity() {
         synchronized(rstate) { rstate.reset() }
         lastStatusAt = 0L
         radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
+        lightsReadAt = 0L; setStartupReading(false)
         lastProbeAt = 0L
         parser.reset()
         lastFlags = 0
@@ -1605,6 +1658,7 @@ class MainActivity : Activity() {
             if (it.cmd != null) "[cmd " + it.cmd.joinToString("") { b -> "%02X".format(b) }.drop(8).dropLast(2) + "]"
             else it.keyId + (if (it.long) "(long)" else "") }.take(400))
         if (longSequenceRunning) { toast("Patientez : réglage de la radio en cours"); return false }
+        if (startupReading) { toast("Patientez : lecture de l'état de la radio"); return false }
         // Réglages en cours d'envoi : la lecture 0x0A précédente ne vaut plus (relue au prochain état)
         teamSettings = null; teamSettingsAskedAt = 0L
         // Réglage long et bip actif : on coupe le bip d'abord (quelques bips au lieu de dizaines),

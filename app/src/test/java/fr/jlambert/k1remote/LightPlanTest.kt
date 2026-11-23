@@ -62,4 +62,21 @@ class LightPlanTest {
             }
         }
     }
+
+    /** 0.72 (r31) : témoin « Écran éteint » déduit de la radio ; inconnu ou ambigu = null. */
+    @Test fun ecran_eteint_lu_dans_la_radio() {
+        assertEquals(true, LightPlan.screenDarkFromRadio(0, 0, stealth = false))
+        assertEquals(false, LightPlan.screenDarkFromRadio(12, 0, stealth = false))
+        assertEquals(false, LightPlan.screenDarkFromRadio(0, 3, stealth = false))
+        assertEquals(null, LightPlan.screenDarkFromRadio(0, 0, stealth = true))      // furtif : mêmes valeurs possibles
+        assertEquals(null, LightPlan.screenDarkFromRadio(null, 0, stealth = false))
+        assertEquals(null, LightPlan.screenDarkFromRadio(0, null, stealth = false))
+        // Cohérence avec ce que LightPlan envoie pour « Écran éteint » (hors furtif)
+        val day = LightPlan.Day(blTxRx = 3, blTime = 12, blMax = 10, inv = false)
+        fun read(dark: Boolean) = LightPlan.target(false, dark, 1, false, day).toMap().let {
+            LightPlan.screenDarkFromRadio(it.getValue(Shortcut.MENU_BLTIME).toInt(), it.getValue(Shortcut.MENU_BLTXRX).toInt(), false)
+        }
+        assertEquals(true, read(true)); assertEquals(false, read(false))
+        assertEquals(RadioSettings.BL_TIME, Shortcut.MENU_BLTIME); assertEquals(RadioSettings.BL_TXRX, Shortcut.MENU_BLTXRX)
+    }
 }

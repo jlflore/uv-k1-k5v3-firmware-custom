@@ -24,6 +24,11 @@ object RadioSettings {
     const val SQL = 54
     const val SET_OFF = 67
     const val SET_NFM = 68
+    // r31 (protocole 6) : éclairage, pour le témoin « Écran éteint »
+    const val BL_TIME = 36
+    const val BL_TXRX = 39
+    const val PROTOCOL_LIGHTS = 6
+    val LIGHTS = listOf(BL_TIME, BL_TXRX)
 
     /** Les 10 réglages de la liste blanche r30, dans l'ordre des deux requêtes (5 + 5). */
     val WHITELIST = listOf(STEP, BEEP, UPCODE, PTT_ID, D_ST, D_PRE, D_LIVE, SQL, SET_OFF, SET_NFM)
@@ -32,7 +37,7 @@ object RadioSettings {
         STEP to "pas", BEEP to "bip", UPCODE to "code d'appel", PTT_ID to "envoi du code (PTT ID)",
         D_ST to "écoute de son code (D ST)", D_PRE to "préambule du code (D Prel)",
         D_LIVE to "affichage des codes (D Live)", SQL to "squelch", SET_OFF to "veille (SetOff)",
-        SET_NFM to "SetNFM")
+        SET_NFM to "SetNFM", BL_TIME to "durée d'éclairage (BLTime)", BL_TXRX to "éclairage en émission/réception (BLTxRx)")
 
     /**
      * Résumé court des réglages vérifiés, pour l'affichage. N'énumère que [keys] (jamais plus) ;

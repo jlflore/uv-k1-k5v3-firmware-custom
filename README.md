@@ -1,4 +1,10 @@
-# K1 Remote Essai · version 0.71-essai (firmware Fusion PTT r30)
+# K1 Remote Essai · version 0.72-essai (firmware Fusion PTT r31)
+
+## 0.72-essai — avec le firmware Fusion PTT r31 (éclairage lisible)
+- Le bouton « Écran éteint » suit la radio, plus seulement l'appli : avec r31, l'appli lit dans la radio les deux réglages d'éclairage (36 BLTime, 39 BLTxRx). « Éteint » = les deux à 0. Corrige le bouton allumé alors que l'écran de la radio l'était (réglages changés hors de l'appli : UV Studio, menu au clavier). En furtif, l'état est ambigu (mêmes valeurs) : l'appli garde alors sa mémoire.
+- Écran de démarrage à chaque connexion : anneau qui tourne et « Lecture de l'état de la radio… » sur la vitre, touches et PTT de l'appli bloqués pendant la lecture (une fraction de seconde par câble, 3 s au plus). Le PTT de la radio reste libre.
+- Relecture de l'éclairage toutes les 15 s au plus, appli à l'écran, jamais pendant le PTT. Tout recalage est noté au journal.
+- Fonctionne par câble et par le boîtier K1 Relais (la relecture de la mémoire, elle, exigerait l'appui sur BOOT du boîtier).
 
 ## 0.71-essai — retours des premiers essais r30 (23/11)
 - Équipe sur les deux lignes A et B : en changeant de ligne, les réglages sont relus aussitôt (avant : jusqu'à 15 s de bouton éteint).

@@ -152,6 +152,10 @@ class ScreensTest {
                 ChoiceSheet.Option("✎", "Nommer", "Ex. Airsoft, Écoute aviation…") {},
                 ChoiceSheet.Option("✕", "Supprimer", "Efface le fichier du téléphone, la radio n'est pas concernée", danger = true) {}), "Retour")
         }
+        captureDialog("demarrage_$tag", "Lecture de l'état à la connexion · $label") { act ->
+            val f = MainActivity::class.java.getDeclaredField("lcd").apply { isAccessible = true }
+            (f.get(act) as LcdView).busyText = "Lecture de l'état de la radio…"
+        }
         captureDialog("choix_equipe_$tag", "Équipe déjà réglée · $label") { act ->
             ChoiceSheet.show(act, "Cette radio a déjà les réglages de l'équipe",
                 "« Scorpio », vérifié à l'instant dans la radio : la ligne (fréquence, sous-canaux, puissance, largeur), puis " +

@@ -51,6 +51,17 @@ object ShortcutStates {
  * alors que « Écran éteint » restait actif). Contrôlée dans toutes ses combinaisons par LightPlanTest.
  */
 object LightPlan {
+    /**
+     * 0.72 (firmware r31) : « Écran éteint » déduit des réglages lus dans la radio.
+     * Éteint = BLTime 0 et BLTxRx 0, exactement ce que [target] envoie. Renvoie null (inconnu,
+     * on garde la préférence) si une valeur manque ou en furtif, qui peut produire les mêmes
+     * valeurs : l'état serait ambigu.
+     */
+    fun screenDarkFromRadio(blTime: Int?, blTxRx: Int?, stealth: Boolean): Boolean? {
+        if (blTime == null || blTxRx == null || stealth) return null
+        return blTime == 0 && blTxRx == 0
+    }
+
     /** Réglages normaux de la radio (Préférences › Réglages normaux). */
     data class Day(val blTxRx: Int, val blTime: Int, val blMax: Int, val inv: Boolean)
 

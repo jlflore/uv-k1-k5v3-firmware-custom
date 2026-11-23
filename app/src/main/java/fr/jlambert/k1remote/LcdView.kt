@@ -48,6 +48,16 @@ class LcdView(context: Context) : View(context) {
     var placeholder: String = "Branchez la radio"
         set(v) { field = v; invalidate() }
 
+    /**
+     * 0.72 : lecture de l'état de la radio à la connexion. Non nul : voile sur la vitre, anneau
+     * qui tourne et ce texte ; l'appli bloque ses touches et son PTT pendant ce temps.
+     */
+    var busyText: String? = null
+        set(v) { field = v; busyStart = android.os.SystemClock.uptimeMillis(); invalidate() }
+    private var busyStart = 0L
+    private val busyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val busyArc = RectF()
+
     init { repaint() }
 
     fun setColors(on: Int, off: Int, offDim: Int, night: Boolean) {
@@ -125,6 +135,30 @@ class LcdView(context: Context) : View(context) {
             canvas.drawRect(glass, glassPaint)
         }
         canvas.restore()
+
+        busyText?.let { txt ->
+            // Voile, puis anneau (un arc de 90° qui tourne en 1 s) et le texte dessous
+            busyPaint.style = Paint.Style.FILL
+            busyPaint.color = if (night) Color.argb(215, 0, 0, 0) else Color.argb(200, 214, 226, 205)
+            canvas.drawRoundRect(glass, 9 * d, 9 * d, busyPaint)
+            val fg = if (night) Color.parseColor("#B8392E") else Color.parseColor("#2F4A2A")
+            val r = 13 * d
+            val cy = glass.centerY() - 10 * d
+            busyArc.set(glass.centerX() - r, cy - r, glass.centerX() + r, cy + r)
+            busyPaint.style = Paint.Style.STROKE
+            busyPaint.strokeWidth = 3.5f * d
+            busyPaint.strokeCap = Paint.Cap.ROUND
+            busyPaint.color = Color.argb(60, Color.red(fg), Color.green(fg), Color.blue(fg))
+            canvas.drawOval(busyArc, busyPaint)
+            busyPaint.color = fg
+            val turn = ((android.os.SystemClock.uptimeMillis() - busyStart) % 1000L) * 360f / 1000f
+            canvas.drawArc(busyArc, turn - 90f, 90f, false, busyPaint)
+            hintPaint.textSize = 14 * d
+            hintPaint.color = fg
+            canvas.drawText(txt, glass.centerX(), cy + r + 22 * d, hintPaint)
+            postInvalidateOnAnimation()
+            return
+        }
 
         if (lastFrame == null && placeholder.isNotEmpty()) {
             hintPaint.textSize = 15 * d
