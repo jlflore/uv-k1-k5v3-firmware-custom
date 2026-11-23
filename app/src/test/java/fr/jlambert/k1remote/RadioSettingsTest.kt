@@ -150,6 +150,14 @@ class RadioSettingsTest {
         assertTrue(!RadioSettings.applies(r.copy(key = null), snap, now = 2_000))                               // lecture non validée
     }
 
+    @Test fun resume_n_annonce_que_ce_qui_est_verifie() {
+        val team = TeamProfile(freq = "446.00625")
+        assertEquals("pas, squelch, bip, veille, SetNFM, D Live et code d'appel (avec ses options)",
+            RadioSettings.summary(team.expectedSettings("A1").keys))
+        assertEquals("pas, squelch, bip, veille, SetNFM et D Live", RadioSettings.summary(team.expectedSettings(null).keys))
+        assertEquals("squelch", RadioSettings.summary(setOf(RadioSettings.SQL)))
+    }
+
     @Test fun sans_code_d_appel_ses_options_ne_sont_pas_attendues() {
         val team = TeamProfile(freq = "446.00625", tone = "ctcss", toneIdx = 9, power = 2, narrow = true, channel = 12)
         assertEquals(6, team.expectedSettings(null).size)

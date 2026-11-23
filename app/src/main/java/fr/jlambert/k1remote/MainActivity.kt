@@ -2821,9 +2821,8 @@ class MainActivity : Activity() {
                 ChoiceSheet.show(this, "Cette radio a déjà les réglages de l'équipe",
                     if (full) {
                         val code = prefs.myCallCode.ifEmpty { null }
-                        val checked = t.expectedSettings(code).keys.mapNotNull { RadioSettings.LABELS[it] }
-                        "« ${s.name} » : vérifié à l'instant dans la radio — fréquence, sous-canaux, puissance, largeur, " +
-                            checked.joinToString(", ") + "." +
+                        "« ${s.name} », vérifié à l'instant dans la radio : la ligne (fréquence, sous-canaux, puissance, largeur), " +
+                            "puis " + RadioSettings.summary(t.expectedSettings(code).keys) + "." +
                             (if (code == null) "\nAucun code d'appel dans vos préférences : le code et ses options ne sont pas contrôlés." else "")
                     } else "« ${s.name} » : fréquence, sous-canaux, puissance et largeur sont déjà les bons.",
                     listOf(ChoiceSheet.Option("↻", "Renvoyer quand même",

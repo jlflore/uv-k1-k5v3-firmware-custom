@@ -154,8 +154,8 @@ class ScreensTest {
         }
         captureDialog("choix_equipe_$tag", "Équipe déjà réglée · $label") { act ->
             ChoiceSheet.show(act, "Cette radio a déjà les réglages de l'équipe",
-                "« Scorpio » : vérifié à l'instant dans la radio — fréquence, sous-canaux, puissance, largeur, " +
-                    TeamProfile(freq = "446.00625").expectedSettings("A1").keys.mapNotNull { RadioSettings.LABELS[it] }.joinToString(", ") + ".",
+                "« Scorpio », vérifié à l'instant dans la radio : la ligne (fréquence, sous-canaux, puissance, largeur), puis " +
+                    RadioSettings.summary(TeamProfile(freq = "446.00625").expectedSettings("A1").keys) + ".",
                 listOf(ChoiceSheet.Option("↻", "Renvoyer quand même", "Réécrit aussi le canal 1 en mémoire (l'appli ne le relit pas)") {}),
                 "Annuler")
         }

@@ -34,6 +34,25 @@ object RadioSettings {
         D_LIVE to "affichage des codes (D Live)", SQL to "squelch", SET_OFF to "veille (SetOff)",
         SET_NFM to "SetNFM")
 
+    /**
+     * Résumé court des réglages vérifiés, pour l'affichage. N'énumère que [keys] (jamais plus) ;
+     * le code d'appel et ses 3 options (PTT ID, D ST, D Prel) sont regroupés.
+     */
+    fun summary(keys: Set<Int>): String {
+        val short = linkedMapOf(STEP to "pas", SQL to "squelch", BEEP to "bip", SET_OFF to "veille",
+            SET_NFM to "SetNFM", D_LIVE to "D Live")
+        val parts = short.filterKeys { it in keys }.values.toMutableList()
+        val codeOpts = listOf(PTT_ID, D_ST, D_PRE)
+        when {
+            UPCODE in keys && keys.containsAll(codeOpts) -> parts += "code d'appel (avec ses options)"
+            else -> {
+                if (UPCODE in keys) parts += "code d'appel"
+                codeOpts.filter { it in keys }.forEach { parts += LABELS.getValue(it) }
+            }
+        }
+        return if (parts.size <= 1) parts.joinToString() else parts.dropLast(1).joinToString(", ") + " et " + parts.last()
+    }
+
     fun request(positions: List<Int>): ByteArray {
         require(positions.size in 1..MAX_PER_REQUEST)
         return K5ViewerProtocol.command(OP, positions.size, *positions.toIntArray())
