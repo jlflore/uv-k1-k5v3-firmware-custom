@@ -1,5 +1,11 @@
 # K1 Remote Essai · version 0.76-essai (firmware Fusion PTT r32)
 
+## 0.83-essai — bibliothèque : mer et relais
+
+- Règle de D'jé : seuls les canaux de secours émettent.
+- **Mer · France** : 13 canaux VHF marine en écoute seule, sauf le 16 (détresse) en émission ; météo des CROSS sur 79/80/63 (voie de réception, ANFR).
+- **Relais** (écoute seule, FM analogique) : Lyon et Val de Saône (F1ZFG, F1ZFH, F5ZXY, F5ZTI), Mont-Blanc et Arve (F1ZJV), Haut-Jura et Pays de Gex (F1ZJD, F1ZOH, F5ZBP). Sources : RepeaterBook, REF 74, ADRA01, radio-club du CERN, relevé du 24/11/2026.
+
 ## 0.82-essai — aide et mode d'emploi complétés
 
 - Aide « ? » du raccourci Spectre : appui long (touches du spectre) et appui bref spectre ouvert (fermeture) ; description du raccourci à jour.
