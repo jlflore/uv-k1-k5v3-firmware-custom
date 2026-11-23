@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.RadioSettingsTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:51.673Z" hostname="runnervm0hi8g" time="0.012">
+  <properties/>
+  <testcase name="listes_de_scan_proposees" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.002"/>
+  <testcase name="attendus_identiques_aux_reglages_envoyes" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.005"/>
+  <testcase name="entrees_refusees_sans_valeur" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="lecture_liee_a_la_ligne_et_a_son_age" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.001"/>
+  <testcase name="envois_qui_effacent_la_lecture" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="comparaison_inconnu_jamais_conforme" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="trames_corrompues_rejetees" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.001"/>
+  <testcase name="refus_globaux_sur_deux_octets" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="reunion_refusee_si_vfo_change_ou_lecture_manquante" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="resume_n_annonce_que_ce_qui_est_verifie" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="sans_code_d_appel_ses_options_ne_sont_pas_attendues" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="cle_stable_ignore_l_activite_radio" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.001"/>
+  <testcase name="decodage_trames_de_reference" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="code_d_appel_vide_et_seize_caracteres" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="requete_conforme" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.0"/>
+  <testcase name="cle_stable_change_avec_la_configuration" classname="fr.jlambert.k1remote.RadioSettingsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

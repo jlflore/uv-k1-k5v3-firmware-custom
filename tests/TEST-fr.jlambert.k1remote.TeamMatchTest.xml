@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.TeamMatchTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:51.763Z" hostname="runnervm0hi8g" time="0.001">
+  <properties/>
+  <testcase name="equipe_chaque_difference_eteint_le_temoin" classname="fr.jlambert.k1remote.TeamMatchTest" time="0.001"/>
+  <testcase name="equipe_donnee_inconnue_jamais_de_temoin" classname="fr.jlambert.k1remote.TeamMatchTest" time="0.0"/>
+  <testcase name="equipe_tout_identique_temoin_allume" classname="fr.jlambert.k1remote.TeamMatchTest" time="0.0"/>
+  <testcase name="equipe_sans_sous_canal" classname="fr.jlambert.k1remote.TeamMatchTest" time="0.0"/>
+  <testcase name="equipe_profil_incomplet_jamais_de_temoin" classname="fr.jlambert.k1remote.TeamMatchTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

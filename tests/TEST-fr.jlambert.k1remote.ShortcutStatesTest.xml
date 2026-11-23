@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.ShortcutStatesTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:51.708Z" hostname="runnervm0hi8g" time="0.053">
+  <properties/>
+  <testcase name="temoin_furtif_de_l_appli_meme_sans_furtif_profond" classname="fr.jlambert.k1remote.ShortcutStatesTest" time="0.002"/>
+  <testcase name="temoins_toutes_les_combinaisons" classname="fr.jlambert.k1remote.ShortcutStatesTest" time="0.046"/>
+  <testcase name="temoins_independants_en_furtif" classname="fr.jlambert.k1remote.ShortcutStatesTest" time="0.001"/>
+  <testcase name="pas_de_temoin_radio_fm" classname="fr.jlambert.k1remote.ShortcutStatesTest" time="0.0"/>
+  <testcase name="temoins_actions_ordinaires_jamais_allumees" classname="fr.jlambert.k1remote.ShortcutStatesTest" time="0.003"/>
+  <testcase name="temoins_spectre_eteint_scan_et_inversion" classname="fr.jlambert.k1remote.ShortcutStatesTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

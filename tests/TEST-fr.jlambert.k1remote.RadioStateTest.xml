@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.RadioStateTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:51.688Z" hostname="runnervm0hi8g" time="0.007">
+  <properties/>
+  <testcase name="fraicheur_et_exception_de_l_emission" classname="fr.jlambert.k1remote.RadioStateTest" time="0.003"/>
+  <testcase name="commande_sans_confirmation_indeterminee_jamais_echec" classname="fr.jlambert.k1remote.RadioStateTest" time="0.001"/>
+  <testcase name="commande_refusee_seulement_sur_preuve" classname="fr.jlambert.k1remote.RadioStateTest" time="0.001"/>
+  <testcase name="lecture_equivalente_a_l_ecran" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="trame_invalide_garde_le_dernier_etat" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="lectures_espacees_quand_la_radio_ne_repond_plus" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="spectre_ferme_des_la_premiere_reponse_normale" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="spectre_statut_4_radio_occupee_sans_repli" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="detection_firmware_sans_0x09_statut_9" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="commande_confirmee_par_l_etat_suivant" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="deconnexion_remet_tout_a_zero" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="detection_reussie_puis_jamais_de_retour_aux_pixels" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <testcase name="detection_trois_delais_depasses_repli_sur_l_ecran" classname="fr.jlambert.k1remote.RadioStateTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

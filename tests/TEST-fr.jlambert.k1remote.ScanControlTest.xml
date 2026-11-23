@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.ScanControlTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:51.706Z" hostname="runnervm0hi8g" time="0.0">
+  <properties/>
+  <testcase name="appuis_rapides_alternent_lancement_et_arret" classname="fr.jlambert.k1remote.ScanControlTest" time="0.0"/>
+  <testcase name="appui_court_toutes_les_combinaisons" classname="fr.jlambert.k1remote.ScanControlTest" time="0.0"/>
+  <testcase name="touches_de_lancement" classname="fr.jlambert.k1remote.ScanControlTest" time="0.0"/>
+  <testcase name="lectures_0x09_manquees_ne_changent_rien" classname="fr.jlambert.k1remote.ScanControlTest" time="0.0"/>
+  <testcase name="etat_ancien_ignore_apres_arret" classname="fr.jlambert.k1remote.ScanControlTest" time="0.0"/>
+  <testcase name="suivi_sur_etat_radio" classname="fr.jlambert.k1remote.ScanControlTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

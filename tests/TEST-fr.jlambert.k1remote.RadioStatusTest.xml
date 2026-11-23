@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.RadioStatusTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:51.697Z" hostname="runnervm0hi8g" time="0.008">
+  <properties/>
+  <testcase name="etat_encodeur_et_decodeur_concordent" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.002"/>
+  <testcase name="etat_reponse_d_erreur_courte" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_requete_bien_formee" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.001"/>
+  <testcase name="etat_frequences_limites" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_format2_partie_etendue_douteuse_ignoree_sans_perdre_v1" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.001"/>
+  <testcase name="etat_veille_etendue_autre_frequence" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_valeurs_inconnues_selon_le_type" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_format2_sous_canaux_et_spectre" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.001"/>
+  <testcase name="etat_type_de_ligne_inconnu_bloc_ignore" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_refus_des_valeurs_hors_contrat" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_trame_de_reference_decodee_champ_par_champ" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_format2_lu_par_un_decodeur_format1_meme_prefixe" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_format2_encodeur_concorde" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_liste_toutes_et_liste_24" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <testcase name="etat_longueurs_31_33_et_format_2" classname="fr.jlambert.k1remote.RadioStatusTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

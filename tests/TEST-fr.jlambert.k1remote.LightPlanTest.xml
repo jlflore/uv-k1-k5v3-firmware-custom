@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.LightPlanTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:51.651Z" hostname="runnervm0hi8g" time="0.02">
+  <properties/>
+  <testcase name="eclairage_toutes_les_combinaisons" classname="fr.jlambert.k1remote.LightPlanTest" time="0.009"/>
+  <testcase name="eclairage_toutes_les_suites_de_quatre_appuis" classname="fr.jlambert.k1remote.LightPlanTest" time="0.01"/>
+  <testcase name="ecran_eteint_lu_dans_la_radio" classname="fr.jlambert.k1remote.LightPlanTest" time="0.0"/>
+  <testcase name="eclairage_le_scenario_signale_ecran_eteint_puis_furtif_aller_retour" classname="fr.jlambert.k1remote.LightPlanTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

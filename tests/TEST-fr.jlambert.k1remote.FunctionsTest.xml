@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="fr.jlambert.k1remote.FunctionsTest" tests="32" skipped="0" failures="0" errors="0" timestamp="2026-11-23T23:10:49.478Z" hostname="runnervm0hi8g" time="2.17">
+  <properties/>
+  <testcase name="journal_separe_deux_appelants" classname="fr.jlambert.k1remote.FunctionsTest" time="1.588"/>
+  <testcase name="canal_nom_de_liste_lu_dans_la_radio" classname="fr.jlambert.k1remote.FunctionsTest" time="0.041"/>
+  <testcase name="journal_survit_au_redemarrage" classname="fr.jlambert.k1remote.FunctionsTest" time="0.036"/>
+  <testcase name="equipe_r26_enregistre_le_canal_au_clavier" classname="fr.jlambert.k1remote.FunctionsTest" time="0.031"/>
+  <testcase name="equipe_bande_etroite_standard_setnfm_narrow" classname="fr.jlambert.k1remote.FunctionsTest" time="0.019"/>
+  <testcase name="canal_am_toujours_en_ecoute_seule" classname="fr.jlambert.k1remote.FunctionsTest" time="0.023"/>
+  <testcase name="equipe_pas_automatique_et_choisi" classname="fr.jlambert.k1remote.FunctionsTest" time="0.018"/>
+  <testcase name="commande_frequence" classname="fr.jlambert.k1remote.FunctionsTest" time="0.018"/>
+  <testcase name="equipe_reglages_contre_les_pertes_de_code" classname="fr.jlambert.k1remote.FunctionsTest" time="0.017"/>
+  <testcase name="sauvegarde_ecrite_puis_relue" classname="fr.jlambert.k1remote.FunctionsTest" time="0.024"/>
+  <testcase name="equipe_pas_incompatible_refuse" classname="fr.jlambert.k1remote.FunctionsTest" time="0.016"/>
+  <testcase name="equipe_controle_des_saisies" classname="fr.jlambert.k1remote.FunctionsTest" time="0.017"/>
+  <testcase name="journal_texte_par_jour_et_effacement" classname="fr.jlambert.k1remote.FunctionsTest" time="0.019"/>
+  <testcase name="journal_limite_a_300_et_garde_les_plus_recents" classname="fr.jlambert.k1remote.FunctionsTest" time="0.015"/>
+  <testcase name="commande_code_d_appel" classname="fr.jlambert.k1remote.FunctionsTest" time="0.014"/>
+  <testcase name="journal_ignore_les_ouvertures_breves_du_squelch" classname="fr.jlambert.k1remote.FunctionsTest" time="0.022"/>
+  <testcase name="commande_reglage_de_menu" classname="fr.jlambert.k1remote.FunctionsTest" time="0.012"/>
+  <testcase name="journal_note_mes_emissions" classname="fr.jlambert.k1remote.FunctionsTest" time="0.014"/>
+  <testcase name="canal_modification_garde_l_exclusion_temporaire" classname="fr.jlambert.k1remote.FunctionsTest" time="0.02"/>
+  <testcase name="journal_appel_identifie_pendant_la_reception" classname="fr.jlambert.k1remote.FunctionsTest" time="0.016"/>
+  <testcase name="canal_liste_de_scan_un_numero_comme_le_firmware_v7" classname="fr.jlambert.k1remote.FunctionsTest" time="0.015"/>
+  <testcase name="canal_ecoute_seule_garde_ses_listes" classname="fr.jlambert.k1remote.FunctionsTest" time="0.015"/>
+  <testcase name="equipe_pas_enregistre_partage_et_anciens_profils" classname="fr.jlambert.k1remote.FunctionsTest" time="0.022"/>
+  <testcase name="canal_nom_sans_accents_sans_perte_de_lettre" classname="fr.jlambert.k1remote.FunctionsTest" time="0.017"/>
+  <testcase name="journal_fusionne_les_reprises_du_meme_appelant" classname="fr.jlambert.k1remote.FunctionsTest" time="0.018"/>
+  <testcase name="canal_ecrit_puis_relu_a_l_identique" classname="fr.jlambert.k1remote.FunctionsTest" time="0.022"/>
+  <testcase name="equipe_r27_enregistre_le_canal_en_direct_sans_touches" classname="fr.jlambert.k1remote.FunctionsTest" time="0.015"/>
+  <testcase name="journal_code_recu_juste_apres_la_reception" classname="fr.jlambert.k1remote.FunctionsTest" time="0.013"/>
+  <testcase name="canal_suppression" classname="fr.jlambert.k1remote.FunctionsTest" time="0.01"/>
+  <testcase name="commande_ptt" classname="fr.jlambert.k1remote.FunctionsTest" time="0.012"/>
+  <testcase name="frequences_saisies_en_mhz_khz_hz" classname="fr.jlambert.k1remote.FunctionsTest" time="0.012"/>
+  <testcase name="envoi_ne_touche_que_les_zones_des_canaux" classname="fr.jlambert.k1remote.FunctionsTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
