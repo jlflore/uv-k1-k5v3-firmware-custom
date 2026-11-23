@@ -49,7 +49,7 @@
 <body>
 <div class="hero">
 <h1>Mode d'emploi</h1>
-<p>K1 Remote 0.69-essai · télécommande pour Quansheng UV-K1 / UV-K5 V3 sous F4HWN Fusion, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
+<p>K1 Remote 0.70-essai · télécommande pour Quansheng UV-K1 / UV-K5 V3 sous F4HWN Fusion, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
 </div>
 <nav class="toc" aria-label="Sommaire"><a class="c0" href="#avant">Avant de commencer</a><a class="c1" href="#brancher">Brancher la radio</a><a class="c2" href="#ecran">L'écran principal</a><a class="c3" href="#clavier">Le clavier de la radio</a><a class="c4" href="#raccourcis">Les raccourcis</a><a class="c5" href="#equipe">Configuration d'équipe et partage</a><a class="c1" href="#carte">La carte d'équipe</a><a class="c2" href="#ptt">Firmware Fusion PTT</a><a class="c3" href="#appelants">Savoir qui appelle</a><a class="c0" href="#puissance">Le bouton Puissance</a><a class="c1" href="#nuit">Mode nuit et mode furtif</a><a class="c3" href="#operation">En opération</a><a class="c0" href="#laterales">Touches F1 / F2</a><a class="c4" href="#canaux">Les canaux de la radio</a><a class="c2" href="#aide">L'aide « ? »</a><a class="c3" href="#preferences">Préférences et noms des appelants</a><a class="c4" href="#problemes">Problèmes fréquents</a></nav>
 <section class="s c0"><h2 id="avant">Avant de commencer</h2>
@@ -268,7 +268,8 @@
 </section>
 <section class="s c5"><h2 id="equipe">Configuration d'équipe et partage</h2>
 <p>Un seul bouton règle la radio pour l'équipe : fréquence, pas de fréquence (automatique ou choisi), sous-canal, puissance, largeur et squelch, règle aussi le bip (OFF par défaut), puis enregistre le tout dans un canal. Dans le profil, vous choisissez si la radio reste ensuite en mode fréquence (par défaut) ou passe sur le canal. Pour changer le nom ou les réglages d'un profil : appui long sur son bouton, puis Modifier.</p>
-<p>Si le bouton d'équipe est déjà allumé (la radio a exactement les réglages de l'équipe, firmware r29), l'appli affiche « Cette radio a déjà les réglages de l'équipe » : <strong>Annuler</strong> ne change rien, <strong>Renvoyer quand même</strong> refait toute la configuration (utile si le squelch, le bip, le code d'appel ou le canal ont été changés à la main : la radio ne les signale pas à l'appli).</p>
+<p>Avec le firmware Fusion PTT <strong>r30</strong>, le bouton d'équipe ne s'allume que si la radio a <strong>tous</strong> les réglages de l'équipe : ligne active (fréquence, sous-canaux, puissance, largeur) et réglages généraux relus dans la radio (pas, squelch, bip, veille SetOff, SetNFM, code d'appel et ses options). Seul le canal enregistré en mémoire n'est pas relu. Avec r29, seule la ligne active est vérifiée.</p>
+<p>Si le bouton d'équipe est déjà allumé (la radio a exactement les réglages de l'équipe), l'appli affiche « Cette radio a déjà les réglages de l'équipe » : <strong>Annuler</strong> ne change rien, <strong>Renvoyer quand même</strong> refait toute la configuration (utile si le canal en mémoire a été modifié à la main ; avec r29, aussi pour le squelch, le bip ou le code d'appel, que la radio ne signale pas). Avec r30, si un réglage diffère, la configuration part directement et l'appli indique lesquels différaient.</p>
 <p>Avec le firmware Fusion PTT, la configuration met aussi le réglage général <strong>SetNFM</strong> (menu 68) sur NARROW, la bande étroite standard du PMR446. Sur NARROWER, la radio affiche « N+ » et resserre aussi son émission : votre voix arriverait plus faible ou plus étouffée chez les autres. Ainsi, toute l'équipe a le même réglage.</p>
 <p><strong>Créer le bouton</strong> (référent radio)</p>
 <ol>

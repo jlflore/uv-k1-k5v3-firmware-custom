@@ -256,6 +256,7 @@ class MainActivity : Activity() {
                     val model = if (r.size >= 7) (if (r[6].toInt() == 1) "UV-K5 V3" else "UV-K1") else null
                     val ver = if (r.size > 7) String(r, 7, r.size - 7) else ""
                     fwRevision = Regex("""r(\d+)""").find(ver)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                    fwProtocol = if (r.size >= 6) r[5].toInt() and 0xFF else 0
                     // Firmwares r10 à r23 : réponse limitée à 16 octets, « r23 » arrivait tronqué en « r2 ».
                     // Réponse pleine et un seul chiffre : c'est au moins la dizaine (r2 → r20 et plus).
                     if (r.size == 16 && fwRevision in 1..9) fwRevision *= 10
@@ -962,7 +963,7 @@ class MainActivity : Activity() {
             // La radio a pu redémarrer sur un autre emplacement Multiboot (autre firmware) :
             // on vérifiera de nouveau son firmware à la première image.
             direct = false
-            radioInfo = null; fwRevision = 0
+            radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
             lastProbeAt = 0L
             watcherFor = null
             lcd.placeholder = "Allumez la radio et branchez-la sur le boîtier"
@@ -1162,6 +1163,7 @@ class MainActivity : Activity() {
             RadioState.Change.NONE -> if (raw == null && synchronized(rstate) { rstate.usesFirmware }) ui.post { refreshChips() }
         }
         ui.post { refreshIfActiveChanged() }
+        if (raw != null && change != RadioState.Change.SUPPORT_SCREEN) maybeReadTeamSettings(c)
     }
 
     /** Recopie l'état 0x09 dans la lecture consultée par tout l'affichage. */
@@ -1225,8 +1227,88 @@ class MainActivity : Activity() {
     private fun teamActive(s: Shortcut): Boolean {
         captureActive?.let { return "team" in it }
         val t = s.team ?: return false
+        if (!teamLineMatches(t)) return false
+        if (fwProtocol < RadioSettings.PROTOCOL) return true          // r29 : ligne seulement
+        return teamSettingsDiff(t)?.isEmpty() == true                  // r30 : tout, ou éteint
+    }
+
+    /** Ligne active conforme au profil (état 0x09 format 2, frais). */
+    private fun teamLineMatches(t: TeamProfile): Boolean {
         val snap = synchronized(rstate) { if (rstate.usesFirmware && rstate.isFresh(System.currentTimeMillis(), pttOn)) rstate.snapshot else null }
         return snap != null && snap.format >= 2 && t.matches(snap.selectedLine)
+    }
+
+    // ---- 0.70 : réglages généraux relus par la commande 0x0A (r30) ----
+    @Volatile private var teamSettings: RadioSettings.Reading? = null
+    @Volatile private var teamSettingsAskedAt = 0L
+    private var lastSettingsDiff = ""
+
+    /** Réglages différents du profil ; null = lecture absente ou trop ancienne (inconnu ≠ conforme). */
+    private fun teamSettingsDiff(t: TeamProfile): List<String>? {
+        val r = teamSettings ?: return null
+        if (System.currentTimeMillis() - r.at > 45_000) return null
+        return RadioSettings.differences(t.expectedSettings(prefs.myCallCode.ifEmpty { null }), r)
+    }
+
+    /**
+     * Fil de surveillance : relit les 10 réglages quand la ligne active correspond à un profil
+     * d'équipe (au plus toutes les 15 s). Séquence du contrat 0x0A : 0x09, 0x0A (5), 0x0A (5),
+     * 0x09 ; les champs stables de la ligne doivent être identiques avant et après, et la ligne
+     * sélectionnée doit être celle des réglages de ligne. Sinon : lecture rejetée.
+     */
+    /**
+     * Test d'intégration du contrat 0x0A, une fois par connexion : 7 demandes du code d'appel,
+     * soit la réponse la plus longue possible (4 + 7 × (3 + longueur du code)). Vérifie qu'elle
+     * arrive entière et cohérente par USB comme par le boîtier (découpage Bluetooth). Journal seul.
+     */
+    @Volatile private var longFrameChecked = false
+    private fun checkLongFrame(c: RadioLink) {
+        longFrameChecked = true
+        val pos = List(RadioSettings.MAX_PER_REQUEST) { RadioSettings.UPCODE }
+        val raw = request(c, RadioSettings.request(pos), 1500)
+        val via = if (c is BleLink) "boîtier Bluetooth" else "USB"
+        val r = raw?.let { RadioSettings.decode(it, pos) }
+        val ok = r is RadioSettings.Result.Ok && r.entries.all { it.status == 0 && it.value == r.entries[0].value }
+        Journal.add(when {
+            raw == null -> "Test 0x0A : pas de réponse ($via)"
+            ok -> "Test 0x0A : réponse longue de ${raw.size} octets reçue intacte ($via)"
+            else -> "Test 0x0A : réponse de ${raw.size} octets incohérente ($via) : $r".take(200)
+        })
+    }
+
+    private fun maybeReadTeamSettings(c: RadioLink) {
+        if (fwProtocol < RadioSettings.PROTOCOL || pttOn || !resumed) return
+        if (!longFrameChecked) checkLongFrame(c)
+        val now = System.currentTimeMillis()
+        if (now - teamSettingsAskedAt < 15_000) return
+        val teams = runCatching { shortcuts.toList() }.getOrDefault(emptyList()).mapNotNull { it.team }
+        if (teams.none { teamLineMatches(it) }) return
+        teamSettingsAskedAt = now
+        val before = synchronized(rstate) { rstate.snapshot } ?: return
+        val parts = RadioSettings.WHITELIST.chunked(5).map { pos ->
+            val raw = request(c, RadioSettings.request(pos), 800) ?: return
+            RadioSettings.decode(raw, pos)
+        }
+        if (cdc !== c) return
+        val rawAfter = request(c, RadioStatus.REQUEST, 800) ?: return
+        val t = System.currentTimeMillis()
+        synchronized(rstate) { rstate.onResult(RadioStatus.decode(rawAfter), t) }
+        val after = (RadioStatus.decode(rawAfter) as? RadioStatus.Result.Ok)?.snapshot
+        val reading = RadioSettings.merge(parts, t)
+        val keyBefore = RadioSettings.stableKey(before)
+        val ok = reading != null && after != null && keyBefore != null &&
+            keyBefore == RadioSettings.stableKey(after) && after.selected == reading.vfo
+        teamSettings = if (ok) reading else null
+        val note = when {
+            reading == null -> "Réglages 0x0A illisibles : " + parts.joinToString { it.toString() }.take(160)
+            !ok -> "Réglages 0x0A ignorés : la ligne a changé pendant la lecture"
+            else -> teams.firstOrNull { teamLineMatches(it) }?.let { tp ->
+                RadioSettings.differences(tp.expectedSettings(prefs.myCallCode.ifEmpty { null }), reading)
+                    .let { d -> if (d.isEmpty()) "Réglages d'équipe tous vérifiés (0x0A)" else "Réglages différents de l'équipe : " + d.joinToString(", ") }
+            } ?: ""
+        }
+        if (note != lastSettingsDiff) { lastSettingsDiff = note; if (note.isNotEmpty()) Journal.add(note) }
+        ui.post { refreshIfActiveChanged() }
     }
 
     /** Signature des témoins : les raccourcis sont redessinés seulement quand elle change. */
@@ -1428,7 +1510,7 @@ class MainActivity : Activity() {
         direct = false
         synchronized(rstate) { rstate.reset() }
         lastStatusAt = 0L
-        radioInfo = null; fwRevision = 0
+        radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
         lastProbeAt = 0L
         parser.reset()
         lastFlags = 0
@@ -1497,6 +1579,8 @@ class MainActivity : Activity() {
             if (it.cmd != null) "[cmd " + it.cmd.joinToString("") { b -> "%02X".format(b) }.drop(8).dropLast(2) + "]"
             else it.keyId + (if (it.long) "(long)" else "") }.take(400))
         if (longSequenceRunning) { toast("Patientez : réglage de la radio en cours"); return false }
+        // Réglages en cours d'envoi : la lecture 0x0A précédente ne vaut plus (relue au prochain état)
+        teamSettings = null; teamSettingsAskedAt = 0L
         // Réglage long et bip actif : on coupe le bip d'abord (quelques bips au lieu de dizaines),
         // puis on le rétablit à la fin. Inutile en furtif : le bip y est déjà coupé.
         // Clavier de la radio verrouillé (cadenas) : le verrou protège aussi l'appli des touchers
@@ -1887,6 +1971,8 @@ class MainActivity : Activity() {
     private var radioInfo: String? = null
     /** Révision Fusion PTT (« r17 » → 17) ; 0 si inconnue. Le furtif complet demande la r17. */
     @Volatile private var fwRevision = 0
+    /** Version du protocole K1R annoncée au ping (5 = op 0x0A, r30). */
+    @Volatile private var fwProtocol = 0
 
     /** Sous-titre : la radio reconnue, sinon le type choisi dans les Préférences (flèches K1/K5). */
     private fun radioSubtitle(): String = radioInfo
@@ -2725,12 +2811,21 @@ class MainActivity : Activity() {
             // 0.69 : la radio affiche déjà les réglages de l'équipe (témoin allumé) → on demande
             // avant de tout renvoyer (≈ quelques secondes de radio occupée pour rien).
             if (!force && teamActive(s)) {
+                val full = fwProtocol >= RadioSettings.PROTOCOL
                 ChoiceSheet.show(this, "Cette radio a déjà les réglages de l'équipe",
-                    "« ${s.name} » : fréquence, sous-canaux, puissance et largeur sont déjà les bons.",
+                    if (full) "« ${s.name} » : tout est vérifié dans la radio — fréquence, sous-canaux, puissance, largeur, pas, squelch, bip, veille, SetNFM" +
+                        (if (prefs.myCallCode.isNotEmpty()) " et code d'appel." else ".")
+                    else "« ${s.name} » : fréquence, sous-canaux, puissance et largeur sont déjà les bons.",
                     listOf(ChoiceSheet.Option("↻", "Renvoyer quand même",
-                        "Réécrit aussi le canal ${t.channel} et le code d'appel, si l'un d'eux a été modifié à la main") { runShortcut(s, force = true) }),
+                        if (full) "Réécrit aussi le canal ${t.channel} en mémoire (l'appli ne le relit pas)"
+                        else "Réécrit aussi le canal ${t.channel} et le code d'appel, si l'un d'eux a été modifié à la main") { runShortcut(s, force = true) }),
                     "Annuler")
                 return
+            }
+            if (!force && fwProtocol >= RadioSettings.PROTOCOL && teamLineMatches(t)) {
+                teamSettingsDiff(t)?.takeIf { it.isNotEmpty() }?.let { d ->
+                    toast("Différent de l'équipe : " + d.joinToString(", ") + ". Réglage envoyé.")
+                }
             }
             if (sendSteps(if (direct) t.directSteps(fromChannelMode = mode == 'M', upCode = prefs.myCallCode.ifEmpty { null },
                               memSaveDirect = fwRevision >= 27)

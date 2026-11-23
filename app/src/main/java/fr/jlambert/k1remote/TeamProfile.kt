@@ -218,6 +218,29 @@ data class TeamProfile(
         return out
     }
 
+    /**
+     * 0.70 : réglages généraux que [directSteps] écrit, tels que la commande 0x0A (r30) doit les
+     * relire. Toute évolution de directSteps doit se refléter ici (contrôlé par TeamSettingsTest).
+     */
+    fun expectedSettings(upCode: String?): Map<Int, RadioSettings.Value> {
+        val hz = freqHz() ?: return emptyMap()
+        fun n(v: Int) = RadioSettings.Value.Num(v)
+        val m = linkedMapOf<Int, RadioSettings.Value>(
+            RadioSettings.STEP to n(stepFor(hz)),
+            RadioSettings.SQL to n(squelch),
+            RadioSettings.BEEP to n(if (beep) 1 else 0),
+            RadioSettings.D_LIVE to n(1),
+            RadioSettings.SET_OFF to n(0),
+            RadioSettings.SET_NFM to n(0))
+        if (upCode != null) {
+            m[RadioSettings.UPCODE] = RadioSettings.Value.Text(upCode.take(8))
+            m[RadioSettings.PTT_ID] = n(1)
+            m[RadioSettings.D_ST] = n(0)
+            m[RadioSettings.D_PRE] = n(60)
+        }
+        return m
+    }
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("f", freq); put("t", tone); put("i", toneIdx); put("tt", txTone); put("ti", txIdx); put("p", power)
         put("w", if (narrow) "n" else "w"); put("s", squelch); put("c", channel)
