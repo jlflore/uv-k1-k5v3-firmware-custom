@@ -558,15 +558,18 @@ class MainActivity : Activity() {
             else toast("Connectez la radio pour lire ses canaux")
             return
         }
-        val b = android.app.AlertDialog.Builder(this)
-            .setTitle("Canaux de la radio")
-            .setMessage("Lire les 1 024 canaux de la radio et les enregistrer dans une sauvegarde ?\n\n" +
-                "Lecture seule : rien n'est modifié dans la radio. Comptez une vingtaine de secondes ; " +
-                "l'écran et le PTT de l'appli sont suspendus pendant la lecture.")
-            .setPositiveButton("Lire la radio") { _, _ -> startMemoryRead(c) }
-            .setNegativeButton("Annuler", null)
-        if (last != null) b.setNeutralButton("Dernière sauvegarde") { _, _ -> startActivity(ChannelsActivity.intent(this, last)) }
-        b.show()
+        val opts = mutableListOf(ChoiceSheet.Option("⇩", "Lire la radio",
+            "Lit les 1 024 canaux et les enregistre dans une nouvelle sauvegarde. Quelques secondes par câble.", primary = true) { startMemoryRead(c) })
+        if (last != null) {
+            val m = runCatching { RadioMemory.load(last) }.getOrNull()
+            val date = java.text.SimpleDateFormat("d MMM yyyy à HH:mm", java.util.Locale.FRANCE).format(java.util.Date(last.lastModified()))
+            opts += ChoiceSheet.Option("▤", "Dernière sauvegarde",
+                listOfNotNull(m?.label?.ifEmpty { null }, date, m?.let { "${it.channels().size} canaux" }).joinToString(" · ") +
+                    "\nSans relire la radio") { startActivity(ChannelsActivity.intent(this, last)) }
+        }
+        ChoiceSheet.show(this, "Canaux de la radio",
+            "Lecture seule : rien n'est modifié dans la radio. L'écran et le PTT de l'appli sont suspendus le temps de la lecture.",
+            opts, "Annuler")
     }
 
     private fun startMemoryRead(c: RadioLink) {
@@ -2690,7 +2693,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun runShortcut(s: Shortcut) {
+    private fun runShortcut(s: Shortcut, force: Boolean = false) {
         // Liaison qui vient de se rétablir : l'appli ne sait pas encore que la radio a le firmware
         // Fusion PTT. Pour un réglage, on le vérifie d'abord (≤ 2 s) au lieu de retomber sur les
         // appuis de touches.
@@ -2719,6 +2722,16 @@ class MainActivity : Activity() {
             }
             val t = s.team ?: return
             t.problem()?.let { toast(it); return }
+            // 0.69 : la radio affiche déjà les réglages de l'équipe (témoin allumé) → on demande
+            // avant de tout renvoyer (≈ quelques secondes de radio occupée pour rien).
+            if (!force && teamActive(s)) {
+                ChoiceSheet.show(this, "Cette radio a déjà les réglages de l'équipe",
+                    "« ${s.name} » : fréquence, sous-canaux, puissance et largeur sont déjà les bons.",
+                    listOf(ChoiceSheet.Option("↻", "Renvoyer quand même",
+                        "Réécrit aussi le canal ${t.channel} et le code d'appel, si l'un d'eux a été modifié à la main") { runShortcut(s, force = true) }),
+                    "Annuler")
+                return
+            }
             if (sendSteps(if (direct) t.directSteps(fromChannelMode = mode == 'M', upCode = prefs.myCallCode.ifEmpty { null },
                               memSaveDirect = fwRevision >= 27)
                           else t.steps(fromChannelMode = mode == 'M'), restoreBeep = false, onDone = {

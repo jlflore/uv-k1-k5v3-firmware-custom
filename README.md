@@ -1,4 +1,9 @@
-# K1 Remote Essai · version 0.68-essai (firmware Fusion PTT r29)
+# K1 Remote Essai · version 0.69-essai (firmware Fusion PTT r29)
+
+## 0.69-essai
+- Fenêtres modernes aux couleurs du thème (ChoiceSheet) à la place des listes système d'Android : « Canaux de la radio » (Lire la radio · Dernière sauvegarde avec nom, date et nombre de canaux · Annuler), Bibliothèque (une tuile par liste, avec nombre de canaux et source), Sauvegardes (tuiles avec nom ou date, nombre de canaux, pastilles OUVERTE / RÉCENTE) et ses actions (Ouvrir · Nommer · Supprimer, avec confirmation).
+- Bouton d'équipe déjà allumé (la ligne active a exactement les réglages de l'équipe) : l'appli demande « Cette radio a déjà les réglages de l'équipe » — Renvoyer quand même / Annuler — au lieu de tout renvoyer.
+- Captures de ces fenêtres ajoutées aux contrôles (Ciel, Woodland, Nuit).
 
 ## 0.68-essai
 - Mes canaux › « Passer la radio sur ce canal » : ne bute plus sur « Écran principal fermé ». Le lien avec l'écran principal est réinscrit à chaque retour au premier plan, et seul l'écran qui l'a créé peut l'effacer ; si Android l'a quand même fermé (mémoire, rotation), la demande n'est plus perdue : retour à l'écran principal, qui passe sur le canal dès que la radio est prête.

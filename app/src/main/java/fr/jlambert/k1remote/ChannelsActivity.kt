@@ -317,33 +317,40 @@ class ChannelsActivity : Activity() {
 
     private fun showBackups() {
         val files = RadioMemory.list(this)
-        val fmt = SimpleDateFormat("d MMM yyyy HH:mm", Locale.FRANCE)
-        val labels = files.map { f ->
-            val m = runCatching { RadioMemory.load(f) }.getOrNull()
-            (if (f == file) "● " else "") + (m?.label?.ifEmpty { null } ?: fmt.format(Date(f.lastModified()))) +
-                (m?.let { " · ${it.channels().size} canaux" } ?: " · illisible")
-        }.toTypedArray()
         if (files.isEmpty()) { android.widget.Toast.makeText(this, "Aucune sauvegarde", android.widget.Toast.LENGTH_SHORT).show(); return }
-        AlertDialog.Builder(this)
-            .setTitle("Sauvegardes (la plus récente en premier)")
-            .setItems(labels) { _, i -> backupActions(files[i]) }
-            .setNegativeButton("Fermer", null)
-            .show()
+        val fmt = SimpleDateFormat("EEE d MMM yyyy · HH:mm", Locale.FRANCE)
+        val opts = files.mapIndexed { i, f ->
+            val m = runCatching { RadioMemory.load(f) }.getOrNull()
+            val date = fmt.format(Date(f.lastModified()))
+            val name = m?.label?.ifEmpty { null }
+            ChoiceSheet.Option(
+                icon = if (m == null) "!" else "▤",
+                title = name ?: date.replaceFirstChar { it.uppercase() },
+                subtitle = listOfNotNull(if (name != null) date else null,
+                    m?.let { "${it.channels().size} canaux" } ?: "fichier illisible").joinToString(" · "),
+                badge = when { f == file -> "OUVERTE"; i == 0 -> "RÉCENTE"; else -> null },
+                onClick = { backupActions(f) })
+        }
+        ChoiceSheet.show(this, "Sauvegardes", "Touchez une sauvegarde pour l'ouvrir, la nommer ou la supprimer. La plus récente est en haut.", opts)
     }
 
     private fun backupActions(f: File) {
-        AlertDialog.Builder(this)
-            .setTitle(f.nameWithoutExtension)
-            .setItems(arrayOf("Ouvrir", "Nommer", "Supprimer")) { _, which ->
-                when (which) {
-                    0 -> { startActivity(intent(this, f)); finish() }
-                    1 -> rename(f)
-                    2 -> AlertDialog.Builder(this).setTitle("Supprimer cette sauvegarde ?")
-                        .setMessage("Elle sera effacée du téléphone. La radio n'est pas concernée.")
-                        .setPositiveButton("Supprimer") { _, _ -> f.delete(); if (f == file) finish() else showBackups() }
-                        .setNegativeButton("Annuler", null).show()
-                }
-            }.show()
+        val m = runCatching { RadioMemory.load(f) }.getOrNull()
+        val fmt = SimpleDateFormat("d MMM yyyy à HH:mm", Locale.FRANCE)
+        val title = m?.label?.ifEmpty { null } ?: "Sauvegarde du " + fmt.format(Date(f.lastModified()))
+        val info = (m?.let { "${it.channels().size} canaux" } ?: "Fichier illisible") +
+            (if (m?.label?.isNotEmpty() == true) " · " + fmt.format(Date(f.lastModified())) else "")
+        val opts = mutableListOf<ChoiceSheet.Option>()
+        if (m != null) opts += ChoiceSheet.Option("▶", if (f == file) "Rester sur celle-ci" else "Ouvrir",
+            if (f == file) "C'est la sauvegarde affichée" else "Afficher ses canaux", primary = true) {
+            if (f != file) { startActivity(intent(this, f)); finish() } }
+        if (m != null) opts += ChoiceSheet.Option("✎", "Nommer", "Ex. Airsoft, Écoute aviation…") { rename(f) }
+        opts += ChoiceSheet.Option("✕", "Supprimer", "Efface le fichier du téléphone, la radio n'est pas concernée", danger = true) {
+            ChoiceSheet.show(this, "Supprimer cette sauvegarde ?", "« $title » sera effacée du téléphone. La radio n'est pas concernée.",
+                listOf(ChoiceSheet.Option("✕", "Supprimer définitivement", danger = true) {
+                    f.delete(); if (f == file) finish() else showBackups() }), "Annuler")
+        }
+        ChoiceSheet.show(this, title, info, opts, "Retour")
     }
 
     private fun rename(f: File) {
@@ -533,9 +540,11 @@ class ChannelsActivity : Activity() {
 
     private fun showLibrary() {
         val presets = ChannelLibrary.PRESETS
-        AlertDialog.Builder(this).setTitle("Bibliothèque")
-            .setItems(presets.map { "${it.title} · ${it.channels.size} canaux" }.toTypedArray()) { _, w -> addPreset(presets[w]) }
-            .setNegativeButton("Fermer", null).show()
+        ChoiceSheet.show(this, "Bibliothèque",
+            "Listes de fréquences toutes prêtes. Touchez-en une pour voir ses canaux avant de l'ajouter au brouillon : rien n'est écrasé.",
+            presets.map { pr ->
+                ChoiceSheet.Option("+", pr.title, "${pr.channels.size} canaux · ${pr.source}") { addPreset(pr) }
+            })
     }
 
     /** Ajoute une liste dans des places libres, à partir du numéro choisi. Rien n'est écrasé. */

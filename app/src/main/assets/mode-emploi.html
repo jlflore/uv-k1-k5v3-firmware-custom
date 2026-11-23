@@ -49,7 +49,7 @@
 <body>
 <div class="hero">
 <h1>Mode d'emploi</h1>
-<p>K1 Remote 0.68-essai · télécommande pour Quansheng UV-K1 / UV-K5 V3 sous F4HWN Fusion, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
+<p>K1 Remote 0.69-essai · télécommande pour Quansheng UV-K1 / UV-K5 V3 sous F4HWN Fusion, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
 </div>
 <nav class="toc" aria-label="Sommaire"><a class="c0" href="#avant">Avant de commencer</a><a class="c1" href="#brancher">Brancher la radio</a><a class="c2" href="#ecran">L'écran principal</a><a class="c3" href="#clavier">Le clavier de la radio</a><a class="c4" href="#raccourcis">Les raccourcis</a><a class="c5" href="#equipe">Configuration d'équipe et partage</a><a class="c1" href="#carte">La carte d'équipe</a><a class="c2" href="#ptt">Firmware Fusion PTT</a><a class="c3" href="#appelants">Savoir qui appelle</a><a class="c0" href="#puissance">Le bouton Puissance</a><a class="c1" href="#nuit">Mode nuit et mode furtif</a><a class="c3" href="#operation">En opération</a><a class="c0" href="#laterales">Touches F1 / F2</a><a class="c4" href="#canaux">Les canaux de la radio</a><a class="c2" href="#aide">L'aide « ? »</a><a class="c3" href="#preferences">Préférences et noms des appelants</a><a class="c4" href="#problemes">Problèmes fréquents</a></nav>
 <section class="s c0"><h2 id="avant">Avant de commencer</h2>
@@ -268,6 +268,7 @@
 </section>
 <section class="s c5"><h2 id="equipe">Configuration d'équipe et partage</h2>
 <p>Un seul bouton règle la radio pour l'équipe : fréquence, pas de fréquence (automatique ou choisi), sous-canal, puissance, largeur et squelch, règle aussi le bip (OFF par défaut), puis enregistre le tout dans un canal. Dans le profil, vous choisissez si la radio reste ensuite en mode fréquence (par défaut) ou passe sur le canal. Pour changer le nom ou les réglages d'un profil : appui long sur son bouton, puis Modifier.</p>
+<p>Si le bouton d'équipe est déjà allumé (la radio a exactement les réglages de l'équipe, firmware r29), l'appli affiche « Cette radio a déjà les réglages de l'équipe » : <strong>Annuler</strong> ne change rien, <strong>Renvoyer quand même</strong> refait toute la configuration (utile si le squelch, le bip, le code d'appel ou le canal ont été changés à la main : la radio ne les signale pas à l'appli).</p>
 <p>Avec le firmware Fusion PTT, la configuration met aussi le réglage général <strong>SetNFM</strong> (menu 68) sur NARROW, la bande étroite standard du PMR446. Sur NARROWER, la radio affiche « N+ » et resserre aussi son émission : votre voix arriverait plus faible ou plus étouffée chez les autres. Ainsi, toute l'équipe a le même réglage.</p>
 <p><strong>Créer le bouton</strong> (référent radio)</p>
 <ol>
@@ -440,14 +441,14 @@
 <p>Sur le clavier de l'appli, F1 et F2 sont les deux touches du côté : elles agissent comme celles de la radio. Leur fonction se choisit dans Préférences › Touches latérales de la radio (appui court et long de F1 et F2, appui long sur MENU), en clair : lampe, puissance, écoute forcée, scan, verrou, ligne A ⇄ B, etc. Le réglage part aussitôt vers la radio (firmware Fusion PTT, radio connectée). Évitez « 1750 Hz » : un appui pendant l'émission envoie un sifflement continu.</p>
 </section>
 <section class="s c4"><h2 id="canaux">Les canaux de la radio</h2>
-<p>Le bouton <strong>▤</strong> en haut de l'écran lit les 1 024 canaux de la radio (firmware Fusion PTT), en garde une sauvegarde datée dans le téléphone et ouvre « Mes canaux ». La lecture ne modifie rien dans la radio.</p>
+<p>Le bouton <strong>▤</strong> en haut de l'écran ouvre une fenêtre à deux choix : <strong>Lire la radio</strong> (les 1 024 canaux, firmware Fusion PTT, en quelques secondes par câble ; une sauvegarde datée est gardée dans le téléphone puis « Mes canaux » s'ouvre) ou <strong>Dernière sauvegarde</strong> (son nom, sa date et son nombre de canaux sont indiqués ; elle s'ouvre sans relire la radio). La lecture ne modifie rien dans la radio.</p>
 <ul>
 <li><strong>Consulter</strong> : chaque canal montre son nom (s'il en a un), sa fréquence, sa modulation et sa puissance en milliwatts. Recherche et filtres (Émission, Écoute seule, Avec nom).</li>
 <li><strong>Passer la radio sur un canal</strong> : appui long sur le canal, ou « ▶ Passer la radio sur ce canal » dans sa fiche. L'appli tape les mêmes touches que le raccourci « Aller à un canal » (passage en mode canal compris) et revient à l'écran principal. La radio prend le canal tel qu'il est enregistré chez elle : un canal modifié et pas encore envoyé garde son ancienne version, l'appli le signale.</li>
 <li><strong>Modifier ou créer</strong> : touchez un canal, sa fiche s'ouvre directement ; « Annuler » ressort sans rien changer. Nom (10 caractères ; la radio l'affiche si son menu ChDisp est sur NAME), fréquence, décalage, modulation, puissance (LOW 1 &lt; 20 mW … HIGH ≈ 5 W), largeur, codes CTCSS/DCS, pas, liste de scan. Un canal appartient à une seule liste, de 1 à 24 (avec son nom s'il en a un sur la radio), ou à « Toutes les listes ». « Écoute » signale un canal en AM (la radio n'émet jamais en AM) ou marqué « Émission bloquée » : avec le firmware Fusion PTT r25 ou plus, la radio refuse alors toute émission sur ce canal. Les canaux aviation et fluviaux de la bibliothèque sont bloqués d'office.</li>
 <li><strong>Brouillon</strong> : vos modifications sont gardées à chaque changement, même si l'appli est interrompue ; elles reviennent quand vous rouvrez la même sauvegarde.</li>
-<li><strong>Bibliothèque</strong> : aviation (Lyon), fluvial (Saône), PMR446, placés à partir du canal 101 dans les emplacements libres.</li>
-<li><strong>Sauvegardes</strong> : chaque lecture et chaque envoi en créent une ; renommez-les, exportez-les (fichier .k1r) ou rouvrez-les sans radio.</li>
+<li><strong>Bibliothèque</strong> : une tuile par liste (aviation Lyon, fluvial Saône, PMR446) avec son nombre de canaux et sa source ; touchez-la pour voir les canaux avant de les ajouter. Ils sont placés à partir du canal 101 dans les emplacements libres.</li>
+<li><strong>Sauvegardes</strong> : chaque lecture et chaque envoi en créent une. La liste montre pour chacune son nom ou sa date et son nombre de canaux ; « OUVERTE » marque celle affichée, « RÉCENTE » la dernière. Touchez-en une pour l'ouvrir, la nommer ou la supprimer ; exportez-les (fichier .k1r) ou rouvrez-les sans radio.</li>
 </ul>
 <h3>Envoyer à la radio</h3>
 <p>Les canaux modifiés portent la pastille « Modifié ». Le bouton du bas résume les changements puis :</p>

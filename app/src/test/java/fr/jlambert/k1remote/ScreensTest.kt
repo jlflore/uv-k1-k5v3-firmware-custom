@@ -122,11 +122,49 @@ class ScreensTest {
     }
 
     /** Carte de réussite par-dessus l'écran principal (animation terminée). */
-    private fun captureSuccess(name: String, label: String) {
+    private fun captureSuccess(name: String, label: String) = captureDialog(name, label) { act ->
+        SuccessCard.show(act, "Équipe configurée", "« Équipe » est enregistrée dans le canal 1.\nVotre code d'appel A1 part au début de chaque émission.")
+    }
+
+    /** Fenêtres de choix (0.69) : canaux de la radio, bibliothèque, sauvegardes, équipe déjà réglée. */
+    private fun captureSheets(tag: String, label: String) {
+        captureDialog("choix_canaux_$tag", "Canaux de la radio · $label") { act ->
+            ChoiceSheet.show(act, "Canaux de la radio",
+                "Lecture seule : rien n'est modifié dans la radio. L'écran et le PTT de l'appli sont suspendus le temps de la lecture.",
+                listOf(ChoiceSheet.Option("⇩", "Lire la radio", "Lit les 1 024 canaux et les enregistre dans une nouvelle sauvegarde. Quelques secondes par câble.", primary = true) {},
+                    ChoiceSheet.Option("▤", "Dernière sauvegarde", "Airsoft · 22 nov. 2026 à 18:40 · 37 canaux\nSans relire la radio") {}), "Annuler")
+        }
+        captureDialog("choix_bibliotheque_$tag", "Bibliothèque · $label") { act ->
+            ChoiceSheet.show(act, "Bibliothèque",
+                "Listes de fréquences toutes prêtes. Touchez-en une pour voir ses canaux avant de l'ajouter au brouillon : rien n'est écrasé.",
+                ChannelLibrary.PRESETS.map { pr -> ChoiceSheet.Option("+", pr.title, "${pr.channels.size} canaux · ${pr.source}") {} })
+        }
+        captureDialog("choix_sauvegardes_$tag", "Sauvegardes · $label") { act ->
+            ChoiceSheet.show(act, "Sauvegardes", "Touchez une sauvegarde pour l'ouvrir, la nommer ou la supprimer. La plus récente est en haut.", listOf(
+                ChoiceSheet.Option("▤", "Airsoft", "Dim. 22 nov. 2026 · 18:40 · 37 canaux", badge = "OUVERTE") {},
+                ChoiceSheet.Option("▤", "Sam. 21 nov. 2026 · 09:12", "35 canaux") {},
+                ChoiceSheet.Option("▤", "Écoute aviation", "Mar. 10 nov. 2026 · 20:05 · 112 canaux") {},
+                ChoiceSheet.Option("!", "Lun. 2 nov. 2026 · 14:30", "fichier illisible") {}))
+        }
+        captureDialog("choix_sauvegarde_actions_$tag", "Actions sur une sauvegarde · $label") { act ->
+            ChoiceSheet.show(act, "Écoute aviation", "112 canaux · 10 nov. 2026 à 20:05", listOf(
+                ChoiceSheet.Option("▶", "Ouvrir", "Afficher ses canaux", primary = true) {},
+                ChoiceSheet.Option("✎", "Nommer", "Ex. Airsoft, Écoute aviation…") {},
+                ChoiceSheet.Option("✕", "Supprimer", "Efface le fichier du téléphone, la radio n'est pas concernée", danger = true) {}), "Retour")
+        }
+        captureDialog("choix_equipe_$tag", "Équipe déjà réglée · $label") { act ->
+            ChoiceSheet.show(act, "Cette radio a déjà les réglages de l'équipe",
+                "« Scorpio » : fréquence, sous-canaux, puissance et largeur sont déjà les bons.",
+                listOf(ChoiceSheet.Option("↻", "Renvoyer quand même", "Réécrit aussi le canal 1 et le code d'appel, si l'un d'eux a été modifié à la main") {}),
+                "Annuler")
+        }
+    }
+
+    private fun captureDialog(name: String, label: String, show: (MainActivity) -> Unit) {
         RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val act = controller.get()
-        SuccessCard.show(act, "Équipe configurée", "« Équipe » est enregistrée dans le canal 1.\nVotre code d'appel A1 part au début de chaque émission.")
+        show(act)
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1500))
         val dm = act.resources.displayMetrics
         val w = dm.widthPixels; val h = dm.heightPixels
@@ -209,6 +247,10 @@ class ScreensTest {
         for ((t, night) in listOf(ThemeId.CIEL to false, ThemeId.FRANCE to false, ThemeId.CIEL to true)) {
             prefs(t, night, 0)
             captureSuccess("reussite_${if (night) "nuit" else t.name.lowercase()}", "Réussite · ${if (night) "Nuit" else t.label}")
+        }
+        for ((t, night) in listOf(ThemeId.CIEL to false, ThemeId.OTAN to false, ThemeId.CIEL to true)) {
+            prefs(t, night, 0)
+            captureSheets(if (night) "nuit" else t.name.lowercase(), if (night) "Nuit" else t.label)
         }
         for (t in listOf(ThemeId.CIEL, ThemeId.FRANCE)) {
             prefs(t, false, 0)
