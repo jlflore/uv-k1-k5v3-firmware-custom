@@ -42,7 +42,7 @@ class SplashOverlay(context: Context, private val status: () -> String) : View(c
         private val SHOTS = listOf(
             Shot("splash/glacier.jpg", 0.60f to 0.60f, 0.50f to 0.70f, topPort = true),
             Shot("splash/montee-soleil.jpg", 0.52f to 0.50f, 0.50f to 0.50f, topPort = true),
-            Shot("splash/montee-seracs.jpg", 0.38f to 0.50f, 0.45f to 0.50f, topPort = true, topLand = true),
+            Shot("splash/montee-seracs.jpg", 0.38f to 0.50f, null, topPort = true),   // paysage : alpiniste au centre, sous le texte
             Shot("splash/ski.jpg", 0.50f to 0.50f, 0.50f to 0.55f),
             Shot("splash/foret.jpg", 0.55f to 0.40f, null, topPort = true),
             Shot("splash/tireur.jpg", 0.55f to 0.40f, 0.55f to 0.20f, topLand = true),
@@ -173,7 +173,8 @@ class SplashOverlay(context: Context, private val status: () -> String) : View(c
 
         // Barre de progression sur 2 s, puis l'état de la liaison
         val t = ((SystemClock.uptimeMillis() - start).toFloat() / SHOW_MS).coerceIn(0f, 1f)
-        val barW = (if (landscape) minOf(w - 2 * m, 420 * d) else w - 2 * m)
+        // En paysage, la barre ne dépasse pas le titre (le personnage est souvent au centre)
+        val barW = if (landscape) minOf(w - 2 * m, title.measureText("UV-Kx OPS")) else w - 2 * m
         bar.color = Color.argb(70, 255, 255, 255)
         c.drawRoundRect(RectF(m, barY, m + barW, barY + 4 * d), 2 * d, 2 * d, bar)
         bar.color = Color.rgb(240, 170, 60)

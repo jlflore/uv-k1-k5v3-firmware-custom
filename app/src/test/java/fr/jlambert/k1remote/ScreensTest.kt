@@ -262,11 +262,11 @@ class ScreensTest {
     fun allScreens() {
         // 0.80 : écran d'ouverture (portrait et paysage) et touches du spectre
         prefs(ThemeId.CIEL, false, 0)
-        // Toutes les photos, dans les deux orientations (la forêt, en hauteur, n'est jamais tirée en paysage)
+        // Toutes les photos, dans les deux orientations (forêt et séracs ne sont jamais tirées en paysage)
         val photos = listOf("glacier", "montee-soleil", "montee-seracs", "ski", "foret", "tireur")
         photos.forEachIndexed { i, p ->
             capture("ouverture_${p}_portrait", "Écran d'ouverture · $p · portrait", false, splash = i)
-            if (p != "foret") capture("ouverture_${p}_paysage", "Écran d'ouverture · $p · paysage", true, splash = i)
+            if (p != "foret" && p != "montee-seracs") capture("ouverture_${p}_paysage", "Écran d'ouverture · $p · paysage", true, splash = i)
         }
         capture("spectre_touches_portrait", "Touches du spectre · portrait", false, spectrumKeys = true)
         val themes = ThemeId.values().filter { it != ThemeId.NUIT }
