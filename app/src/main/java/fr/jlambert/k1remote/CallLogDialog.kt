@@ -1,7 +1,6 @@
 package fr.jlambert.k1remote
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.Dialog
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
@@ -97,17 +96,16 @@ object CallLogDialog {
 
         val row1 = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL }
         row1.addView(button("Partager", false) {
-            AlertDialog.Builder(act).setTitle("Partager")
-                .setItems(arrayOf("Le journal des appels", "Le rapport complet (diagnostic)")) { _, w -> onShare(w == 0) }
-                .show()
+            ChoiceSheet.show(act, "Partager", null, listOf(
+                ChoiceSheet.Option("☰", "Le journal des appels", "Qui a parlé, quand, sur quel canal", primary = true) { onShare(true) },
+                ChoiceSheet.Option("⚙", "Le rapport complet", "Diagnostic technique, pour une analyse") { onShare(false) }), "Annuler")
         }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(6) })
         row1.addView(button("Effacer", false) {
             val n = CallLog.size()
             if (n == 0) return@button
-            AlertDialog.Builder(act).setTitle("Effacer le journal des appels ?")
-                .setMessage("$n élément${if (n > 1) "s" else ""} ser${if (n > 1) "ont" else "a"} supprimé${if (n > 1) "s" else ""}. Le journal technique n'est pas touché.")
-                .setPositiveButton("Effacer") { _, _ -> CallLog.clear(); fill() }
-                .setNegativeButton("Annuler", null).show()
+            Sheet.confirm(act, "Effacer le journal des appels ?",
+                "$n élément${if (n > 1) "s" else ""} ser${if (n > 1) "ont" else "a"} supprimé${if (n > 1) "s" else ""}. Le journal technique n'est pas touché.",
+                "Effacer") { CallLog.clear(); fill() }
         }, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(6) })
         row1.addView(button("Technique", false) { dialog.dismiss(); onTechnical() }, LinearLayout.LayoutParams(0, dp(44), 1f))
         card.addView(row1, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })

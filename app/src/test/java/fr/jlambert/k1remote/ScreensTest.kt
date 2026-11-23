@@ -152,6 +152,28 @@ class ScreensTest {
                 ChoiceSheet.Option("✎", "Nommer", "Ex. Airsoft, Écoute aviation…") {},
                 ChoiceSheet.Option("✕", "Supprimer", "Efface le fichier du téléphone, la radio n'est pas concernée", danger = true) {}), "Retour")
         }
+        // 0.76 : plus aucune fenêtre système
+        captureDialog("envoi_progression_$tag", "Envoi des canaux · $label") { act ->
+            ProgressSheet(act, "Envoi à la radio",
+                "Seuls les canaux modifiés sont écrits, puis relus pour vérification. Ne débranchez pas la radio.",
+                cancelLabel = "Annuler") {}.show().update("Écriture du bloc 3 sur 8…", 38)
+        }
+        captureDialog("lecture_progression_$tag", "Lecture des canaux · $label") { act ->
+            ProgressSheet(act, "Lecture des canaux", "Lecture seule : rien n'est modifié dans la radio.").show()
+                .update("Lecture des canaux…", 72)
+        }
+        captureDialog("message_$tag", "Message · $label") { act ->
+            Sheet.message(act, "Lecture interrompue",
+                "Pas de réponse de la radio.\n\nRien n'a été modifié dans la radio. Rapprochez le téléphone et réessayez.",
+                action = Sheet.Btn("Réessayer", Sheet.Style.PRIMARY))
+        }
+        captureDialog("confirmation_$tag", "Confirmation · $label") { act ->
+            Sheet.confirm(act, "Supprimer le canal 12 ?", "Il sera retiré du brouillon. La radio n'est modifiée qu'à l'envoi.", "Supprimer") {}
+        }
+        captureDialog("choix_liste_$tag", "Choix dans une liste · $label") { act ->
+            Sheet.pick(act, "Puissance (valeurs approximatives)",
+                listOf("LOW 1 · 0,1 W", "LOW 2 · 0,5 W", "LOW 3 · 1 W", "MID · 2 W", "HIGH · 5 W"), 3) {}
+        }
         captureDialog("scan_listes_$tag", "Appui long sur Scan · $label", withDialog = false) { act ->
             act.captureScanPicker(listOf("ALL · toutes les listes", "L1 · EQUI", "L2 · AIR", "L5 · PMR"), 1)
         }

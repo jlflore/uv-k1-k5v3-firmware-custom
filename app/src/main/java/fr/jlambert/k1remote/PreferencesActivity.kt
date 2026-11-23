@@ -1,7 +1,6 @@
 package fr.jlambert.k1remote
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.TimePickerDialog
 import android.graphics.Color
 import android.graphics.Typeface
@@ -359,15 +358,11 @@ class PreferencesActivity : Activity() {
         // Raccourcis
         col.addView(section("RACCOURCIS"))
         col.addView(button("Rétablir les raccourcis par défaut") {
-            AlertDialog.Builder(this)
-                .setTitle("Rétablir les raccourcis ?")
-                .setMessage("Vos raccourcis seront remplacés par : A ⇄ B, Puissance, Appel, Scan, Verrou, Furtif.")
-                .setNegativeButton("Annuler", null)
-                .setPositiveButton("Rétablir") { _, _ ->
-                    Shortcut.save(prefs, Shortcut.defaults())
-                    build()
-                }
-                .show()
+            Sheet.confirm(this, "Rétablir les raccourcis ?",
+                "Vos raccourcis seront remplacés par : A ⇄ B, Puissance, Appel, Scan, Verrou, Furtif.", "Rétablir") {
+                Shortcut.save(prefs, Shortcut.defaults())
+                build()
+            }
         }, lp(top = 8))
 
         // À propos
@@ -427,21 +422,18 @@ class PreferencesActivity : Activity() {
             setSingleLine()
             setText(prefs.mapTeam.takeIf { it != "Équipe" } ?: "")
         }
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Nouvelle équipe carte")
-            .setMessage("Une clé secrète est créée. Partagez-la ensuite par QR code avec vos coéquipiers.")
-            .setView(android.widget.FrameLayout(this).apply {
-                setPadding(dp(20), dp(4), dp(20), 0); addView(input)
-            })
-            .setPositiveButton("Créer") { _, _ ->
+        input.setTextColor(p.text); input.setHintTextColor(p.muted)
+        input.setPadding(dp(14), dp(12), dp(14), dp(12))
+        input.background = Ui.shape(this, p.surface, 12f, p.border)
+        Sheet.show(this, "Nouvelle équipe carte",
+            "Une clé secrète est créée. Partagez-la ensuite par QR code avec vos coéquipiers.", input,
+            listOf(Sheet.Btn("Annuler"), Sheet.Btn("Créer", Sheet.Style.PRIMARY) {
                 if (TeamMapState.running) PositionService.stop(this)
                 prefs.mapKey = TeamMap.keyToText(TeamMap.newKey())
                 prefs.mapTeam = input.text.toString().trim().ifEmpty { "Équipe" }
                 build()
                 showTeamQr(TeamMap.keyFromText(prefs.mapKey)!!)
-            }
-            .setNegativeButton("Annuler", null)
-            .show()
+            }))
     }
 
     private fun showTeamQr(key: ByteArray) {
@@ -451,21 +443,23 @@ class PreferencesActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(16), dp(8), dp(16), 0)
-            if (qr != null) addView(QrView(this@PreferencesActivity, qr), LinearLayout.LayoutParams(dp(240), dp(240)))
+            // QR sur fond blanc dans tous les thèmes (lisible par l'appareil photo, même en mode nuit)
+            if (qr != null) addView(android.widget.FrameLayout(this@PreferencesActivity).apply {
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+                background = Ui.shape(this@PreferencesActivity, android.graphics.Color.WHITE, 16f, p.border)
+                addView(QrView(this@PreferencesActivity, qr))
+            }, LinearLayout.LayoutParams(dp(250), dp(250)))
             addView(text("Vos coéquipiers scannent ce code avec l'appareil photo, ou ouvrent le lien reçu : " +
-                "K1 Remote leur propose alors de rejoindre « ${prefs.mapTeam} ».", 13f, android.graphics.Color.DKGRAY), lp(top = 8))
+                "K1 Remote leur propose alors de rejoindre « ${prefs.mapTeam} ».", 13f, p.muted), lp(top = 10))
         }
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Équipe « ${prefs.mapTeam} »")
-            .setView(box)
-            .setPositiveButton("Envoyer le lien") { _, _ ->
+        Sheet.show(this, "Équipe « ${prefs.mapTeam} »", null, box, listOf(
+            Sheet.Btn("Fermer"),
+            Sheet.Btn("Envoyer le lien", Sheet.Style.PRIMARY) {
                 startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND)
                     .setType("text/plain")
                     .putExtra(android.content.Intent.EXTRA_TEXT, "Rejoins l'équipe « ${prefs.mapTeam} » sur la carte K1 Remote : $link"),
                     "Envoyer le lien d'équipe"))
-            }
-            .setNegativeButton("Fermer", null)
-            .show()
+            }))
     }
 
     private fun joinFromClipboard() {
@@ -552,11 +546,7 @@ class PreferencesActivity : Activity() {
         row.addView(labels(title, subtitle), LinearLayout.LayoutParams(0, -2, 1f))
         row.addView(text((options.getOrNull(selected) ?: "?") + "  ›", 15f, p.text, Typeface.DEFAULT_BOLD))
         row.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle(title)
-                .setSingleChoiceItems(options.toTypedArray(), selected) { d, which -> d.dismiss(); onPick(which) }
-                .setNegativeButton("Annuler", null)
-                .show()
+            Sheet.pick(this, title, options, selected) { onPick(it) }
         }
         return row
     }

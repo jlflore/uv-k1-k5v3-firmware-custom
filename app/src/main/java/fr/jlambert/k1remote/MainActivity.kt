@@ -504,8 +504,7 @@ class MainActivity : Activity() {
     private fun startMemoryWrite(act: Activity, base: RadioMemory, draft: RadioMemory, done: (Boolean, File?) -> Unit) {
         fun info(title: String, msg: String, then: () -> Unit = {}) {
             if (act.isFinishing) { then(); return }
-            android.app.AlertDialog.Builder(act).setTitle(title).setMessage(msg)
-                .setPositiveButton("OK") { _, _ -> then() }.setOnCancelListener { then() }.show()
+            Sheet.message(act, title, msg, onClose = then)
         }
         val c = cdc
         if (c == null || !direct || (c is BleLink && !relayRadio)) {
@@ -521,39 +520,28 @@ class MainActivity : Activity() {
             return
         }
         val cancel = java.util.concurrent.atomic.AtomicBoolean(false)
-        val density = act.resources.displayMetrics.density
-        val label = android.widget.TextView(act).apply { textSize = 14f; setTextColor(android.graphics.Color.GRAY); text = "Préparation…" }
-        val bar = android.widget.ProgressBar(act, null, android.R.attr.progressBarStyleHorizontal).apply { max = 100; isIndeterminate = true }
-        val box = LinearLayout(act).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = (22 * density).toInt(); setPadding(p, (16 * density).toInt(), p, (8 * density).toInt())
-            addView(label)
-            addView(bar, LinearLayout.LayoutParams(-1, -2).apply { topMargin = (12 * density).toInt() })
-        }
-        val dlg = android.app.AlertDialog.Builder(act).setTitle("Envoi à la radio").setView(box).setCancelable(false)
-            .setNegativeButton("Annuler", null).create()
-        dlg.show()
-        dlg.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.setOnClickListener { cancel.set(true); label.text = "Annulation…" }
+        lateinit var sheet: ProgressSheet
+        sheet = ProgressSheet(act, "Envoi à la radio",
+            "Seuls les canaux modifiés sont écrits, puis relus pour vérification. Ne débranchez pas la radio.",
+            cancelLabel = "Annuler") { cancel.set(true); sheet.cancelText("Annulation…") }.show()
         Thread {
             try {
                 val f = writeRadioMemory(c, base, draft, { cancel.get() }) { msg, pct ->
                     ui.post {
-                        label.text = msg
-                        bar.isIndeterminate = pct < 0
-                        if (pct >= 0) bar.progress = pct
+                        sheet.update(msg, pct)
                         // Plus d'annulation une fois l'écriture commencée : chaque bloc est vérifié
-                        if (pct > 50) dlg.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)?.visibility = View.GONE
+                        if (pct > 50) sheet.cancelVisible(false)
                     }
                 }
                 ui.post {
-                    dlg.dismiss()
+                    sheet.dismiss()
                     SuccessCard.show(act, "Canaux envoyés",
                         "Toutes les modifications ont été écrites puis relues dans la radio.\n\n" +
                             "Éteignez la radio puis rallumez-la : elle ne prend les nouveaux canaux qu'au démarrage.") { done(true, f) }
                 }
             } catch (e: Exception) {
                 Journal.add("Écriture des canaux interrompue : ${e.message}")
-                ui.post { dlg.dismiss(); info(if (e is WriteCancelled) "Envoi annulé" else "Envoi interrompu", e.message ?: "Erreur") { done(false, null) } }
+                ui.post { sheet.dismiss(); info(if (e is WriteCancelled) "Envoi annulé" else "Envoi interrompu", e.message ?: "Erreur") { done(false, null) } }
             }
         }.start()
     }
@@ -583,33 +571,22 @@ class MainActivity : Activity() {
 
     private fun startMemoryRead(c: RadioLink) {
         if (pttOn) { toast("Relâchez le PTT d'abord"); return }
-        val bar = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply { max = 100 }
-        val label = text("Préparation…", 14f, android.graphics.Color.GRAY)   // lisible sur le fond du dialogue système
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(16), dp(22), dp(8))
-            addView(label); addView(bar, lp(-1, -2, top = 12))
-        }
-        val dlg = android.app.AlertDialog.Builder(this)
-            .setTitle("Lecture des canaux")
-            .setView(box)
-            .setCancelable(false)
-            .create()
-        dlg.show()
+        val sheet = ProgressSheet(this, "Lecture des canaux",
+            "Lecture seule : rien n'est modifié dans la radio.").show()
         Thread {
             try {
-                val mem = readRadioMemory(c) { d, t -> ui.post { bar.progress = d * 100 / t; label.text = "Lecture… ${d * 100 / t} %" } }
+                val mem = readRadioMemory(c) { d, t -> ui.post { sheet.update("Lecture des canaux…", d * 100 / t) } }
                 val f = mem.save(this)
                 val n = mem.channels().size
                 Journal.add("Lecture mémoire terminée : $n canaux, sauvegarde ${f.name}")
-                ui.post { dlg.dismiss(); startActivity(ChannelsActivity.intent(this, f)) }
+                ui.post { sheet.dismiss(); startActivity(ChannelsActivity.intent(this, f)) }
             } catch (e: Exception) {
                 Journal.add("Lecture mémoire interrompue : ${e.message}")
                 ui.post {
-                    dlg.dismiss()
-                    android.app.AlertDialog.Builder(this).setTitle("Lecture interrompue")
-                        .setMessage((e.message ?: "Erreur") + "\n\nRien n'a été modifié dans la radio. Rapprochez le téléphone et réessayez.")
-                        .setPositiveButton("OK", null).show()
+                    sheet.dismiss()
+                    Sheet.message(this, "Lecture interrompue",
+                        (e.message ?: "Erreur") + "\n\nRien n'a été modifié dans la radio. Rapprochez le téléphone et réessayez.",
+                        action = Sheet.Btn("Réessayer", Sheet.Style.PRIMARY) { cdc?.let { startMemoryRead(it) } })
                 }
             }
         }.start()
@@ -710,17 +687,22 @@ class MainActivity : Activity() {
         val trace = sp.getString("lastCrash", null) ?: return false
         sp.edit().remove("lastCrash").apply()
         setContentView(TextView(this).apply { setBackgroundColor(Color.parseColor("#DCE8F2")) })
-        android.app.AlertDialog.Builder(this)
-            .setTitle("L'appli s'est arrêtée la dernière fois")
-            .setMessage("Touchez « Copier » puis collez ce rapport dans la conversation avec Claude.\n\n" + trace.take(4000))
-            .setPositiveButton("Copier") { _, _ ->
+        val box = android.widget.ScrollView(this).apply {
+            addView(TextView(this@MainActivity).apply {
+                text = trace.take(4000); textSize = 11f; typeface = Typeface.MONOSPACE
+                setTextColor(p.text); setTextIsSelectable(true)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = Ui.shape(this@MainActivity, p.surface, 12f, p.border)
+            })
+        }
+        box.layoutParams = LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.45).toInt())
+        Sheet.show(this, "L'appli s'est arrêtée la dernière fois",
+            "Touchez « Copier » puis collez ce rapport dans la conversation avec Claude.", box,
+            listOf(Sheet.Btn("Fermer"), Sheet.Btn("Copier", Sheet.Style.PRIMARY) {
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 cm.setPrimaryClip(android.content.ClipData.newPlainText("Rapport K1 Remote", trace))
                 toastSafe("Rapport copié")
-            }
-            .setNegativeButton("Fermer", null)
-            .setOnDismissListener { buildUi() }
-            .show()
+            }), onDismiss = { buildUi() })
         return true
     }
 
@@ -820,17 +802,14 @@ class MainActivity : Activity() {
             val got = TeamMap.fromLink(intent.dataString)
             ui.post {
                 if (got == null) toast("Lien d'équipe carte illisible")
-                else android.app.AlertDialog.Builder(this)
-                    .setTitle("Rejoindre l'équipe « ${got.second} » ?")
-                    .setMessage("Votre position sera partagée avec cette équipe quand vous l'activerez sur la carte.")
-                    .setPositiveButton("Rejoindre") { _, _ ->
+                else Sheet.confirm(this, "Rejoindre l'équipe « ${got.second} » ?",
+                    "Votre position sera partagée avec cette équipe quand vous l'activerez sur la carte.",
+                    "Rejoindre", danger = false) {
                         if (TeamMapState.running) PositionService.stop(this)
                         prefs.mapKey = TeamMap.keyToText(got.first)
                         prefs.mapTeam = got.second
                         startActivity(Intent(this, MapActivity::class.java))
                     }
-                    .setNegativeButton("Annuler", null)
-                    .show()
             }
             if (cdc == null) connect()
             return
@@ -1496,22 +1475,19 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             addView(head)
             addView(android.widget.ScrollView(this@MainActivity).apply { addView(tv) },
-                LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.6).toInt()))
+                LinearLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.45).toInt()))
         }
         Journal.listener = { ui.post { tv.text = Journal.text() } }
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Journal technique")
-            .setView(box)
-            .setPositiveButton("Partager") { _, _ -> shareJournal(false) }
-            .setNeutralButton("Effacer") { _, _ ->
-                android.app.AlertDialog.Builder(this).setTitle("Effacer le journal technique ?")
-                    .setMessage("Le journal des appels n'est pas touché.")
-                    .setPositiveButton("Effacer") { _, _ -> Journal.clear(); toast("Journal technique effacé") }
-                    .setNegativeButton("Annuler", null).show()
-            }
-            .setNegativeButton("Fermer", null)
-            .setOnDismissListener { Journal.listener = null }
-            .show()
+        tv.setTextColor(p.text); head.setTextColor(p.muted)
+        (box.getChildAt(1) as View).background = Ui.shape(this, p.surface, 12f, p.border)
+        Sheet.show(this, "Journal technique", null, box, listOf(
+            Sheet.Btn("Effacer", Sheet.Style.DANGER) {
+                Sheet.confirm(this, "Effacer le journal technique ?", "Le journal des appels n'est pas touché.", "Effacer") {
+                    Journal.clear(); toast("Journal technique effacé")
+                }
+            },
+            Sheet.Btn("Partager", Sheet.Style.PRIMARY) { shareJournal(false) },
+            Sheet.Btn("Fermer")), onDismiss = { Journal.listener = null })
         cdc?.let { if (direct) { startWatcher(it); watchKick = true } }
     }
 
@@ -3007,14 +2983,11 @@ class MainActivity : Activity() {
         else Shortcut.multiSettingSteps(items)
 
     private fun warnStealthUnplugged() {
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Radio restée en mode furtif")
-            .setMessage("Son écran reste éteint ou sombre.\n\n" +
+        Sheet.message(this, "Radio restée en mode furtif",
+            "Son écran reste éteint ou sombre.\n\n" +
                 "• Le plus simple : rebranchez-la et touchez Furtif.\n" +
                 "• Sans téléphone : de jour l'écran se lit sans éclairage. Menu 39 (BLTxRx), 38 (BLMax), " +
                 "36 (BLTime) et 60 (SetInv) pour remettre vos valeurs.")
-            .setPositiveButton("OK", null)
-            .show()
     }
 
     private fun onLcdTap(top: Boolean) {
@@ -3823,11 +3796,7 @@ class MainActivity : Activity() {
     /** Bouton qui affiche la valeur choisie et ouvre la liste des valeurs. */
     private fun pickerButton(title: String, options: List<String>, selected: Int, onPick: (Int) -> Unit): TextView =
         toggleTile((options.getOrNull(selected) ?: "Choisir") + "  ▾", false) {
-            android.app.AlertDialog.Builder(this)
-                .setTitle(title)
-                .setSingleChoiceItems(options.toTypedArray(), selected) { d, which -> d.dismiss(); onPick(which) }
-                .setNegativeButton("Annuler", null)
-                .show()
+            Sheet.pick(this, title, options, selected) { onPick(it) }
         }
 
     private fun renderTeamBody(panel: LinearLayout, e: EditorState) {

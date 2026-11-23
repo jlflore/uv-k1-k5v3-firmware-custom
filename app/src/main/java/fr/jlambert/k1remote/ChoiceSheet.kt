@@ -27,6 +27,8 @@ object ChoiceSheet {
         val danger: Boolean = false,
         /** Option marquée (sauvegarde ouverte…) : pastille. */
         val badge: String? = null,
+        /** Flèche « › » à droite (faux pour un simple choix dans une liste). */
+        val arrow: Boolean = true,
         val onClick: () -> Unit
     )
 
@@ -80,7 +82,7 @@ object ChoiceSheet {
             if (!o.subtitle.isNullOrBlank()) texts.addView(tv(o.subtitle, 13f, sub).apply { setLineSpacing(0f, 1.15f) },
                 LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(2) })
             row.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(tv("›", 24f, sub), LinearLayout.LayoutParams(-2, -2))
+            if (o.arrow) row.addView(tv("›", 24f, sub), LinearLayout.LayoutParams(-2, -2))
             list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         }
         // Liste longue (sauvegardes) : défilante, hauteur plafonnée à 60 % de l'écran

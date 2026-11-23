@@ -77,8 +77,8 @@ class ChannelsActivity : Activity() {
                 }
             }
         } catch (e: Exception) {
-            AlertDialog.Builder(this).setTitle("Sauvegarde illisible").setMessage(e.message ?: "")
-                .setPositiveButton("OK") { _, _ -> finish() }.setCancelable(false).show()
+            Sheet.message(this, "Sauvegarde illisible", e.message ?: "Fichier abîmé ou d'un autre format.",
+                cancelable = false, onClose = { finish() })
             return
         }
         all = mem.channels()
@@ -201,24 +201,27 @@ class ChannelsActivity : Activity() {
      * propre fond (souvent gris foncé), sur lequel nos textes devenaient illisibles.
      */
     /** [validate] : si fourni et faux, la fenêtre reste ouverte (saisie à corriger). */
+    /**
+     * Carte avec contenu libre (éditeur de canal, envoi, détail d'une liste). 0.76 : même carte et
+     * mêmes boutons en pilule que [Sheet] ; hôte AlertDialog gardé pour le clavier des champs.
+     */
     private fun themedDialog(title: String, content: View, positive: String, onPositive: (() -> Unit)? = null,
                              negative: String? = null, contentHeight: Int = -2, validate: (() -> Boolean)? = null) {
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = Ui.shape(this@ChannelsActivity, p.surface, 18f, p.border)
-            setPadding(dp(20), dp(18), dp(20), dp(12))
+            background = Ui.shape(this@ChannelsActivity, p.sheet, 22f, p.border)
+            setPadding(dp(18), dp(18), dp(18), dp(14))
         }
-        box.addView(text(title, 19f, p.text, Typeface.DEFAULT_BOLD))
-        box.addView(content, LinearLayout.LayoutParams(-1, contentHeight).apply { topMargin = dp(8) })
-        val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.END }
-        box.addView(buttons, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+        box.addView(text(title, 20f, p.text, Typeface.DEFAULT_BOLD))
+        box.addView(content, LinearLayout.LayoutParams(-1, contentHeight).apply { topMargin = dp(10) })
+        val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        box.addView(buttons, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
         val dlg = AlertDialog.Builder(this).setView(box).create()
-        if (negative != null) buttons.addView(actionButton(negative, false) { dlg.dismiss() },
-            LinearLayout.LayoutParams(-2, dp(44)).apply { marginEnd = dp(8) })
-        buttons.addView(actionButton(positive, true) {
-            if (validate != null && !validate()) return@actionButton
-            dlg.dismiss(); onPositive?.invoke() }, LinearLayout.LayoutParams(-2, dp(44)))
-        for (i in 0 until buttons.childCount) buttons.getChildAt(i).setPadding(dp(18), 0, dp(18), 0)
+        if (negative != null) buttons.addView(Sheet.pill(this, p, Sheet.Btn(negative)) { dlg.dismiss() },
+            LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginEnd = dp(8) })
+        buttons.addView(Sheet.pill(this, p, Sheet.Btn(positive, Sheet.Style.PRIMARY)) {
+            if (validate != null && !validate()) return@pill
+            dlg.dismiss(); onPositive?.invoke() }, LinearLayout.LayoutParams(0, dp(46), 1f))
         dlg.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         dlg.show()
     }
@@ -390,9 +393,7 @@ class ChannelsActivity : Activity() {
             background = Ui.ripple(this@ChannelsActivity, p.bg, 10f, p.border, night = p.night)
         }
         v.setOnClickListener {
-            AlertDialog.Builder(this).setTitle(label).setItems(values.toTypedArray()) { _, w ->
-                onPick(w); v.text = values[w] + "  ▾"
-            }.show()
+            Sheet.pick(this, label, values, current()) { w -> onPick(w); v.text = values[w] + "  ▾" }
         }
         row.addView(v, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
         return row
@@ -455,13 +456,10 @@ class ChannelsActivity : Activity() {
         }
         listsValue.setOnClickListener {
             // 0 = aucune, 1..24, 25 = toutes : l'index du choix est la valeur écrite dans la radio
-            val names = (listOf("Aucune") + (1..RadioMemory.LISTS).map { mem.listLabel(it)!! } + listOf("Toutes les listes")).toTypedArray()
-            AlertDialog.Builder(this).setTitle("Liste de scan")
-                .setSingleChoiceItems(names, e.scanList.coerceIn(0, RadioMemory.LIST_ALL)) { d, w ->
-                    e.scanList = w; listsValue.text = listsLabel() + "  ▾"; d.dismiss()
-                }
-                .setNegativeButton("Annuler", null)
-                .show()
+            val names = listOf("Aucune") + (1..RadioMemory.LISTS).map { mem.listLabel(it)!! } + listOf("Toutes les listes")
+            Sheet.pick(this, "Liste de scan", names, e.scanList.coerceIn(0, RadioMemory.LIST_ALL)) { w ->
+                e.scanList = w; listsValue.text = listsLabel() + "  ▾"
+            }
         }
         listsRow.addView(listsValue, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
         box.addView(listsRow)
@@ -482,10 +480,10 @@ class ChannelsActivity : Activity() {
         if (existing != null) box.addView(text("Supprimer ce canal", 15f, p.danger, medium).apply {
             setPadding(0, dp(16), 0, dp(6))
             setOnClickListener {
-                AlertDialog.Builder(this@ChannelsActivity).setTitle("Supprimer le canal ${i + 1} ?")
-                    .setMessage("Il sera retiré du brouillon. La radio n'est modifiée qu'à l'envoi.")
-                    .setPositiveButton("Supprimer") { _, _ -> mem.deleteChannel(i); refresh() }
-                    .setNegativeButton("Annuler", null).show()
+                Sheet.confirm(this@ChannelsActivity, "Supprimer le canal ${i + 1} ?",
+                    "Il sera retiré du brouillon. La radio n'est modifiée qu'à l'envoi.", "Supprimer") {
+                    mem.deleteChannel(i); refresh()
+                }
             }
         })
         themedDialog(if (existing == null) "Nouveau canal" else "Canal ${i + 1}",
@@ -530,11 +528,10 @@ class ChannelsActivity : Activity() {
             if (why == null) { toast("Radio : passage au canal $n"); finish() } else toast(why)
         }
         if (changed(n)) {
-            AlertDialog.Builder(this).setTitle("Canal $n modifié, pas encore envoyé")
-                .setMessage("La radio passera sur ce canal tel qu'il est enregistré dans la radio, pas sur votre version modifiée. " +
-                    "Pour utiliser la nouvelle version, envoyez d'abord les modifications.")
-                .setPositiveButton("Passer quand même") { _, _ -> go() }
-                .setNegativeButton("Annuler", null).show()
+            Sheet.confirm(this, "Canal $n modifié, pas encore envoyé",
+                "La radio passera sur ce canal tel qu'il est enregistré dans la radio, pas sur votre version modifiée. " +
+                    "Pour utiliser la nouvelle version, envoyez d'abord les modifications.",
+                "Passer quand même", danger = false) { go() }
         } else go()
     }
 
@@ -605,10 +602,9 @@ class ChannelsActivity : Activity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (::mem.isInitialized && changedCount() > 0) {
-            AlertDialog.Builder(this).setTitle("Modifications non envoyées")
-                .setMessage("${changedCount()} canal(aux) modifié(s) dans l'appli mais pas dans la radio. Les abandonner ?")
-                .setPositiveButton("Abandonner") { _, _ -> draftFile().delete(); finish() }
-                .setNegativeButton("Rester", null).show()
+            Sheet.confirm(this, "Modifications non envoyées",
+                "${changedCount()} canal(aux) modifié(s) dans l'appli mais pas dans la radio. Les abandonner ?",
+                "Abandonner", cancel = "Rester") { draftFile().delete(); finish() }
         } else {
             @Suppress("DEPRECATION") super.onBackPressed()
         }
