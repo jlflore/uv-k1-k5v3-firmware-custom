@@ -50,6 +50,7 @@ class RadioState {
                 val first = support != Support.FIRMWARE
                 support = Support.FIRMWARE
                 snapshot = r.snapshot; receivedAt = now; misses = 0; failures = 0
+                busyAt = 0L                                                    // réponse normale : spectre fermé
                 checkPending(now)
                 return if (first) Change.SUPPORT_FIRMWARE else Change.STATE
             }
@@ -82,7 +83,7 @@ class RadioState {
     fun isFresh(now: Long, transmitting: Boolean): Boolean =
         snapshot != null && (transmitting || now - receivedAt < FRESH_MS)
 
-    fun isBusy(now: Long) = now - busyAt < POLL_BUSY_MS * 2
+    fun isBusy(now: Long) = busyAt != 0L && now - busyAt < POLL_BUSY_MS * 2
 
     /** Délai avant la prochaine lecture (hors émission, que l'appelant gère). */
     fun nextPollDelay(now: Long): Long {

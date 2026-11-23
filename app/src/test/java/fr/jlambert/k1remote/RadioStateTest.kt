@@ -45,6 +45,13 @@ class RadioStateTest {
         assertTrue(st.isBusy(5000)); assertEquals(RadioState.POLL_BUSY_MS, st.nextPollDelay(5000))
     }
 
+    @Test fun spectre_ferme_des_la_premiere_reponse_normale() {
+        val st = RadioState()
+        st.onResult(Result.Refused(4), 1000); assertTrue(st.isBusy(1500))
+        st.onResult(ok(), 2000); assertFalse(st.isBusy(2001))           // témoin « Spectre » éteint aussitôt
+        assertFalse(RadioState().isBusy(0))                             // jamais occupé au départ
+    }
+
     @Test fun trame_invalide_garde_le_dernier_etat() {
         val st = RadioState(); st.onResult(ok(), 1000)
         st.onResult(Result.Invalid("test"), 2000)

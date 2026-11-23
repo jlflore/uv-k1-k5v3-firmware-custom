@@ -14,6 +14,9 @@ object MemoryBridge {
     /** Réglages de menu (n° de la liste « All », valeur) envoyés à la radio ; renvoie null si envoyé, sinon la raison. */
     @Volatile var menuSender: ((List<Pair<Int, Int>>) -> String?)? = null
 
+    /** Passe la radio sur le canal mémoire n (1..1024) ; renvoie null si envoyé, sinon la raison (0.64). */
+    @Volatile var channelSelector: ((Int) -> String?)? = null
+
     /** Demande d'ouverture du Journal au retour sur l'écran principal (bouton des Préférences). */
     @Volatile var openJournal = false
 }

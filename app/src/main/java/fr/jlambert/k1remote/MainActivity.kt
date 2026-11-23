@@ -640,6 +640,7 @@ class MainActivity : Activity() {
         Journal.init(this)
         CallLog.init(this)
         MemoryBridge.writer = { act, base, draft, done -> startMemoryWrite(act, base, draft, done) }
+        MemoryBridge.channelSelector = { n -> selectChannel(n) }
         MemoryBridge.menuSender = { items ->
             val c = cdc
             when {
@@ -755,6 +756,7 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         MemoryBridge.writer = null
         MemoryBridge.menuSender = null
+        MemoryBridge.channelSelector = null
         disconnect(null)
         runCatching { unregisterReceiver(usbReceiver) }
         sender.shutdownNow()
@@ -1117,6 +1119,7 @@ class MainActivity : Activity() {
             RadioState.Change.STATE -> ui.post { applyFirmwareState() }
             RadioState.Change.NONE -> if (raw == null && synchronized(rstate) { rstate.usesFirmware }) ui.post { refreshChips() }
         }
+        ui.post { refreshIfActiveChanged() }
     }
 
     /** Recopie l'état 0x09 dans la lecture consultée par tout l'affichage. */
@@ -1158,6 +1161,55 @@ class MainActivity : Activity() {
             })
         }
         statusKick = true; watchKick = true
+    }
+
+    /**
+     * Fonction d'un raccourci encore active sur la radio (0.64). Avec le firmware r28 (0x09) :
+     * verrou, furtif, scan et spectre viennent de la radio ; sinon, ce que l'appli sait déjà.
+     */
+    private fun shortcutActive(action: String): Boolean {
+        val now = System.currentTimeMillis()
+        val (snap, busy) = synchronized(rstate) {
+            (if (rstate.usesFirmware) rstate.snapshot else null) to rstate.isBusy(now)
+        }
+        return when (action) {
+            "screendark" -> prefs.screenDark
+            "lock" -> snap?.keyLocked ?: live.locked
+            "stealth" -> snap?.stealth ?: prefs.stealth
+            "scan" -> snap != null && !busy && snap.function == RadioStatus.Function.SCAN_OR_SPECTRUM
+            "spectrum" -> busy
+            else -> false
+        }
+    }
+
+    /** Signature des témoins : les raccourcis sont redessinés seulement quand elle change. */
+    private var activeSig = ""
+    private fun refreshIfActiveChanged() {
+        val sig = listOf("lock", "stealth", "scan", "spectrum").joinToString("") { if (shortcutActive(it)) "1" else "0" }
+        if (sig != activeSig) {
+            activeSig = sig; refreshChips()
+            val k = fKeyDef
+            if (k != null) fKeyView?.text = if (shortcutActive("lock")) lockedLabel(k) else keyLabel(k)
+        }
+    }
+
+    /** « F 🔒 » : plus court que l'étiquette normale, donc tient toujours dans la touche. */
+    private fun lockedLabel(k: KeyDef): CharSequence = SpannableStringBuilder().apply {
+        append(k.main, StyleSpan(Typeface.BOLD), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        append("  🔒")
+    }
+
+    /** « Mes canaux » › Passer la radio sur ce canal : mêmes touches que le raccourci « Aller à un canal ». */
+    private fun selectChannel(n: Int): String? {
+        if (cdc == null) return "Radio non connectée"
+        val mode = live.mainMode ?: return "Revenez à l'écran principal de la radio (ligne active non reconnue)"
+        if (!sendSteps(Shortcut.channelSteps(n.toString(), fromFreqMode = mode == 'F'))) return "Envoi impossible pour l'instant"
+        expectChannel(n)
+        return null
+    }
+
+    private fun expectChannel(n: Int) = expectState("Canal $n") { st ->
+        st.selectedLine?.let { it.kind == RadioStatus.LineKind.MEMORY && it.number == n } == true
     }
 
     private fun showDiagnostic() {
@@ -1360,6 +1412,7 @@ class MainActivity : Activity() {
         // Changement de ligne (A ⇄ B) : le bouton Puissance doit suivre, même si les deux lignes
         // ont la même puissance (avant la 0.51, la ligne était mise à jour avant d'être comparée,
         // et le bouton gardait l'ancienne lettre).
+        refreshIfActiveChanged()
         if (fw != null) {
             val via0 = (if (cdc is BleLink) " · Bluetooth" else "") + (if (direct) " · PTT" else "")
             if (sleeping) setLink(Link.SLEEP, "Radio en veille$via0") else setLink(Link.ON, "Connecté$via0")
@@ -2183,7 +2236,8 @@ class MainActivity : Activity() {
                 box.addView(text("◆", if (L) 9f else 10f, p.primaryBorder, Typeface.DEFAULT_BOLD),
                     LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(4) })
             }
-            val darkOn = s.type == "action" && s.action == "screendark" && prefs.screenDark && !editMode
+            // Fonction restée active (écran éteint, verrou, furtif, scan, spectre) : le bouton le montre
+            val darkOn = s.type == "action" && !editMode && shortcutActive(s.action)
             if (darkOn) {
                 // Éclairage coupé : le bouton le montre (pastille pleine), un appui le rallume
                 box.background = Ui.ripple(this@MainActivity, p.accentBg, 10f, p.accentBorder, night = p.night)
@@ -2562,7 +2616,10 @@ class MainActivity : Activity() {
                 return
             }
             if (s.type == "channel") {
-                if (sendSteps(Shortcut.channelSteps(s.channel, fromFreqMode = mode == 'F'))) toast(s.name + " envoyé")
+                if (sendSteps(Shortcut.channelSteps(s.channel, fromFreqMode = mode == 'F'))) {
+                    toast(s.name + " envoyé")
+                    s.channel.toIntOrNull()?.let { n -> expectChannel(n) }
+                }
                 return
             }
             val t = s.team ?: return
@@ -2612,8 +2669,13 @@ class MainActivity : Activity() {
         }
     }
 
+    /** Touche F du clavier de l'appli : porte un cadenas quand le clavier de la radio est verrouillé (0.64). */
+    private var fKeyView: TextView? = null
+    private var fKeyDef: KeyDef? = null
+
     private fun keyView(k: KeyDef, side: Boolean = false): TextView = TextView(this).apply {
         text = keyLabel(k)
+        if (k.id == "F") { fKeyView = this; fKeyDef = k; if (shortcutActive("lock")) text = lockedLabel(k) }
         val small = k.main.length > 2
         textSize = if (side || small) 13f else 19f
         typeface = if (small) medium else Typeface.DEFAULT_BOLD

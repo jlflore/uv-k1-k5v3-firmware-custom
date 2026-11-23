@@ -1,4 +1,10 @@
-# K1 Remote Essai · version 0.63-essai (firmware Fusion PTT r28)
+# K1 Remote Essai · version 0.64-essai (firmware Fusion PTT r28)
+
+## 0.64-essai
+- Mes canaux : « Passer la radio sur ce canal » (appui long sur un canal, ou bouton dans sa fiche). Mêmes touches que le raccourci « Aller à un canal », passage en mode canal compris ; avec le r28, le passage est confirmé par la radio. Si le canal a été modifié sans être envoyé, l'appli prévient que la radio utilisera la version enregistrée chez elle.
+- Témoins sur les raccourcis : Verrou, Furtif, Scan et Spectre s'allument comme « Écran éteint » tant que la fonction est active sur la radio (avec le r28 ; sans lui, Verrou d'après l'écran et Furtif d'après l'appli), et s'éteignent dès qu'elle ne l'est plus.
+- Touche F du clavier de l'appli : « F 🔒 » tant que le clavier de la radio est verrouillé (appui long sur F pour le déverrouiller).
+- Le raccourci « Aller à un canal » est lui aussi confirmé par la radio (r28).
 
 ## 0.63-essai — appli d'essai, installable à côté de K1 Remote
 - Identité distincte (fr.jlambert.k1remote.essai, nom « K1 Remote Essai ») : elle s'installe à côté de l'appli habituelle, avec ses propres réglages (vierges au départ). Une fois validée, la version définitive reprendra l'identité de K1 Remote et ses réglages.

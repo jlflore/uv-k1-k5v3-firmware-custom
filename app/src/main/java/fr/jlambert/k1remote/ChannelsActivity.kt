@@ -124,6 +124,7 @@ class ChannelsActivity : Activity() {
         info.addView(text("Radio : " + mem.firmware.ifEmpty { "?" } +
             " · copie de sa mémoire de configuration active (celle du firmware qui tournait)", 12f, p.muted))
         info.addView(text("Vos modifications restent dans l'appli tant que vous n'appuyez pas sur « Envoyer … à la radio ».", 12f, p.muted))
+        info.addView(text("Toucher un canal : le modifier. Appui long : passer la radio dessus.", 12f, p.muted))
         root.addView(info, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
 
         // Recherche
@@ -166,6 +167,10 @@ class ChannelsActivity : Activity() {
             dividerHeight = 0
             this.adapter = this@ChannelsActivity.adapter
             setOnItemClickListener { _, _, pos, _ -> editChannel(shown[pos].number - 1) }
+            setOnItemLongClickListener { v, _, pos, _ ->
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                selectOnRadio(shown[pos].number); true
+            }
             selector = android.graphics.drawable.ColorDrawable(0)
         }
         root.addView(list, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(8) })
@@ -463,6 +468,10 @@ class ChannelsActivity : Activity() {
             box.addView(text(existing.raw.joinToString(" ") { String.format("%02X", it) }, 11f, p.muted, mono).apply {
                 setPadding(0, dp(4), 0, 0); setTextIsSelectable(true) })
         }
+        if (existing != null) box.addView(text("▶  Passer la radio sur ce canal", 15f, p.text, medium).apply {
+            setPadding(0, dp(16), 0, dp(2))
+            setOnClickListener { selectOnRadio(i + 1) }
+        })
         if (existing != null) box.addView(text("Supprimer ce canal", 15f, p.danger, medium).apply {
             setPadding(0, dp(16), 0, dp(6))
             setOnClickListener {
@@ -494,6 +503,21 @@ class ChannelsActivity : Activity() {
                     }
                 }
             })
+    }
+
+    /** Passe la radio sur le canal n, tel qu'il est enregistré dans la radio (0.64). */
+    private fun selectOnRadio(n: Int) {
+        fun go() {
+            val why = MemoryBridge.channelSelector?.invoke(n) ?: "Écran principal fermé : revenez-y, puis réessayez"
+            if (why == null) { toast("Radio : passage au canal $n"); finish() } else toast(why)
+        }
+        if (changed(n)) {
+            AlertDialog.Builder(this).setTitle("Canal $n modifié, pas encore envoyé")
+                .setMessage("La radio passera sur ce canal tel qu'il est enregistré dans la radio, pas sur votre version modifiée. " +
+                    "Pour utiliser la nouvelle version, envoyez d'abord les modifications.")
+                .setPositiveButton("Passer quand même") { _, _ -> go() }
+                .setNegativeButton("Annuler", null).show()
+        } else go()
     }
 
     private fun showLibrary() {
