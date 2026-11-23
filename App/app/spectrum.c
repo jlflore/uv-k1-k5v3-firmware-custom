@@ -1173,7 +1173,9 @@ static void ToggleBacklight()
     else
     {
         // BACKLIGHT_TurnOff();
-        BACKLIGHT_SetBrightness(gEeprom.BACKLIGHT_MIN);
+        // r29 : avec « Écran éteint » (BLTime = OFF), la position éteinte est vraiment noire,
+        // et non le minimum réglé. Allumer par SIDE2 reste une action manuelle volontaire.
+        BACKLIGHT_SetBrightness(gEeprom.BACKLIGHT_TIME == 0 ? 0 : gEeprom.BACKLIGHT_MIN);
     }
 }
 
