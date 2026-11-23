@@ -3,6 +3,7 @@
 ## 0.79-essai — sortie du spectre à l'allumage
 
 - Bug (23/11) : radio allumée en spectre, l'appli ne pouvait pas en sortir. La vérification du firmware attend la fermeture du spectre (jusqu'à 10 min) et tournait sur le fil qui envoie les touches : EXIT et les autres appuis restaient en file, puis partaient tous d'un coup une fois le spectre fermé sur la radio. Elle tourne désormais sur son propre fil (une seule à la fois).
+- Revue ChatGPT : une demande de vérification arrivée pendant une autre attend sa fin (pas de retour anticipé aux appuis de touches) ; une réponse d'une liaison précédente ne publie plus rien.
 - Journal : durée de la lecture de démarrage en millisecondes sous 1 s (« 44 ms » au lieu de « 0,0 s »).
 
 ## 0.78-essai — lecture de démarrage visible

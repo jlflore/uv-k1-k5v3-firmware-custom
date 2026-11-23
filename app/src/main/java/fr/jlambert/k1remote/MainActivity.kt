@@ -229,18 +229,31 @@ class MainActivity : Activity() {
      * en spectre, elle attend la fermeture du spectre (jusqu'à 10 min) : sur le fil des touches,
      * elle bloquait tous les appuis de l'appli, EXIT compris — impossible de sortir du spectre
      * depuis l'appli (bug du 23/11), et les appuis en attente partaient tous d'un coup ensuite.
-     * Une seule vérification à la fois ([probing]).
+     * Une seule vérification à la fois ; revue 0.79 (P1) : une demande arrivée pendant une
+     * vérification attend sa fin (pas de rappel anticipé, qui retombait sur les appuis de touches).
      */
-    private val probing = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val probeLock = Any()
+    private var probing = false
+    private val probeWaiters = ArrayList<() -> Unit>()
     private fun probeDirect(then: (() -> Unit)? = null) {
         val c = cdc ?: run { then?.let { ui.post(it) }; return }
-        if (!probing.compareAndSet(false, true)) { then?.let { ui.post(it) }; return }
+        synchronized(probeLock) {
+            then?.let { probeWaiters += it }
+            if (probing) return
+            probing = true
+        }
         Thread({
-            try { probeLoop(c) } finally { probing.set(false); then?.let { ui.post(it) } }
+            try { probeLoop(c) } finally {
+                val done = synchronized(probeLock) { probing = false; probeWaiters.toList().also { probeWaiters.clear() } }
+                done.forEach { ui.post(it) }
+                // Liaison changée pendant la vérification : la nouvelle a la sienne
+                if (cdc != null && cdc !== c) ui.post { probeDirect() }
+            }
         }, "k1-probe").start()
     }
 
     private fun probeLoop(c: RadioLink) {
+        val gen = linkGen          // revue 0.79 (P2) : une réponse d'une liaison précédente ne publie rien
         run {
             var tries = 0
             while (tries < 3) {
@@ -257,6 +270,7 @@ class MainActivity : Activity() {
                     r = request(c, K5ViewerProtocol.PING, 700)
                 }
                 tries++
+                if (cdc !== c || gen != linkGen) return@run
                 if (r != null && r.size >= 5 && r[0].toInt() == 4 && r[2] == 'K'.code.toByte()) {
                     direct = true
                     Journal.add("Radio reconnue : Fusion PTT " + (if (r.size > 7) String(r, 7, r.size - 7) else "") +
