@@ -415,16 +415,24 @@ class MainActivity : Activity() {
         if (blocks.isEmpty()) error("Aucune modification à envoyer")
         if (c is BleLink) {
             c.requestProgramming(true)
-            val end = System.currentTimeMillis() + 30_000
-            var polls = 0
-            while (!c.progOpen) {
-                if (++polls % 8 == 0) c.refreshState()      // toutes les 2 s, si les notifications manquent
-                if (cancelled()) throw WriteCancelled()
-                if (cdc !== c) error("Liaison avec le boîtier perdue")
-                val left = ((end - System.currentTimeMillis()) / 1000).toInt()
-                if (left <= 0) error("Pas d'appui sur BOOT dans les 30 secondes : rien n'a été écrit")
-                step("Appuyez brièvement sur le bouton BOOT du boîtier\n(lumière orange clignotante) — $left s", -1)
-                Thread.sleep(250)
+            // Revue 0.76 : annulation, délai dépassé ou liaison perdue pendant l'attente de BOOT →
+            // l'autorisation d'écriture est toujours refermée sur le boîtier (le finally principal
+            // n'est pas encore atteint à ce stade)
+            try {
+                val end = System.currentTimeMillis() + 30_000
+                var polls = 0
+                while (!c.progOpen) {
+                    if (++polls % 8 == 0) c.refreshState()      // toutes les 2 s, si les notifications manquent
+                    if (cancelled()) throw WriteCancelled()
+                    if (cdc !== c) error("Liaison avec le boîtier perdue")
+                    val left = ((end - System.currentTimeMillis()) / 1000).toInt()
+                    if (left <= 0) error("Pas d'appui sur BOOT dans les 30 secondes : rien n'a été écrit")
+                    step("Appuyez brièvement sur le bouton BOOT du boîtier\n(lumière orange clignotante) — $left s", -1)
+                    Thread.sleep(250)
+                }
+            } catch (e: Throwable) {
+                runCatching { c.requestProgramming(false) }
+                throw e
             }
             Journal.add("Écriture des canaux autorisée sur le boîtier")
         }

@@ -594,7 +594,11 @@ class ChannelsActivity : Activity() {
             val w = MemoryBridge.writer
             if (w == null) toast("Revenez à l'écran principal de l'appli, radio connectée, puis réessayez")
             else w(this, base, mem) { ok, newFile ->
-                if (ok && newFile != null) { draftFile().delete(); startActivity(intent(this, newFile)); finish() }
+                if (ok && newFile != null) {
+                    draftFile().delete()
+                    // Revue 0.76 : écran déjà fermé → pas de navigation depuis une activité morte
+                    if (!isFinishing && !isDestroyed) { startActivity(intent(this, newFile)); finish() }
+                }
             }
         }, "Annuler", contentHeight = (resources.displayMetrics.heightPixels * 0.5f).toInt())
     }

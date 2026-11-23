@@ -131,7 +131,9 @@ object Sheet {
         val d = act.resources.displayMetrics.density
         fun dp(v: Int) = (v * d).toInt()
         var h = (minutes / 60).coerceIn(0, 23)
-        var m = ((minutes % 60) / stepMin * stepMin).coerceIn(0, 59)
+        // Revue 0.76 : l'heure enregistrée est affichée telle quelle, même hors de la grille de 5 min ;
+        // le premier appui sur ▲ / ▼ la ramène sur la grille (au-dessus ou au-dessous)
+        var m = (minutes % 60).coerceIn(0, 59)
         fun two(v: Int) = v.toString().padStart(2, '0')
         val row = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         fun column(get: () -> Int, change: (Int) -> Unit): Pair<View, TextView> {
@@ -147,6 +149,11 @@ object Sheet {
                     if (e.actionMasked == android.view.MotionEvent.ACTION_UP || e.actionMasked == android.view.MotionEvent.ACTION_CANCEL) v.removeCallbacks(repeat)
                     false
                 }
+                // Fenêtre fermée pendant le défilement rapide : il s'arrête aussi
+                addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: View) {}
+                    override fun onViewDetachedFromWindow(v: View) { v.removeCallbacks(repeat) }
+                })
             }
             val col = LinearLayout(act).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
@@ -159,7 +166,10 @@ object Sheet {
         row.addView(column({ h }) { h = (h + it + 24) % 24 }.first)
         row.addView(text(act, ":", 40f, p.muted, true).apply { gravity = Gravity.CENTER },
             LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(4); marginEnd = dp(4) })
-        row.addView(column({ m }) { m = (m + it * stepMin + 60) % 60 }.first)
+        row.addView(column({ m }) { d ->
+            m = if (m % stepMin != 0) (if (d > 0) (m / stepMin + 1) * stepMin else m / stepMin * stepMin) % 60
+                else (m + d * stepMin + 60) % 60
+        }.first)
         return show(act, title, null, row, listOf(Btn("Annuler"), Btn("Valider", Style.PRIMARY) { onPick(h * 60 + m) }))
     }
 
