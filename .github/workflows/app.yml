@@ -32,7 +32,7 @@ jobs:
       - name: Contrôle des fonctions (sans radio)
         if: always()
         run: |
-          ./gradlew --no-daemon testDebugUnitTest --tests fr.jlambert.k1remote.FunctionsTest --tests fr.jlambert.k1remote.RadioStatusTest --tests fr.jlambert.k1remote.RadioStateTest --tests fr.jlambert.k1remote.ShortcutStatesTest --tests fr.jlambert.k1remote.LightPlanTest --tests fr.jlambert.k1remote.TeamMatchTest --tests fr.jlambert.k1remote.RadioSettingsTest
+          ./gradlew --no-daemon testDebugUnitTest --tests fr.jlambert.k1remote.FunctionsTest --tests fr.jlambert.k1remote.RadioStatusTest --tests fr.jlambert.k1remote.RadioStateTest --tests fr.jlambert.k1remote.ShortcutStatesTest --tests fr.jlambert.k1remote.LightPlanTest --tests fr.jlambert.k1remote.TeamMatchTest --tests fr.jlambert.k1remote.RadioSettingsTest --tests fr.jlambert.k1remote.ScanControlTest
       - name: APK
         if: always()
         uses: actions/upload-artifact@v4

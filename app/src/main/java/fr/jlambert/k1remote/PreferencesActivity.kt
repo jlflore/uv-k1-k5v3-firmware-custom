@@ -281,12 +281,13 @@ class PreferencesActivity : Activity() {
             12f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 4))
         col.addView(android.widget.EditText(this).apply {
             setText(prefs.myCallCode)
-            hint = "A1"
+            // Indication volontairement « vide » : un exemple comme « A1 » passait pour une valeur déjà saisie
+            hint = "Aucun code — touchez pour saisir"
             textSize = 15f
             setSingleLine()
             filters = arrayOf(android.text.InputFilter.AllCaps(), android.text.InputFilter.LengthFilter(8))
             setTextColor(p.text)
-            setHintTextColor(p.muted)
+            setHintTextColor((p.muted and 0x00FFFFFF) or 0x99000000.toInt())
             setPadding(dp(14), dp(10), dp(14), dp(10))
             background = Ui.shape(this@PreferencesActivity, p.surface, 12f, p.border)
             addTextChangedListener(object : android.text.TextWatcher {

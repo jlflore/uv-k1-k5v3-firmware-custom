@@ -180,6 +180,7 @@ class ScreensTest {
         captureDialog("scan_listes_$tag", "Appui long sur Scan · $label", withDialog = false) { act ->
             act.captureScanPicker(listOf("ALL · toutes les listes", "L1 · EQUI", "L2 · AIR", "L5 · PMR"), 1)
         }
+        captureDialog("scan_mode_frequence_$tag", "Scan depuis le mode fréquence · $label") { act -> act.showScanModeChoice() }
         captureDialog("demarrage_$tag", "Lecture de l'état à la connexion · $label", withDialog = false) { act ->
             val f = MainActivity::class.java.getDeclaredField("lcd").apply { isAccessible = true }
             (f.get(act) as LcdView).busyText = "Lecture de l'état de la radio…"

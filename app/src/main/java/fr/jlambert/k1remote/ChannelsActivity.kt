@@ -32,6 +32,7 @@ class ChannelsActivity : Activity() {
     companion object {
         private const val EXTRA_FILE = "file"
         private const val REQ_EXPORT = 41
+        private val CHIP_LABELS = listOf("Tous", "Émission", "Écoute seule", "Avec nom")
         fun intent(ctx: Context, f: File): Intent =
             Intent(ctx, ChannelsActivity::class.java).putExtra(EXTRA_FILE, f.absolutePath)
     }
@@ -148,7 +149,7 @@ class ChannelsActivity : Activity() {
         // Filtres
         val chipRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         chips.clear()
-        listOf("Tous", "Émission", "Écoute seule", "Avec nom").forEachIndexed { i, label ->
+        CHIP_LABELS.forEachIndexed { i, label ->
             val c = text(label, 13f, p.text, medium).apply {
                 gravity = Gravity.CENTER
                 setPadding(dp(14), 0, dp(14), 0)
@@ -249,8 +250,11 @@ class ChannelsActivity : Activity() {
             }) && (q.isEmpty() || c.name.lowercase(Locale.FRANCE).contains(q) || c.number.toString() == q ||
                 RadioMemory.mhz(c.rxHz).replace(',', '.').startsWith(q))
         }
+        // Nombre de canaux par filtre (sur toute la mémoire, recherche non comprise)
+        val counts = intArrayOf(all.size, all.count { !it.listenOnly }, all.count { it.listenOnly }, all.count { it.name.isNotEmpty() })
         chips.forEachIndexed { i, c ->
             val on = i == filter
+            c.text = "${CHIP_LABELS[i]} · ${counts[i]}"
             c.setTextColor(if (on) p.accentText else p.text)
             c.background = Ui.shape(this, if (on) p.accentBg else p.surface, 999f, if (on) p.accentBorder else p.border)
         }

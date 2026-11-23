@@ -265,7 +265,7 @@
 </tbody>
 </table></div>
 <p><strong>Les témoins ●</strong> : Écran éteint, Furtif, Verrou, Scan, Spectre et Inv. relais s'allument tant que la fonction est active sur la radio, et s'éteignent dès qu'elle ne l'est plus. Avec le firmware Fusion PTT, l'appli lit cet état dans la radio : Verrou, Scan, Spectre et Inv. relais à partir de r28, Écran éteint à partir de r31 (sauf en furtif, où l'appli garde ce qu'elle sait). Un réglage changé directement sur la radio se voit donc aussi dans l'appli. Les boutons d'équipe ont leur propre témoin (section suivante).</p>
-<p><strong>Refus</strong> : clavier verrouillé, l'appli refuse ses raccourcis (sauf Verrou). Spectre ouvert sur la radio, seuls Écran éteint et Furtif passent. Le message dit toujours pourquoi.</p>
+<p><strong>Refus</strong> : clavier verrouillé, l'appli refuse ses raccourcis (sauf Verrou). Spectre ouvert sur la radio, seuls Écran éteint et Furtif passent, et Spectre, qui le ferme (comme EXIT). Les appuis longs de Puissance et Scan n'ouvrent pas leur colonne non plus. Le message dit toujours pourquoi.</p>
 <p><strong>Modifier ou supprimer</strong> : maintenez le doigt environ une seconde sur le bouton, puis choisissez Modifier ou Supprimer (pour Puissance et Scan, dont l'appui long sert au choix au doigt, passez par le bouton « Modifier »). Le bouton « Modifier » en haut de la zone passe aussi tous les boutons en mode modification ; touchez « Terminé » pour en sortir.</p>
 <p>Pour revenir aux raccourcis de départ : Préférences › Réinitialiser les raccourcis. Toutes les fenêtres de l'appli (choix, confirmations, progression) suivent le thème choisi ; une suppression se confirme toujours par un bouton rouge, et toucher à côté de la fenêtre l'annule.</p>
 </section>
@@ -373,12 +373,12 @@
 <tr><td>r29</td><td>Sous-canaux et spectre : témoin d'équipe (ligne active), Écran éteint pendant le spectre</td></tr>
 <tr><td>r30</td><td>Lecture des réglages : témoin d'équipe complet (squelch, bip, veille, code d'appel…)</td></tr>
 <tr><td>r31</td><td>Éclairage lu dans la radio : témoin Écran éteint fiable, écran de démarrage</td></tr>
-<tr><td>r32</td><td>Liste de scan lue et choisie au doigt ; changement de liste refusé pendant un scan</td></tr>
+<tr><td>r32</td><td>Liste de scan lue et choisie au doigt (le scan démarre dessus) ; la radio refuse un changement de liste pendant un scan, l'appli l'arrête donc d'abord</td></tr>
 </tbody></table></div>
 <p>Avec le firmware <strong>« Fusion PTT »</strong> sur la radio (une version d'Armel F4HWN v7 légèrement modifiée), un grand bouton <strong>« Maintenir pour émettre »</strong> apparaît sous le clavier : activez-le dans Préférences › Affichage › <strong>Bouton PTT à distance</strong>. Maintenez-le pour émettre, et parlez dans le micro de la radio ou de votre casque ; relâchez pour écouter.</p>
 <p>Sécurité : la radio coupe d'elle-même l'émission si elle ne reçoit plus de nouvelles du téléphone pendant 0,9 s (doigt levé, liaison perdue, appli fermée), et au plus tard au bout de 30 s. Le bouton de l'appli marche toujours en « maintenir pour émettre », même si la radio est en PTT « une pression » (indicateur OP en haut de l'écran). Si la radio refuse d'émettre, l'appli dit pourquoi au bout d'une seconde. Avec ce firmware, l'écran de la radio reste à jour dans l'appli pendant l'émission, barre d'émission comprise (le firmware d'origine le fige).</p>
 <p>Pendant qu'UV Studio échange avec la radio, celle-ci refuse d'émettre (elle se croit en cours de programmation) : fermez UV Studio ou débranchez le câble avant d'émettre.</p>
-<p><strong>Journal des appels</strong> (Préférences › Journal) : les appels reçus et vos émissions, jour par jour, du plus récent au plus ancien. Chaque ligne donne l'heure, l'appelant (son nom s'il a un code d'appel connu, sinon « appelant non identifié ») et la durée. Les ouvertures très brèves du squelch ne sont pas notées, et les reprises rapprochées d'un même appelant ne font qu'une ligne. « Partager » propose le journal des appels seul, ou le rapport complet pour un diagnostic. « Effacer » demande confirmation et indique combien d'éléments partent.</p>
+<p><strong>Journal des appels</strong> (bouton ☰ Journal à gauche du PTT, ou Préférences › Journal) : les appels reçus et vos émissions, jour par jour, du plus récent au plus ancien. Chaque ligne donne l'heure, l'appelant (son nom s'il a un code d'appel connu, sinon « appelant non identifié ») et la durée. Les ouvertures très brèves du squelch ne sont pas notées, et les reprises rapprochées d'un même appelant ne font qu'une ligne. « Partager » propose le journal des appels seul, ou le rapport complet pour un diagnostic. « Effacer » demande confirmation et indique combien d'éléments partent.</p>
 <p><strong>Journal technique</strong> : bouton « Technique » du journal des appels, ou appui long sur le titre « K1 Remote ». L'appli y note tout ce qu'elle envoie (touches, réglages, bouton PTT) et tout ce que fait la radio, avec le firmware Fusion PTT chaque changement de son état. Il sert au diagnostic ; vous n'en avez pas besoin au quotidien.</p>
 </section>
 <section class="s c3"><h2 id="appelants">Savoir qui appelle</h2>
@@ -406,10 +406,11 @@
 <section class="s c5"><h2 id="scan">Le bouton Scan et les listes de scan</h2>
 <p>Le bouton Scan lance ou arrête le scan, comme l'appui long sur ✱. Pendant un scan, il porte le témoin ●. Avec le firmware Fusion PTT r32, il affiche aussi la liste de scan réglée dans la radio : « Scan · L2 », « Scan · ALL » (toutes les listes) ou « Scan · MIX » (listes combinées).</p>
 <ul>
-<li><strong>Appui bref</strong> : le scan démarre avec la liste réglée, ou s'arrête.</li>
-<li><strong>Appui long</strong> (ligne active en mode canal) : une colonne s'ouvre sous le doigt, placée sur la liste actuelle. Elle propose ALL, puis les listes qui contiennent des canaux, avec leur nom ; MIX seulement si la radio y est déjà réglée. Glissez jusqu'à la liste voulue et levez le doigt : elle clignote, puis « Liste de scan demandée » s'affiche ; le bouton se met à jour quand la radio a confirmé. S'il y a trop de listes pour l'écran, une fenêtre défilante prend le relais.</li>
+<li><strong>Appui bref</strong> : pas de scan en cours, il démarre tel que réglé dans la radio. Si la ligne active est en mode fréquence, une fenêtre propose d'abord « Passer en mode canal et scanner » (vos canaux) ou « Scanner les fréquences ». Scan en cours : l'appui l'arrête (comme EXIT sur la radio) ; un nouvel appui le relance.</li>
+<li><strong>Appui long</strong> : une colonne s'ouvre sous le doigt, placée sur la liste actuelle. Elle propose ALL, puis les listes qui contiennent des canaux, avec leur nom ; MIX seulement si la radio y est déjà réglée. Glissez jusqu'à la liste voulue et levez le doigt : la liste est réglée et <strong>le scan démarre aussitôt dessus</strong>, en mode canal (la ligne y passe si elle était en fréquence). Un scan en cours est d'abord arrêté, puis relancé sur la nouvelle liste. Le bouton se met à jour quand la radio a confirmé. S'il y a trop de listes pour l'écran, une fenêtre défilante prend le relais.</li>
 <li>Les listes proposées et leurs noms viennent de votre dernière lecture des canaux (▤ › Lire la radio) : la colonne rappelle sa date. Sans lecture, l'appli propose de la faire.</li>
-<li>Pendant un scan, le changement de liste est refusé : arrêtez d'abord le scan. En mode fréquence, les listes ne servent pas : passez en mode canal (appui long sur 3).</li>
+<li>Clavier verrouillé ou spectre ouvert : la colonne ne s'ouvre pas, un message dit pourquoi.</li>
+<li>Sur la radio elle-même, la liste se choisit dans le menu 18 ScList (MENU, 1, 8, MENU, puis ▲/▼ et MENU).</li>
 <li>Si la liste demandée ne contient aucun canal, la radio peut passer d'elle-même à la suivante au lancement du scan : l'appli le signale.</li>
 </ul>
 </section>
@@ -469,7 +470,7 @@
 <section class="s c4"><h2 id="canaux">Les canaux de la radio</h2>
 <p>Le bouton <strong>▤</strong> en haut de l'écran ouvre une fenêtre à deux choix : <strong>Lire la radio</strong> (les 1 024 canaux, firmware Fusion PTT, en quelques secondes par câble ; une sauvegarde datée est gardée dans le téléphone puis « Mes canaux » s'ouvre) ou <strong>Dernière sauvegarde</strong> (son nom, sa date et son nombre de canaux sont indiqués ; elle s'ouvre sans relire la radio). La lecture ne modifie rien dans la radio.</p>
 <ul>
-<li><strong>Consulter</strong> : chaque canal montre son nom (s'il en a un), sa fréquence, sa modulation et sa puissance en milliwatts. Recherche et filtres (Émission, Écoute seule, Avec nom).</li>
+<li><strong>Consulter</strong> : chaque canal montre son nom (s'il en a un), sa fréquence, sa modulation et sa puissance en milliwatts. Recherche et filtres (Tous, Émission, Écoute seule, Avec nom) : chaque filtre affiche son nombre de canaux, par exemple « Écoute seule · 12 ».</li>
 <li><strong>Passer la radio sur un canal</strong> : appui long sur le canal, ou « ▶ Passer la radio sur ce canal » dans sa fiche. L'appli tape les mêmes touches que le raccourci « Aller à un canal » (passage en mode canal compris) et revient à l'écran principal. La radio prend le canal tel qu'il est enregistré chez elle : un canal modifié et pas encore envoyé garde son ancienne version, l'appli le signale.</li>
 <li><strong>Modifier ou créer</strong> : touchez un canal, sa fiche s'ouvre directement ; « Annuler » ressort sans rien changer. Nom (10 caractères ; la radio l'affiche si son menu ChDisp est sur NAME), fréquence, décalage, modulation, puissance (LOW 1 &lt; 20 mW … HIGH ≈ 5 W), largeur, codes CTCSS/DCS, pas, liste de scan. Un canal appartient à une seule liste, de 1 à 24 (avec son nom s'il en a un sur la radio), ou à « Toutes les listes ». « Écoute » signale un canal en AM (la radio n'émet jamais en AM) ou marqué « Émission bloquée » : avec le firmware Fusion PTT r25 ou plus, la radio refuse alors toute émission sur ce canal. Les canaux aviation et fluviaux de la bibliothèque sont bloqués d'office.</li>
 <li><strong>Brouillon</strong> : vos modifications sont gardées à chaque changement, même si l'appli est interrompue ; elles reviennent quand vous rouvrez la même sauvegarde.</li>
@@ -658,8 +659,8 @@
 <td>Un réglage diffère de l'équipe (le journal technique dit lequel) : touchez le bouton pour tout remettre. Vérifiez aussi que la radio est sur la ligne et le canal de l'équipe, et qu'elle a le firmware Fusion PTT r30 ou plus.</td>
 </tr>
 <tr>
-<td>« Arrêtez le scan avant de changer de liste »</td>
-<td>Le changement de liste de scan est refusé pendant un scan : arrêtez-le (appui bref sur Scan), puis recommencez.</td>
+<td>« scan en cours sur la radio : arrêtez le scan avant de changer de liste »</td>
+<td>La radio refuse un changement de liste pendant un scan. L'appli arrête normalement le scan d'elle-même avant : si le message apparaît, touchez Scan (arrêt), puis refaites l'appui long.</td>
 </tr>
 <tr>
 <td>« Patientez : lecture de l'état de la radio »</td>

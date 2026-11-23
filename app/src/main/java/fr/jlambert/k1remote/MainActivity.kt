@@ -975,7 +975,7 @@ class MainActivity : Activity() {
             // on vérifiera de nouveau son firmware à la première image.
             direct = false
             radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; linkGen++
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; scanTracker.reset(); linkGen++
             lastProbeAt = 0L
             watcherFor = null
             lcd.placeholder = "Allumez la radio et branchez-la sur le boîtier"
@@ -1076,7 +1076,9 @@ class MainActivity : Activity() {
         // 0.71 : les registres du BK4819 n'entrent dans la comparaison que pendant une émission.
         // En économie, REG 30 alterne à chaque réveil de la puce : sans cela, le journal se
         // remplissait d'un « État radio » identique toutes les 1,5 s.
-        val key = sb.toString() + (if (r.size >= 43 && u(8) == 1) "|" + (31 until 43).joinToString(",") { u(it).toString() } else "")
+        // 0.77 : pendant un scan, la fréquence change à chaque pas : elle ne compte plus dans la comparaison
+        val base = if (scanTracker.running) sb.toString().lines().filterNot { it.startsWith("TX ") }.joinToString("\n") else sb.toString()
+        val key = base + (if (r.size >= 43 && u(8) == 1) "|" + (31 until 43).joinToString(",") { u(it).toString() } else "")
         if (r.size >= 43) {
             fun w(i: Int) = u(i) or (u(i + 1) shl 8)
             sb.append("\nREG 70=%04X 71=%04X 47=%04X 30=%04X 50=%04X 31=%04X".format(w(31), w(33), w(35), w(37), w(39), w(41)))
@@ -1172,6 +1174,17 @@ class MainActivity : Activity() {
             if (raw == null) rstate.onTimeout() else rstate.onResult(RadioStatus.decode(raw), t)
         }
         if (raw != null) (RadioStatus.decode(raw) as? RadioStatus.Result.Invalid)?.let { Journal.add("État 0x09 ignoré : ${it.reason}") }
+        // 0.77 : suivi du scan (voir ScanTracker)
+        synchronized(rstate) { if (rstate.usesFirmware) rstate.snapshot else null }?.let { st ->
+            val was = scanTracker.running
+            val fn = st.function
+            scanTracker.onState(fn == RadioStatus.Function.SCAN_OR_SPECTRUM, st.spectrumActive == true || spectrumOpen(),
+                fn == RadioStatus.Function.IDLE || fn == RadioStatus.Function.POWER_SAVE, t)
+            if (was != scanTracker.running) {
+                Journal.add(if (scanTracker.running) "Scan en cours sur la radio" else "Scan arrêté sur la radio")
+                ui.post { refreshChips() }
+            }
+        }
         when (change) {
             RadioState.Change.SUPPORT_FIRMWARE -> {
                 Journal.add("État de la radio lu directement dans le firmware (commande 0x09)")
@@ -1244,6 +1257,8 @@ class MainActivity : Activity() {
      */
     private fun shortcutActive(action: String): Boolean {
         captureActive?.let { return action in it }            // captures automatiques uniquement
+        // 0.77 : le scan suit ScanTracker (état 0x09 + appuis de l'appli), plus fiable que la seule fonction 5
+        if (action == "scan") return scanTracker.running && !spectrumOpen()
         val now = System.currentTimeMillis()
         val (snap, busy) = synchronized(rstate) {
             (if (rstate.usesFirmware) rstate.snapshot else null) to rstate.isBusy(now)
@@ -1300,6 +1315,8 @@ class MainActivity : Activity() {
     @Volatile private var lightsReadAt = 0L
     /** 0.74 (r32) : liste de scan par défaut lue dans la radio (1..24, 25 ALL, 26 MIX) ; null = inconnue. */
     @Volatile private var radioScanList: Int? = null
+    /** 0.77 : scan lancé ou arrêté par l'appli, recalé sur l'état 0x09 (ScanTracker). */
+    private val scanTracker = ScanTracker()
 
     /** Écran de démarrage : spinner sur la vitre, touches et PTT de l'appli bloqués (3 s au plus). */
     private fun setStartupReading(on: Boolean) {
@@ -1397,6 +1414,8 @@ class MainActivity : Activity() {
 
     private fun maybeReadTeamSettings(c: RadioLink) {
         if (fwProtocol < RadioSettings.PROTOCOL || pttOn || !resumed) return
+        // 0.77 : pendant un scan, la ligne change sans cesse : la lecture serait toujours abandonnée
+        if (scanTracker.running) return
         if (!longFrameChecked) checkLongFrame(c)
         val now = System.currentTimeMillis()
         if (now - teamSettingsAskedAt < 15_000) return
@@ -1606,6 +1625,28 @@ class MainActivity : Activity() {
             if (pttOn) p.txOnBorder else if (talking) p.rxOnBorder else p.border, 2f)
     }
 
+    /**
+     * 0.77 : PTT précédé d'un bouton Journal (accès direct au journal des appels, demandé par D'jé).
+     * Renvoie la rangée ; [textSize] s'applique au PTT.
+     */
+    private fun pttRow(textSize: Float? = null): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        addView(LinearLayout(this@MainActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = Ui.ripple(this@MainActivity, p.surface, 16f, p.border, night = p.night)
+            contentDescription = "Journal des appels"
+            addView(TextView(this@MainActivity).apply {
+                text = "☰"; this.textSize = 20f; gravity = Gravity.CENTER; setTextColor(p.text); typeface = Typeface.DEFAULT_BOLD
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "Journal"; this.textSize = 10f; gravity = Gravity.CENTER; setTextColor(p.muted)
+            })
+            setOnClickListener { showCallLog() }
+        }, LinearLayout.LayoutParams(dp(64), -1).apply { marginEnd = dp(8) })
+        addView(buildPttBar().apply { textSize?.let { this.textSize = it } }, LinearLayout.LayoutParams(0, -1, 1f))
+    }
+
     @android.annotation.SuppressLint("ClickableViewAccessibility")
     private fun buildPttBar(): TextView = TextView(this).apply {
         gravity = Gravity.CENTER
@@ -1636,7 +1677,7 @@ class MainActivity : Activity() {
         synchronized(rstate) { rstate.reset() }
         lastStatusAt = 0L
         radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; linkGen++
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; scanTracker.reset(); linkGen++
         lastProbeAt = 0L
         parser.reset()
         lastFlags = 0
@@ -1928,7 +1969,7 @@ class MainActivity : Activity() {
             if (panel != null) content.addView(panel, lp(-1, -2, top = 10))
             content.addView(topKeys, lp(-1, dp(42), top = 10))
             content.addView(pad, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(6) })
-            if (prefs.remotePtt) content.addView(buildPttBar(), lp(-1, dp(64), top = 8))
+            if (prefs.remotePtt) content.addView(pttRow(), lp(-1, dp(64), top = 8))
         } else {
             val left = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -1946,7 +1987,7 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 addView(topKeys, lp(-1, dp(40)))
                 addView(pad, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(6) })
-                if (prefs.remotePtt) addView(buildPttBar(), lp(-1, dp(52), top = 6))
+                if (prefs.remotePtt) addView(pttRow(), lp(-1, dp(52), top = 6))
             }
             content.addView(left, LinearLayout.LayoutParams(0, -1, 1.3f).apply { marginEnd = dp(14) })
             content.addView(right, LinearLayout.LayoutParams(0, -1, 1f))
@@ -2267,7 +2308,7 @@ class MainActivity : Activity() {
             contentDescription = "Revenir à l'interface complète"
             setOnClickListener { prefs.uiMode = 0; buildUi() }
         }
-        fun ptt() = buildPttBar().apply { textSize = 22f }
+        fun ptt() = pttRow(22f)
         if (!L) {
             content.addView(header)
             content.addView(buildControlRow(false, modeLink), lp(-1, -2, top = 8))
@@ -2639,6 +2680,9 @@ class MainActivity : Activity() {
             fired = true
             v.isPressed = false
             longPressFeedback(v)
+            // 0.77 : clavier verrouillé ou spectre ouvert → pas de colonne (la valeur ne passerait pas)
+            if (live.locked) { toast("Clavier verrouillé : appui long sur F pour le déverrouiller"); picking = false; return@Runnable }
+            if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); picking = false; return@Runnable }
             picking = spec()?.let { sp ->
                 if (showDragPicker(sp, rawX, rawY)) true else { sp.fallback?.invoke(); false }
             } ?: false
@@ -2793,14 +2837,9 @@ class MainActivity : Activity() {
         val c = cdc
         if (c == null || (c is BleLink && !relayRadio)) { toast("Radio non connectée"); return null }
         if (!direct) { toast("Choix de la liste de scan : il faut le firmware Fusion PTT"); return null }
-        val kind = synchronized(rstate) { rstate.snapshot }?.selectedLine?.kind
-        val channelMode = kind?.let { it == RadioStatus.LineKind.MEMORY } ?: (live.mainMode == 'M')
-        if (!channelMode) { toast("Listes de scan : passez la ligne active en mode canal"); return null }
-        // Revue 0.74 : pas de changement de liste pendant un scan (le firmware r32 le refuse aussi)
-        val snap = synchronized(rstate) { rstate.snapshot }
-        if (snap != null && snap.function == RadioStatus.Function.SCAN_OR_SPECTRUM && snap.spectrumActive != true) {
-            toast("Arrêtez le scan avant de changer de liste"); return null
-        }
+        // 0.77 : en mode fréquence, la liste choisie fait passer en mode canal avant de lancer le scan ;
+        // pendant un scan, il est arrêté, la liste changée, puis le scan relancé (applyScanList)
+        if (activeMode() == null) { toast("Revenez à l'écran principal de la radio (ligne active non reconnue)"); return null }
         val last = RadioMemory.list(this).firstOrNull()
         val mem = last?.let { runCatching { RadioMemory.load(it) }.getOrNull() }
         if (mem == null) {
@@ -2846,15 +2885,30 @@ class MainActivity : Activity() {
     /** Liste demandée, en attente de confirmation par la relecture (r32) ; null sinon. */
     @Volatile private var scanRequested: Pair<Int, String>? = null
 
+    /**
+     * 0.77 : choisir une liste lance le scan dessus (choix de D'jé). Scan en cours : EXIT d'abord
+     * (le firmware r32 refuse de changer de liste pendant un scan), puis la liste, puis ✱ long.
+     */
     private fun applyScanList(v: Int, label: String) {
-        if (v == radioScanList) return
         if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); return }
-        if (sendSteps(listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(RadioSettings.SCAN_LIST, v))), onDone = {
+        val scanning = scanTracker.running
+        val fromFrequency = activeMode() == 'F'
+        val stop = if (scanning) ScanControl.STOP_STEPS + KeyStep(KeyStep.WAIT, false) else emptyList()
+        if (v == radioScanList) {
+            if (scanning) { toast("Scan déjà en cours sur $label"); return }
+            startScan(fromFrequency, what = "Scan lancé : $label")
+            return
+        }
+        if (scanning) scanTracker.onStopSent(System.currentTimeMillis())
+        if (sendSteps(stop + listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(RadioSettings.SCAN_LIST, v))) +
+                ScanControl.startSteps(fromFrequency), onDone = {
+                scanTracker.onStartSent(System.currentTimeMillis())
+                refreshChips()
                 // Relue dans la radio pour confirmer (r32) ; sinon, on affiche ce qui a été accepté
                 if (fwProtocol < RadioSettings.PROTOCOL_SCANLIST) radioScanList = v
                 else { scanRequested = v to label; scanRequestedAt = System.currentTimeMillis() }
                 lightsReadAt = 0L
-                toast("Liste de scan demandée : $label")
+                toast("Scan lancé : $label")
                 if (editor == null) buildUi()
             })) Journal.add("Appli : liste de scan → $label")
     }
@@ -2995,6 +3049,47 @@ class MainActivity : Activity() {
             }
         }
 
+ private val SPECTRUM_REFUSAL_SHORTCUT = "Spectre ouvert : seuls Écran éteint, Furtif et Spectre (pour le fermer) fonctionnent. Quittez le spectre (EXIT ou Spectre)."
+
+    /** Ligne active : 'M' canal, 'F' fréquence, null inconnue (état 0x09 d'abord, sinon écran). */
+    private fun activeMode(): Char? = synchronized(rstate) { rstate.snapshot }?.selectedLine?.kind?.let {
+        when (it) { RadioStatus.LineKind.MEMORY -> 'M'; RadioStatus.LineKind.FREQUENCY -> 'F'; else -> null }
+    } ?: live.mainMode
+
+    /**
+     * 0.77, raccourci Scan, appui court (choix de D'jé) : arrête le scan en cours ; sinon le lance
+     * tel que réglé, en proposant d'abord le mode canal si la ligne est en fréquence.
+     */
+    private fun runScan() {
+        if (cdc == null) { toast("Radio non connectée"); return }
+        when (ScanControl.onShortPress(scanTracker.running, activeMode())) {
+            ScanControl.Decision.STOP -> if (sendSteps(ScanControl.STOP_STEPS)) {
+                scanTracker.onStopSent(System.currentTimeMillis()); toast("Scan arrêté"); refreshChips()
+            }
+            ScanControl.Decision.START -> startScan(false)
+            ScanControl.Decision.ASK_CHANNEL_MODE -> showScanModeChoice()
+            ScanControl.Decision.LINE_UNKNOWN -> toast("Revenez à l'écran principal de la radio (ligne active non reconnue)")
+        }
+    }
+
+    /** Ligne en mode fréquence : passer en mode canal (recommandé) ou scanner les fréquences. Captures : appelée directement. */
+    internal fun showScanModeChoice() {
+        ChoiceSheet.show(this, "Scan en mode fréquence",
+                "La ligne active est en mode fréquence : le scan y balaierait les fréquences, pas vos canaux.",
+                listOf(ChoiceSheet.Option("M", "Passer en mode canal et scanner",
+                        radioScanList?.let { "Liste " + RadioSettings.scanShort(it) + ", réglée dans la radio" } ?: "Liste réglée dans la radio",
+                        primary = true) { startScan(true) },
+                    ChoiceSheet.Option("F", "Scanner les fréquences", "Rester en mode fréquence") { startScan(false) }),
+                "Annuler")
+    }
+
+    private fun startScan(fromFrequency: Boolean, before: List<KeyStep> = emptyList(), what: String? = null) {
+        if (sendSteps(before + ScanControl.startSteps(fromFrequency))) {
+            scanTracker.onStartSent(System.currentTimeMillis())
+            toast(what ?: "Scan lancé"); refreshChips()
+        }
+    }
+
     private val SPECTRUM_REFUSAL = "Spectre ouvert : la radio n'accepte pas ce réglage. Quittez le spectre (EXIT), puis réessayez."
 
     private fun lightTarget(stealth: Boolean, screenDark: Boolean) = LightPlan.target(stealth, screenDark,
@@ -3058,6 +3153,14 @@ class MainActivity : Activity() {
         val a = if (s.type == "action") Actions.byId(s.action) else null
         if (a?.nightToggle == true) { toggleStealth(!prefs.stealth); return }
         if (a?.screenToggle == true) { toggleScreenDark(!prefs.screenDark); return }
+        // 0.77 : spectre ouvert → seuls Écran éteint et Furtif (ci-dessus) passent ; Spectre le ferme.
+        // Avant, un raccourci d'une seule touche (A⇄B…) partait et tombait dans le spectre.
+        if (spectrumOpen()) {
+            if (a?.id == "spectrum") { if (sendSteps(listOf(KeyStep("EXIT", false)))) toast("Fermeture du spectre") }
+            else toast(SPECTRUM_REFUSAL_SHORTCUT)
+            return
+        }
+        if (s.isScan) { runScan(); return }
         if (s.type == "team" || s.type == "channel") {
             // Il faut savoir si la ligne active est en mode canal ou fréquence
             val mode = live.mainMode
@@ -3468,7 +3571,7 @@ class MainActivity : Activity() {
                 sheetRow(card, "BOUTON", "Affiche la puissance de la ligne active : vert pour LOW, orange pour MID, rouge pour HIGH. $edit")
             }
             s.isScan -> {
-                sheetRow(card, "APPUI LONG", "En mode canal : une colonne propose ALL et les listes qui contiennent des canaux (d'après votre dernière lecture de « Mes canaux »). Glissez jusqu'à la liste voulue, puis levez le doigt. Refusé pendant un scan : arrêtez-le d'abord.")
+                sheetRow(card, "APPUI LONG", "Une colonne propose ALL et les listes qui contiennent des canaux (d'après votre dernière lecture de « Mes canaux »). Glissez jusqu'à la liste voulue, puis levez le doigt : la liste est réglée et le scan démarre dessus, en mode canal. Un scan en cours est d'abord arrêté.")
                 sheetRow(card, "BOUTON", "Avec le firmware Fusion PTT r32, affiche la liste réglée dans la radio (« Scan · L2 », « Scan · ALL ») ; ● quand un scan est en cours. $edit")
             }
             s.type == "team" -> {

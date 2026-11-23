@@ -1,5 +1,15 @@
 # K1 Remote Essai · version 0.76-essai (firmware Fusion PTT r32)
 
+## 0.77-essai — retours des essais r32 / 0.76 (23/11)
+
+- **Scan** (choix de D'jé) : appui court = arrêt si un scan tourne, sinon lancement tel que réglé ; en mode fréquence, fenêtre « Passer en mode canal et scanner » / « Scanner les fréquences ». Appui long = choix de la liste, puis scan lancé dessus (scan en cours arrêté d'abord). Suivi local du scan (`ScanTracker`, testé par `ScanControlTest`) : un second appui n'envoie plus ✱ long pendant un scan (bug : affichage figé, listes qui défilent).
+- **Spectre** : tous les raccourcis sont refusés sauf Écran éteint et Furtif ; Spectre le ferme (EXIT). Avant, A⇄B et les autres raccourcis d'une touche partaient dans le spectre.
+- **Verrou et spectre** : les colonnes des appuis longs (Puissance, Scan) ne s'ouvrent plus.
+- **Journal** : bouton ☰ Journal à gauche du PTT.
+- **Mes canaux** : nombre de canaux sur chaque filtre.
+- **Préférences** : « Mon code d'appel » vide n'affiche plus « A1 » (passait pour une valeur saisie).
+- Pendant un scan : plus de lecture des réglages d'équipe (toujours abandonnée), fréquence hors de la comparaison du journal technique (plus d'« État radio » toutes les 1,5 s).
+
 ## 0.76-essai — plus aucune fenêtre système
 - Nouveaux composants (Sheet.kt) : carte commune aux couleurs du thème pour les messages, confirmations (action rouge pour les suppressions), choix dans une liste (tuiles, valeur actuelle cochée) et fenêtres à contenu libre ; ProgressSheet pour la lecture et l'envoi des canaux (barre aux couleurs du thème, pourcentage, étape en cours, bouton Annuler qui disparaît quand l'annulation n'est plus possible).
 - Converties : envoi des canaux (progression et messages), lecture des canaux (progression, « Lecture interrompue » avec « Réessayer »), journal technique, rapport de plantage, rejoindre une équipe carte, rappel du furtif, choix des valeurs (équipe, Préférences, éditeur de canal, liste de scan), suppression d'un canal, canal modifié non envoyé, modifications non envoyées, sauvegarde illisible, journal des appels (Partager, Effacer), raccourcis par défaut, nouvelle équipe carte, QR d'équipe (sur fond blanc, lisible même en mode nuit).
