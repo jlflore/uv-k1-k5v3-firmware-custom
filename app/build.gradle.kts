@@ -11,8 +11,8 @@ android {
         applicationId = "fr.jlambert.k1remote.essai"   // appli d'essai, installable à côté de K1 Remote (0.63)
         minSdk = 24
         targetSdk = 35
-        versionCode = 75
-        versionName = "0.66-essai"
+        versionCode = 76
+        versionName = "0.67-essai"
     }
 
     buildTypes {

@@ -283,3 +283,45 @@ Les numéros de menus utilisés par l'appli (2, 15, 47, 48, 49, 50, 54, 67, 68�
    - La puissance est la puissance **réglée** sur la ligne (USER = selon SetPwr), pas une mesure.
    - N+ est calculé : largeur étroite et `gSetting_set_nfm` = 1. Le firmware l'applique en FM et en USB, mais pas en AM, où la largeur passe par un filtre propre à l'AM (`RADIO_GetAMFilterBandwidth`). Le champ « largeur » d'une ligne en AM vaut donc 0xFF.
 8. **Annonce de la version 3 dans la commande 04.** Sans risque : l'appli déployée ne vérifie que l'opcode et les lettres « K1R », pas l'octet de version.
+
+---
+
+# Format 2 (firmware r29) — figé le 23 novembre 2026
+
+*Ajout validé par ChatGPT le 23 novembre 2026, après une revue des sources r28 : contrat, `app.c`, `spectrum.c`, `menu.c`, `backlight.c` et `dcs.c`. Les 32 premiers octets gardent exactement le sens du format 1 : seul l'octet 2 vaut 2. La réponse fait 48 octets.*
+
+## Octets 32 à 47
+
+| Octet | Contenu |
+|---|---|
+| 32 | indicateurs étendus. Bit 0 : réservé, à 0 (radio FM : dans Fusion, c'est une appli en surimpression, pendant laquelle la radio ne répond pas). Bit 1 : appli spectre active. Bits 2 à 7 : 0. |
+| 33–38 | sous-canaux de la ligne A |
+| 39–44 | sous-canaux de la ligne B |
+| 45–47 | réservés, 0 |
+
+Bloc sous-canaux d'une ligne (6 octets) :
+
+| Décalage | Contenu |
+|---|---|
+| +0 | type en réception : 0 aucun, 1 CTCSS, 2 DCS normal, 3 DCS inversé, 0xFF inconnu |
+| +1–2 | valeur en réception (u16, petit-boutiste) : 0 si aucun ; CTCSS en dixièmes de Hz (88,5 Hz → 885) ; DCS = valeur numérique du code en base 8, transportée comme entier binaire (D023 → 0x0013, D131 → 0x0059), jamais en chiffres décimaux ni en ASCII ; 0xFFFF = inconnue |
+| +3 | type en émission |
+| +4–5 | valeur en émission |
+
+Côté firmware, l'indice est vérifié avant toute lecture de table : `Code < 50` pour `CTCSS_Options`, `Code < DCS_OPTION_COUNT` pour `DCS_GetOption`. Si le type d'une ligne vaut 0xFF, son bloc de sous-canaux est tout entier à 0xFF.
+
+## Pendant le spectre (r29)
+
+- La commande 0x09 reçoit une réponse au format 2. La fonction (octet 5) vaut 5, l'octet 32 a son bit 1 à 1, et la ligne en réception (octet 30) vaut 0xFF. L'encodeur est le même que hors spectre, avec un contexte explicite (`K1R_BuildStatus(d, inSpectrum)`).
+- La commande 01 est acceptée pour une liste blanche fermée, définie par identifiant `MENU_*` et non par position : `MENU_ABR` (36), `MENU_ABR_MAX` (38), `MENU_ABR_ON_TX_RX` (39), `MENU_BEEP` (40), `MENU_SET_INV` (60).
+- Les bornes sont contrôlées par `MENU_GetLimits`, avec refus si la valeur est hors bornes. Statuts : 0 accepté, 1 trame courte, 2 numéro ou valeur hors bornes, 4 menu refusé pendant le spectre.
+- « Écran éteint » met la luminosité vraiment à 0 (`BACKLIGHT_SetBrightness(0)`), et le furtif profond reste prioritaire. `BACKLIGHT_TurnOff()` n'est pas modifiée.
+- L'enregistrement en EEPROM est différé : `gRequestSaveSettings` est traité par la boucle principale au retour du spectre.
+- Toute autre commande reste refusée pendant le spectre (statut 4).
+
+## Appli
+
+- **Format 2 incomplet** (moins de 48 octets, bit réservé ou octets réservés non nuls, sous-canal hors bornes) : la partie étendue est ignorée, la partie v1 est gardée, et il n'y a jamais de témoin d'équipe.
+- **Témoin « réglages d'équipe identiques »** : il ne s'allume que si tout est connu et identique — canal (ou mode fréquence), fréquence, puissance, largeur, sous-canaux en réception et en émission — sans décalage relais ni inversion. Une seule donnée inconnue l'éteint. Ce n'est pas une garantie de liaison radio effective.
+- **Spectre** : il est reconnu par l'octet 32 bit 1 (r29) ou par le statut 4 (r28).
+- **La commande 04** annonce le protocole 4.

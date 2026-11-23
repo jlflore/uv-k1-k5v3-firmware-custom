@@ -1133,11 +1133,6 @@ class MainActivity : Activity() {
             RadioState.Change.STATE -> ui.post { applyFirmwareState() }
             RadioState.Change.NONE -> if (raw == null && synchronized(rstate) { rstate.usesFirmware }) ui.post { refreshChips() }
         }
-        val hasFm = runCatching { shortcuts.toList() }.getOrDefault(emptyList()).any { it.type == "action" && it.action == "fm" }
-        if (hasFm && !pttOn) {
-            val d = request(c, K5ViewerProtocol.command(0x06), 700)
-            fmScreen = if (d != null && d.size >= 3 && (d[1].toInt() and 0xFF) == 0) (d[2].toInt() and 0xFF) == 3 else null
-        }
         ui.post { refreshIfActiveChanged() }
     }
 
@@ -1194,16 +1189,23 @@ class MainActivity : Activity() {
         }
         return ShortcutStates.active(action, ShortcutStates.Inputs(
             appScreenDark = prefs.screenDark, appStealth = prefs.stealth, pixelLocked = live.locked,
-            snapshot = snap, busy = busy, fmScreen = fmScreen))
+            snapshot = snap, busy = busy))
     }
 
-    /** Écran radio FM affiché (commande 06), lu seulement si un raccourci Radio FM est présent. */
-    @Volatile private var fmScreen: Boolean? = null
+    /** Bouton d'équipe allumé : la ligne active a exactement ses réglages (état 0x09 format 2, r29). */
+    private fun teamActive(s: Shortcut): Boolean {
+        captureActive?.let { return "team" in it }
+        val t = s.team ?: return false
+        val snap = synchronized(rstate) { if (rstate.usesFirmware && rstate.isFresh(System.currentTimeMillis(), pttOn)) rstate.snapshot else null }
+        return snap != null && snap.format >= 2 && t.matches(snap.selectedLine)
+    }
 
     /** Signature des témoins : les raccourcis sont redessinés seulement quand elle change. */
     private var activeSig = ""
     private fun refreshIfActiveChanged() {
-        val sig = ShortcutStates.TOGGLES.joinToString("") { if (shortcutActive(it)) "1" else "0" }
+        val sig = ShortcutStates.TOGGLES.joinToString("") { if (shortcutActive(it)) "1" else "0" } +
+            runCatching { shortcuts.toList() }.getOrDefault(emptyList()).filter { it.type == "team" }
+                .joinToString("") { if (teamActive(it)) "1" else "0" }
         if (sig != activeSig) {
             activeSig = sig; refreshChips()
             val k = fKeyDef
@@ -1474,7 +1476,7 @@ class MainActivity : Activity() {
         // touches déverrouillait, agissait puis reverrouillait tout seul.
         // Spectre ouvert (statut 4) : la radio refuse les réglages, et des appuis de touches
         // tomberaient dans le spectre. Seules les touches simples passent (elles pilotent le spectre).
-        if (spectrumOpen() && (input.size > 1 || input.any { it.cmd != null })) {
+        if (spectrumOpen() && (input.size > 1 || input.any { it.cmd != null }) && !spectrumAccepts(input)) {
             toast(SPECTRUM_REFUSAL)
             return false
         }
@@ -2272,7 +2274,7 @@ class MainActivity : Activity() {
             // 0.66 : plus de ◆ sur les boutons d'équipe ; il laissait croire que la ligne active était
             // réglée pour l'équipe, ce que l'appli ne vérifie pas (le sous-canal n'est pas dans 0x09 v1)
             // Fonction restée active (écran éteint, verrou, furtif, scan, spectre) : le bouton le montre
-            val darkOn = s.type == "action" && !editMode && shortcutActive(s.action)
+            val darkOn = !editMode && ((s.type == "action" && shortcutActive(s.action)) || (s.type == "team" && teamActive(s)))
             if (darkOn) {
                 // Éclairage coupé : le bouton le montre (pastille pleine), un appui le rallume
                 box.background = Ui.ripple(this@MainActivity, p.accentBg, 10f, p.accentBorder, night = p.night)
@@ -2523,7 +2525,7 @@ class MainActivity : Activity() {
         // séquence attendait des réponses qui ne viennent pas et bloquait le retour au normal).
         val radioHere = cdc != null && (cdc !is BleLink || relayRadio)
         if (radioHere) {
-            if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); return }
+            if (spectrumOpen() && !spectrumAccepts(stealthSteps(entering))) { toast(SPECTRUM_REFUSAL); return }
             // Le furtif n'est noté (témoin, thème nuit) qu'une fois TOUS les réglages acceptés par la
             // radio (0.66) : un refus ne laisse plus un témoin allumé sans effet réel.
             if (!sendSteps(stealthSteps(entering), onDone = {
@@ -2557,7 +2559,7 @@ class MainActivity : Activity() {
         // rallumer l'écran ne rétablit pas l'éclairage normal, le furtif garde la main (0.66)
         val items = lightTarget(stealth = prefs.stealth, screenDark = enter)
             .filter { it.first == Shortcut.MENU_BLTXRX || it.first == Shortcut.MENU_BLTIME }
-        if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); return }
+        if (spectrumOpen() && !spectrumAccepts(settingSteps(items))) { toast(SPECTRUM_REFUSAL); return }
         // Noté seulement quand la radio a accepté les réglages (0.66)
         sendSteps(settingSteps(items), onDone = {
             prefs.screenDark = enter
@@ -2590,7 +2592,24 @@ class MainActivity : Activity() {
     }
 
     /** Spectre ouvert : la radio refuse les réglages (statut 4), connu grâce à l'état 0x09 (r28). */
-    private fun spectrumOpen(): Boolean = synchronized(rstate) { rstate.isBusy(System.currentTimeMillis()) }
+    private fun spectrumOpen(): Boolean = synchronized(rstate) {
+        rstate.isBusy(System.currentTimeMillis()) || (rstate.usesFirmware && rstate.snapshot?.spectrumActive == true)
+    }
+
+    /**
+     * Firmware r29 ou plus : pendant le spectre, la radio accepte les réglages d'éclairage
+     * (36 BLTime, 38 BLMax, 39 BLTxRx, 60 SetInv) et le bip (40), en commandes directes, ainsi que
+     * le furtif profond (07). Écran éteint et Furtif y fonctionnent donc ; rien d'autre.
+     */
+    private fun spectrumAccepts(steps: List<KeyStep>): Boolean = direct && fwRevision >= 29 && steps.isNotEmpty() &&
+        steps.all { st ->
+            val c = st.cmd ?: return@all false
+            when (c.getOrNull(4)?.toInt()) {
+                0x01 -> (c.getOrNull(5)?.toInt()?.and(0xFF)) in setOf(36, 38, 39, 40, 60)
+                0x07 -> true
+                else -> false
+            }
+        }
 
     private val SPECTRUM_REFUSAL = "Spectre ouvert : la radio n'accepte pas ce réglage. Quittez le spectre (EXIT), puis réessayez."
 

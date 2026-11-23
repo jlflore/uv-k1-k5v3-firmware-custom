@@ -192,8 +192,8 @@ class ScreensTest {
                 Shortcut(3, "Verrou", "action", "lock"), Shortcut(4, "Scan", "action", "scan"),
                 Shortcut(5, "Spectre", "action", "spectrum"), Shortcut(6, "Inv. relais", "action", "reverse"),
                 Shortcut(7, "Radio FM", "action", "fm"), Shortcut(8, "A ⇄ B", "action", "ab"),
-                Shortcut(9, "Appel", "action", "call")))
-            MainActivity.captureActive = ShortcutStates.TOGGLES.toSet()
+                Shortcut(9, "Scorpio", "team", team = TeamProfile())))
+            MainActivity.captureActive = ShortcutStates.TOGGLES.toSet() + "team"
             val tag = (if (night) "nuit" else t.name.lowercase()) + (if (ui == 0) "_complete" else "_operation")
             capture("temoins_$tag", "Témoins allumés · ${if (night) "Nuit (furtif)" else t.label} · ${if (ui == 0) "complète" else "en opération"}", false)
             MainActivity.captureActive = null

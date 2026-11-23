@@ -11,6 +11,7 @@ object RadioStatus {
 
     const val OP = 0x09
     const val SIZE_V1 = 32
+    const val SIZE_V2 = 48
     const val UNKNOWN8 = 0xFF
     const val UNKNOWN16 = 0xFFFF
     const val UNKNOWN32 = 0xFFFFFFFFL
@@ -24,6 +25,12 @@ object RadioStatus {
     enum class Modulation { FM, AM, USB, OTHER, UNKNOWN }
     enum class Width { WIDE, NARROW, NARROWER, UNKNOWN }
     enum class RxSource { A, B, OTHER_WATCHED, NONE }
+
+    /**
+     * Sous-canal (format 2) : type 0 aucun, 1 CTCSS (valeur en dixièmes de Hz), 2 DCS normal,
+     * 3 DCS inversé (valeur = code octal pris comme entier : D023 → 0x13). [value] null = inconnue.
+     */
+    data class Tone(val type: Int, val value: Int?)
 
     data class Line(
         val kind: LineKind,
@@ -40,7 +47,10 @@ object RadioStatus {
         val hasShift: Boolean,
         val reverse: Boolean,
         /** 0 aucune, 1..24, 25 toutes ; null = inconnue. */
-        val scanList: Int?
+        val scanList: Int?,
+        /** Format 2 : sous-canaux en réception et en émission ; null = inconnu ou format 1. */
+        val rxTone: Tone? = null,
+        val txTone: Tone? = null
     )
 
     data class Snapshot(
@@ -57,7 +67,9 @@ object RadioStatus {
         /** Ligne A ou B ; null si son type est inconnu (bloc à ignorer). */
         val a: Line?,
         val b: Line?,
-        val rxSource: RxSource
+        val rxSource: RxSource,
+        /** Format 2 : appli spectre active (octet 32 bit 1) ; null = format 1. */
+        val spectrumActive: Boolean? = null
     ) {
         fun line(i: Int): Line? = if (i == 0) a else b
         val selectedLine: Line? get() = line(selected)
@@ -103,11 +115,34 @@ object RadioStatus {
         }
         if (u8(r, 31) != 0) return Result.Invalid("octet réservé 31 non nul")
 
-        return Result.Ok(Snapshot(
+        val base = Snapshot(
             format = format, selected = selected,
             keyLocked = flags and 0x01 != 0, dualWatch = flags and 0x02 != 0, crossBand = flags and 0x04 != 0,
             narrowerSetting = flags and 0x08 != 0, stealth = flags and 0x10 != 0, screenAsleep = flags and 0x20 != 0,
-            function = function, a = a, b = b, rxSource = rx))
+            function = function, a = a, b = b, rxSource = rx)
+        // Format 2 : partie étendue lue seulement si elle est complète et valide ; sinon on garde
+        // l'état v1, sans sous-canaux (jamais de témoin d'équipe sur une donnée douteuse).
+        return Result.Ok(if (format >= 2) extended(r, base) ?: base else base)
+    }
+
+    private fun tone(r: ByteArray, o: Int): Tone? {
+        val type = u8(r, o); val v = u16(r, o + 1)
+        return when (type) {
+            0 -> if (v == 0) Tone(0, 0) else null
+            1 -> Tone(1, if (v == UNKNOWN16) null else if (v in 600..3000) v else return null)
+            2, 3 -> Tone(type, if (v == UNKNOWN16) null else if (v in 0..0x1FF) v else return null)
+            UNKNOWN8 -> null
+            else -> null
+        }
+    }
+
+    private fun extended(r: ByteArray, s: Snapshot): Snapshot? {
+        if (r.size < SIZE_V2) return null
+        val ext = u8(r, 32)
+        if (ext and 0xFD != 0) return null                         // bits réservés (dont 0 : FM) non nuls
+        if (u8(r, 45) != 0 || u8(r, 46) != 0 || u8(r, 47) != 0) return null
+        fun withTones(l: Line?, o: Int) = l?.copy(rxTone = tone(r, o), txTone = tone(r, o + 3))
+        return s.copy(a = withTones(s.a, 33), b = withTones(s.b, 39), spectrumActive = ext and 0x02 != 0)
     }
 
     private sealed class LineOrError {
@@ -149,8 +184,9 @@ object RadioStatus {
 
     /** Fabrique une charge utile v1 (trames de référence des tests, futur simulateur de démonstration). */
     fun encode(s: Snapshot): ByteArray {
-        val r = ByteArray(SIZE_V1)
-        r[0] = OP.toByte(); r[1] = 0; r[2] = 1
+        val v2 = s.format >= 2
+        val r = ByteArray(if (v2) SIZE_V2 else SIZE_V1)
+        r[0] = OP.toByte(); r[1] = 0; r[2] = (if (v2) 2 else 1).toByte()
         r[3] = s.selected.toByte()
         r[4] = ((if (s.keyLocked) 1 else 0) or (if (s.dualWatch) 2 else 0) or (if (s.crossBand) 4 else 0) or
             (if (s.narrowerSetting) 8 else 0) or (if (s.stealth) 0x10 else 0) or (if (s.screenAsleep) 0x20 else 0)).toByte()
@@ -161,6 +197,15 @@ object RadioStatus {
         encodeLine(r, 6, s.a); encodeLine(r, 18, s.b)
         r[30] = when (s.rxSource) { RxSource.A -> 0; RxSource.B -> 1; RxSource.OTHER_WATCHED -> 2; RxSource.NONE -> UNKNOWN8 }.toByte()
         r[31] = 0
+        if (v2) {
+            r[32] = (if (s.spectrumActive == true) 0x02 else 0).toByte()
+            fun putTone(o: Int, t: Tone?) {
+                r[o] = (t?.type ?: UNKNOWN8).toByte()
+                val v = if (t == null) UNKNOWN16 else (t.value ?: UNKNOWN16)
+                r[o + 1] = v.toByte(); r[o + 2] = (v shr 8).toByte()
+            }
+            for ((i, l) in listOf(s.a, s.b).withIndex()) { putTone(33 + i * 6, l?.rxTone); putTone(36 + i * 6, l?.txTone) }
+        }
         return r
     }
 

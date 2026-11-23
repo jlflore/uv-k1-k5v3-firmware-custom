@@ -107,6 +107,46 @@ class RadioStatusTest {
         hex(REF).also { it[7] = 0x01; it[8] = 0x04; invalid(it) }         // canal 1025
     }
 
+    /**
+     * Format 2 (r29) : même préfixe, puis spectre actif, sous-canaux.
+     * A : RX CTCSS 88,5 Hz, TX DCS D131 inversé (131 octal = 0x59, chiffres différents en décimal).
+     * B : RX aucun, TX DCS D023 normal.
+     */
+    private val REF2 = "09 00 02 01 0a 02 " +
+        "00 03 00 31 8d a8 02 01 00 01 00 03 " +
+        "01 01 00 f0 03 de 00 07 00 00 04 00 " +
+        "00 00 " +
+        "02 01 75 03 03 59 00 00 00 00 02 13 00 00 00 00"
+
+    @Test fun etat_format2_sous_canaux_et_spectre() {
+        val s = ok(hex(REF2))
+        assertEquals(2, s.format); assertEquals(true, s.spectrumActive)
+        assertEquals(RadioStatus.Tone(1, 885), s.a!!.rxTone)
+        assertEquals(RadioStatus.Tone(3, 0x59), s.a!!.txTone)
+        assertEquals("131", Integer.toOctalString(s.a!!.txTone!!.value!!))   // D131, pas 0x131
+        assertEquals(RadioStatus.Tone(0, 0), s.b!!.rxTone)
+        assertEquals(RadioStatus.Tone(2, 0x13), s.b!!.txTone)
+    }
+
+    @Test fun etat_format2_encodeur_concorde() {
+        assertEquals(REF2.replace(" ", ""), RadioStatus.encode(ok(hex(REF2))).joinToString("") { String.format("%02x", it) })
+    }
+
+    @Test fun etat_format2_lu_par_un_decodeur_format1_meme_prefixe() {
+        val v2 = ok(hex(REF2)); val v1 = ok(hex(REF))
+        assertEquals(v1.copy(format = 2), v2.copy(spectrumActive = null,
+            a = v2.a!!.copy(rxTone = null, txTone = null, width = v1.a!!.width), b = v2.b!!.copy(rxTone = null, txTone = null)))
+    }
+
+    @Test fun etat_format2_partie_etendue_douteuse_ignoree_sans_perdre_v1() {
+        hex(REF2).also { it[32] = 0x01 }.let { val s = ok(it); assertNull(s.spectrumActive); assertNull(s.a!!.rxTone) }  // bit FM réservé
+        hex(REF2).also { it[46] = 1 }.let { assertNull(ok(it).a!!.rxTone) }                                           // réservé non nul
+        hex(REF2).copyOf(47).let { val s = ok(it); assertNull(s.a!!.txTone); assertEquals(3, s.a!!.number) }           // tronquée
+        hex(REF2).also { it[34] = 0xff.toByte(); it[35] = 0xff.toByte() }.let { assertEquals(RadioStatus.Tone(1, null), ok(it).a!!.rxTone) } // valeur inconnue
+        hex(REF2).also { it[33] = 0xff.toByte() }.let { assertNull(ok(it).a!!.rxTone) }                               // type inconnu
+        hex(REF2).also { it[33] = 1; it[34] = 5; it[35] = 0 }.let { assertNull(ok(it).a!!.rxTone) }                    // CTCSS hors bornes
+    }
+
     @Test fun etat_requete_bien_formee() {
         assertEquals("aa 55 08 01 09 00", RadioStatus.REQUEST.joinToString(" ") { String.format("%02x", it) })
     }

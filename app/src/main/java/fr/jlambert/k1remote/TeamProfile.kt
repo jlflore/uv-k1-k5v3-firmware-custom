@@ -32,6 +32,31 @@ data class TeamProfile(
 ) {
     fun copy2() = copy()
 
+    /**
+     * Témoin « réglages d'équipe identiques » (0.67, état 0x09 format 2) : vrai seulement si TOUT
+     * est connu et identique — canal (ou mode fréquence), fréquence, puissance, largeur, sous-canaux
+     * en réception et en émission, sans décalage relais ni inversion. Une seule donnée inconnue,
+     * ou un profil incomplet : faux (jamais de faux positif).
+     */
+    fun matches(l: RadioStatus.Line?): Boolean {
+        l ?: return false
+        val hz = freqHz() ?: return false
+        val kindOk = when (l.kind) {
+            RadioStatus.LineKind.MEMORY -> l.number == channel
+            RadioStatus.LineKind.FREQUENCY -> true             // profil laissé en mode fréquence
+            else -> false
+        }
+        val rx = l.rxTone ?: return false
+        val tx = l.txTone ?: return false
+        val wantRx = expectedTone(tone, toneIdx) ?: return false
+        val wantTx = expectedTone(txTone, txIdx) ?: return false
+        return kindOk && l.rxHz != null && (l.rxHz == hz || l.rxHz == tunedHz()) &&
+            l.power == power &&
+            l.width == (if (narrow) RadioStatus.Width.NARROW else RadioStatus.Width.WIDE) &&
+            !l.hasShift && !l.reverse &&
+            rx.value != null && tx.value != null && rx == wantRx && tx == wantTx
+    }
+
     /** Même sous-canal dans les deux sens. */
     val sameTone: Boolean get() = tone == txTone && (tone == "none" || toneIdx == txIdx)
 
@@ -211,6 +236,18 @@ data class TeamProfile(
         /** Puissances approximatives annoncées par F4HWN pour l'UV-K1 / UV-K5 V3. */
         val POWER_LABELS = listOf("LOW 1 · moins de 20 mW", "LOW 2 · environ 125 mW", "LOW 3 · environ 250 mW",
             "LOW 4 · environ 500 mW", "LOW 5 · environ 1 W", "MID · environ 2 W", "HIGH · environ 5 W")
+
+        /** Sous-canal attendu au sens du protocole 0x09 format 2 (type, valeur), ou null si le profil est incomplet. */
+        fun expectedTone(t: String, idx: Int): RadioStatus.Tone? = when (t) {
+            "none" -> RadioStatus.Tone(0, 0)
+            "ctcss" -> CTCSS.getOrNull(idx - 1)?.let { RadioStatus.Tone(1, it) }
+            "dcs" -> if (idx !in 1..208) null else {
+                val inv = idx > 104
+                val i = if (inv) idx - 105 else idx - 1
+                RadioStatus.Tone(if (inv) 3 else 2, DCS_LOW[i] or (if (i >= 64) 0x100 else 0))
+            }
+            else -> null
+        }
 
         fun toneText(t: String, idx: Int): String = when (t) {
             "ctcss" -> ctcssLabel(idx)

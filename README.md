@@ -1,4 +1,11 @@
-# K1 Remote Essai · version 0.66-essai (firmware Fusion PTT r28)
+# K1 Remote Essai · version 0.67-essai (firmware Fusion PTT r29)
+
+## 0.67-essai — avec le firmware Fusion PTT r29 (état 0x09 format 2)
+- Témoin « réglages d'équipe identiques » sur les boutons d'équipe : allumé seulement si la ligne active a exactement les réglages du profil (canal ou mode fréquence, fréquence, puissance, largeur, sous-canaux en réception et en émission, sans décalage ni inversion). Une seule donnée inconnue l'éteint. Firmware r29 nécessaire.
+- Pendant le spectre (r29) : Écran éteint et Furtif fonctionnent (réglages d'éclairage acceptés par la radio, écran vraiment éteint) ; les autres raccourcis restent refusés.
+- Spectre reconnu par l'état de la radio (r29), et non plus seulement par sa réponse « occupée ».
+- Radio FM : plus de témoin. Dans Fusion, la radio FM est une appli en surimpression, pendant laquelle la radio ne répond à aucune commande : son état n'est pas observable.
+- Décodeur 0x09 format 2 (sous-canaux, spectre) avec trames de référence ; contrat mis à jour (docs/contrat-etat-radio-0x09.md). Contrôles : RadioStatusTest 15, TeamMatchTest 5, ShortcutStatesTest 6 (784 combinaisons).
 
 ## 0.66-essai
 - Écran éteint + Furtif : une seule règle calcule l'éclairage de la radio pour la combinaison des deux (LightPlan). Sortir du furtif ne rallume plus l'écran quand « Écran éteint » est actif ; rallumer l'écran pendant le furtif ne casse plus le furtif. Contrôlée dans ses 72 combinaisons et dans toutes les suites de 4 appuis (LightPlanTest).
