@@ -10,7 +10,8 @@ defs = (root / "App/app/menu_settings.def").read_text(encoding="utf-8")
 
 WHITELIST = ["MENU_SQL", "MENU_BEEP", "MENU_SET_OFF", "MENU_SET_NFM", "MENU_STEP",
              "MENU_UPCODE", "MENU_PTT_ID", "MENU_D_ST", "MENU_D_PRE", "MENU_D_LIVE_DEC",
-             "MENU_ABR", "MENU_ABR_ON_TX_RX"]   # r31 : éclairage
+             "MENU_ABR", "MENU_ABR_ON_TX_RX",   # r31 : éclairage
+             "MENU_S_LIST"]                      # r32 : liste de scan
 
 body = app[app.index("static int8_t K1R_ReadSetting"):]
 body = body[:body.index("\n}\n")]

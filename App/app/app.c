@@ -1932,7 +1932,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "31"
+#define K1R_REVISION "32"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -2207,7 +2207,7 @@ static void K1R_SendStatus(void)
 /* r30 — op 0x0A « lire des réglages » (contrat K1R-contrat-lecture-reglages-0x0A.md v1.2).
  * Lecture seule : ne touche ni gSubMenuSelection, ni gMenuCursor, ni gScanUseCssResult ;
  * aucune écriture, aucune reconfiguration radio, aucun rafraîchissement d'écran.
- * Liste blanche fermée de 12 réglages (contrat v2.0, r31) ; tout autre menu répond s = 3, len = 0.
+ * Liste blanche fermée de 13 réglages (contrat v2.1, r32) ; tout autre menu répond s = 3, len = 0.
  * Renvoie le nombre d'octets de valeur écrits dans out (au plus 16), ou -1 si non lisible. */
 static int8_t K1R_ReadSetting(uint8_t id, uint8_t *out)
 {
@@ -2225,6 +2225,8 @@ static int8_t K1R_ReadSetting(uint8_t id, uint8_t *out)
         case MENU_ABR:        v = gEeprom.BACKLIGHT_TIME; break;
 #endif
         case MENU_ABR_ON_TX_RX: v = gSetting_backlight_on_tx_rx; break;
+        // r32 : liste de scan par défaut (raccourci Scan de l'appli, appui long)
+        case MENU_S_LIST:     v = gEeprom.SCAN_LIST_DEFAULT; break;
         case MENU_BEEP:       v = gEeprom.BEEP_CONTROL; break;
 #ifdef ENABLE_FEAT_F4HWN_SLEEP
         case MENU_SET_OFF:    v = gSetting_set_off; break;            // veille (SetOff, minutes)
@@ -2425,7 +2427,7 @@ static void K1R_RunCommand(void)
             K1R_SendStatus();      // état de la radio, contrat 0x09 v1 (r28)
             return;
         case 0x0A:
-            K1R_ReadSettings(c, n);   // lecture de réglages, contrat 0x0A v2.0 (r31)
+            K1R_ReadSettings(c, n);   // lecture de réglages, contrat 0x0A v2.1 (r32)
             return;
         case 0x05: {
             // Diagnostic : état d'émission vu par la radio
@@ -2469,7 +2471,7 @@ static void K1R_RunCommand(void)
     // Présence : « K1R », version du protocole, modèle (selon SetNav : 0 = UV-K1, 1 = UV-K5 V3),
     // puis la version du firmware (ex. « v7.0.0 »)
     // 24 octets : « v7.0.0 r23 » (10 caractères) dépassait l'ancien tampon de 16 → « r2 »
-    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 6, gEeprom.SET_NAV ? 1 : 0 };   // protocole 6 : 0x0A + éclairage (r31) ; 5 : op 0x0A (r30) ; 4 : 0x09 format 2 (r29)
+    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 7, gEeprom.SET_NAV ? 1 : 0 };   // protocole 7 : 0x0A + liste de scan (r32) ; 6 : 0x0A + éclairage (r31) ; 5 : op 0x0A (r30) ; 4 : 0x09 format 2 (r29)
     uint8_t len = 2;
     if (c[0] == 0x04) {
         len = 7;

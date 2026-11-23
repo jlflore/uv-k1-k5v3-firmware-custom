@@ -23,7 +23,7 @@ jobs:
     - name: Compile firmware
       run: |
         chmod +x compile-firmware.sh compile-app.sh
-        ./compile-firmware.sh Fusion "-DEDITION_STRING=FusPTT r31"
+        ./compile-firmware.sh Fusion "-DEDITION_STRING=FusPTT r32"
 
     - name: Contrôle des positions de menu (firmware compilé et appli)
       run: |
