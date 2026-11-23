@@ -68,7 +68,7 @@ object Actions {
         ActionDef("lock", "Verrou", "Verrouille ou déverrouille le clavier de la radio (appui long sur F)", listOf(long("F"))),
         ActionDef("reverse", "Inv. relais", "Sur un relais, écoute directement votre correspondant (appui long sur 8)", listOf(long("8"))),
         ActionDef("fm", "Radio FM", "Allume ou éteint la radio FM (appui long sur 0)", listOf(long("0"))),
-        ActionDef("spectrum", "Spectre", "Ouvre l'analyseur de spectre (F puis 5)", listOf(short("F"), short("5"))),
+        ActionDef("spectrum", "Spectre", "Ouvre l'analyseur de spectre (F puis 5) ; spectre ouvert, le referme. Appui long, spectre ouvert : fonctions du spectre sur les touches", listOf(short("F"), short("5"))),
         ActionDef("beepoff", "Bip off", "Coupe le bip des touches de la radio (réglage 40 Beep sur OFF)",
             Shortcut.multiSettingSteps(listOf(Shortcut.MENU_BEEP to "0"))),
         ActionDef("stealth", "Furtif",

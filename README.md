@@ -1,5 +1,10 @@
 # K1 Remote Essai · version 0.76-essai (firmware Fusion PTT r32)
 
+## 0.82-essai — aide et mode d'emploi complétés
+
+- Aide « ? » du raccourci Spectre : appui long (touches du spectre) et appui bref spectre ouvert (fermeture) ; description du raccourci à jour.
+- Mode d'emploi : Spectre ajouté partout où Puissance et Scan avaient un appui long particulier ; champ « Mon code d'appel » vide expliqué.
+
 ## 0.81-essai — bibliothèque : Genève, Zermatt, réseaux de montagne
 
 - **Aviation · Genève** (écoute seule) : ATIS 135,575, tour 118,700, sol 121,675, approche 120,300, départ 119,525, arrivée 136,250, détresse 121,500. Bases publiques (metarcentral, airport-lookup), relevé du 23/11/2026 : à vérifier sur l'AIP suisse.

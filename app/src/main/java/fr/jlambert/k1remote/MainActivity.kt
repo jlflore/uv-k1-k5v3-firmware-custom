@@ -3711,6 +3711,10 @@ class MainActivity : Activity() {
                 sheetRow(card, "APPUI LONG", "Une colonne propose ALL et les listes qui contiennent des canaux (d'après votre dernière lecture de « Mes canaux »). Glissez jusqu'à la liste voulue, puis levez le doigt : la liste est réglée et le scan démarre dessus, en mode canal. Un scan en cours est d'abord arrêté.")
                 sheetRow(card, "BOUTON", "Avec le firmware Fusion PTT r32, affiche la liste réglée dans la radio (« Scan · L2 », « Scan · ALL ») ; ● quand un scan est en cours. $edit")
             }
+            s.type == "action" && s.action == "spectrum" -> {
+                sheetRow(card, "APPUI LONG", "Spectre ouvert : affiche sur les touches de l'appli leur fonction dans la vue spectre (pas, saut, échelle, seuil, largeur, fréquence, filtre, modulation). Nouvel appui long : touches normales ; elles reviennent seules à la fermeture du spectre.")
+                sheetRow(card, "SPECTRE OUVERT", "Un appui bref ferme le spectre (comme EXIT). Les autres raccourcis sont refusés, sauf Écran éteint et Furtif. $edit")
+            }
             s.type == "team" -> {
                 sheetRow(card, "BOUTON ALLUMÉ", "La radio a déjà les réglages de l'équipe. Firmware r30 ou plus : ligne active (fréquence, sous-canaux, puissance, largeur) et réglages relus dans la radio (pas, squelch, bip, veille, SetNFM, code d'appel). Seul le canal en mémoire n'est pas relu. Firmware r29 : ligne active seulement.")
                 sheetRow(card, "APPUI, BOUTON ALLUMÉ", "Demande avant de tout renvoyer (« Cette radio a déjà les réglages de l'équipe »).")

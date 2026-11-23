@@ -142,7 +142,7 @@
 <tr>
 <td>Raccourcis</td>
 <td>Vos boutons programmés (9 au maximum), le compteur n/9</td>
-<td>Toucher : lancer. Appui long : modifier ou supprimer (Puissance et Scan : choix au doigt, voir plus bas). « + Ajouter » : en créer un.</td>
+<td>Toucher : lancer. Appui long : modifier ou supprimer (Puissance et Scan : choix au doigt ; Spectre : touches du spectre ; voir plus bas). « + Ajouter » : en créer un.</td>
 </tr>
 <tr>
 <td>Clavier</td>
@@ -268,7 +268,7 @@
 <p><strong>Les témoins ●</strong> : Écran éteint, Furtif, Verrou, Scan, Spectre et Inv. relais s'allument tant que la fonction est active sur la radio, et s'éteignent dès qu'elle ne l'est plus. Avec le firmware Fusion PTT, l'appli lit cet état dans la radio : Verrou, Scan, Spectre et Inv. relais à partir de r28, Écran éteint à partir de r31 (sauf en furtif, où l'appli garde ce qu'elle sait). Un réglage changé directement sur la radio se voit donc aussi dans l'appli. Les boutons d'équipe ont leur propre témoin (section suivante).</p>
 <p><strong>Refus</strong> : clavier verrouillé, l'appli refuse ses raccourcis (sauf Verrou). Spectre ouvert sur la radio, seuls Écran éteint et Furtif passent, et Spectre, qui le ferme (comme EXIT). Radio allumée directement en spectre (F4HWN rouvre le dernier écran) : les touches de l'appli pilotent le spectre et EXIT le ferme ; l'appli termine sa connexion juste après. Les appuis longs de Puissance et Scan n'ouvrent pas leur colonne non plus.</p>
 <p><strong>Touches du spectre</strong> : spectre ouvert, un <strong>appui long sur le raccourci Spectre</strong> affiche sur les touches de l'appli leur fonction dans la vue spectre, en couleur : 1/7 pas de balayage + / −, 2/8 saut des flèches + / −, 3/9 échelle + / −, ✱/F seuil + / −, 4 largeur, 5 saisie d'une fréquence, 6 filtre, 0 modulation. Un nouvel appui long rétablit les touches normales ; elles reviennent seules à la fermeture du spectre. Ce n'est que de l'affichage : les touches envoyées sont les mêmes. Après PTT (vue fixe sur une fréquence) ou pendant la saisie d'une fréquence, certaines touches font autre chose. Pour modifier ou supprimer le raccourci Spectre, passez par « Modifier ». Le message dit toujours pourquoi.</p>
-<p><strong>Modifier ou supprimer</strong> : maintenez le doigt environ une seconde sur le bouton, puis choisissez Modifier ou Supprimer (pour Puissance et Scan, dont l'appui long sert au choix au doigt, passez par le bouton « Modifier »). Le bouton « Modifier » en haut de la zone passe aussi tous les boutons en mode modification ; touchez « Terminé » pour en sortir.</p>
+<p><strong>Modifier ou supprimer</strong> : maintenez le doigt environ une seconde sur le bouton, puis choisissez Modifier ou Supprimer (pour Puissance, Scan et Spectre, dont l'appui long a une autre fonction, passez par le bouton « Modifier »). Le bouton « Modifier » en haut de la zone passe aussi tous les boutons en mode modification ; touchez « Terminé » pour en sortir.</p>
 <p>Pour revenir aux raccourcis de départ : Préférences › Réinitialiser les raccourcis. Toutes les fenêtres de l'appli (choix, confirmations, progression) suivent le thème choisi ; une suppression se confirme toujours par un bouton rouge, et toucher à côté de la fenêtre l'annule.</p>
 </section>
 <section class="s c5"><h2 id="equipe">Configuration d'équipe et partage</h2>
@@ -386,7 +386,7 @@
 <section class="s c3"><h2 id="appelants">Savoir qui appelle</h2>
 <p>En FM, la voix ne dit pas qui parle. Chaque radio peut envoyer un court code (bip-bip DTMF) au début de ses émissions, et l'appli affiche alors « Appel de Paul (A1) ».</p>
 <ol>
-<li><strong>Chaque joueur</strong> choisit un code différent (A1, A2, A3…) et le saisit dans Préférences › Noms des appelants › <strong>Mon code d'appel</strong>.</li>
+<li><strong>Chaque joueur</strong> choisit un code différent (A1, A2, A3…) et le saisit dans Préférences › Noms des appelants › <strong>Mon code d'appel</strong>. Tant qu'il est vide, le champ affiche « Aucun code — touchez pour saisir » en grisé : ce n'est pas une valeur.</li>
 <li><strong>Chaque joueur</strong> lance la <strong>configuration d'équipe</strong> : avec le firmware Fusion PTT, elle écrit ce code dans la radio (45 UPCode), demande de l'envoyer à chaque émission (47 PTT ID) et active l'affichage des codes reçus (50 D Live).</li>
 <li><strong>Dans la liste des noms</strong> (même rubrique), notez une ligne par coéquipier : « A1 = Paul », « A2 = Marc »…</li>
 </ol>
@@ -494,7 +494,7 @@
 </section>
 <section class="s c2"><h2 id="aide">L'aide « ? »</h2>
 <p><strong>Aide de l'écran de la radio</strong> : quand la radio est dans un menu (ou sur la radio FM, le journal…), toucher son écran dans l'appli ouvre directement l'aide de ce qui est affiché. Vous pouvez aussi toucher la pastille <strong>i</strong> orange « i aide », posée sur le coin bas droit du cadre de l'écran, (ou « ? » puis l'écran). Si la radio est dans un menu, une fiche explique le réglage affiché (à quoi il sert, ses valeurs, un conseil pour l'airsoft) ; sinon, l'écran en cours (catégories, radio FM, journal…). Le détail de chaque réglage demande le firmware Fusion PTT r7 ou plus : la radio dit elle-même quel réglage elle affiche.</p>
-<p>Touchez <strong>?</strong> en haut, puis n'importe quelle touche, raccourci ou l'écran de la radio : une fiche explique ce qu'il fait, en appui court et en appui long. Pour un raccourci, elle dit aussi ce que signifie son témoin ● et ce que fait son appui long (choix au doigt pour Puissance et Scan, partage pour un bouton d'équipe).</p>
+<p>Touchez <strong>?</strong> en haut, puis n'importe quelle touche, raccourci ou l'écran de la radio : une fiche explique ce qu'il fait, en appui court et en appui long. Pour un raccourci, elle dit aussi ce que signifie son témoin ● et ce que fait son appui long (choix au doigt pour Puissance et Scan, touches du spectre pour Spectre, partage pour un bouton d'équipe).</p>
 <ul>
 <li>Dans la fiche, <strong>« Aide complète »</strong> ouvre l'aide du firmware F4HWN directement à la bonne touche. Elle est intégrée à l'appli et fonctionne sans réseau.</li>
 <li>Retouchez ? pour quitter le mode aide.</li>
