@@ -1,5 +1,10 @@
 # K1 Remote Essai · version 0.76-essai (firmware Fusion PTT r32)
 
+## 0.78-essai — lecture de démarrage visible
+
+- Anneau « Lecture de l'état de la radio… » affiché au moins 0,6 s (la lecture, une fraction de seconde, passait inaperçue) ; les touches sont libérées dès la fin réelle de la lecture.
+- Journal technique : une ligne à chaque connexion, même sans changement : « État de la radio lu à la connexion (0,3 s) : éclairage normal, liste de scan L2 ».
+
 ## 0.77-essai — retours des essais r32 / 0.76 (23/11)
 
 - **Scan** (choix de D'jé) : appui court = arrêt si un scan tourne, sinon lancement tel que réglé ; en mode fréquence, fenêtre « Passer en mode canal et scanner » / « Scanner les fréquences ». Appui long = choix de la liste, puis scan lancé dessus (scan en cours arrêté d'abord). Suivi local du scan (`ScanTracker`, testé par `ScanControlTest`) : un second appui n'envoie plus ✱ long pendant un scan (bug : affichage figé, listes qui défilent).

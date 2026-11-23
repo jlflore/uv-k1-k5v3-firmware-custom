@@ -51,7 +51,8 @@ class MainActivity : Activity() {
         private const val KEEPALIVE_MS = 250L
         private const val STEP_MS = 280L        // pause après un appui court
         private const val LONG_STEP_MS = 700L   // pause après un appui long
-        private const val WAIT_MS = 900L        // pause « WAIT » dans une suite de touches
+        private const val WAIT_MS = 900L
+        private const val STARTUP_MIN_SHOW_MS = 600L   // anneau de lecture visible au moins 0,6 s        // pause « WAIT » dans une suite de touches
         private const val LONG_PRESS_MS = 800L  // appui long sur un raccourci (Android : ~400 ms)
     }
 
@@ -257,6 +258,7 @@ class MainActivity : Activity() {
                     if (fwProtocol >= RadioSettings.PROTOCOL_LIGHTS) {
                         lightsReadAt = 0L
                         startupReading = true                       // verrou posé tout de suite (fil de sonde)
+                        startupAt = System.currentTimeMillis()
                         ui.post { if (cdc === c && startupReading) setStartupReading(true) }   // affichage
                     }
                     startWatcher(c)
@@ -1322,13 +1324,31 @@ class MainActivity : Activity() {
     private val scanTracker = ScanTracker()
 
     /** Écran de démarrage : spinner sur la vitre, touches et PTT de l'appli bloqués (3 s au plus). */
-    private fun setStartupReading(on: Boolean) {
+    /**
+     * 0.78 : le verrou des touches suit la lecture réelle ; l'anneau, lui, reste au moins
+     * [STARTUP_MIN_SHOW_MS] à l'écran pour qu'on voie que la lecture a eu lieu (demande de D'jé :
+     * par câble comme par le boîtier, elle était trop rapide pour être vue). [linger] false :
+     * effacement immédiat (déconnexion).
+     */
+    private fun setStartupReading(on: Boolean, linger: Boolean = false) {
         startupReading = on
         if (!::lcd.isInitialized) return
-        lcd.busyText = if (on) "Lecture de l'état de la radio…" else null
         ui.removeCallbacks(startupTimeout)
-        if (on) ui.postDelayed(startupTimeout, 3_000)
+        ui.removeCallbacks(clearBusy)
+        if (on) {
+            if (startupAt == 0L) startupAt = System.currentTimeMillis()
+            busyShownAt = System.currentTimeMillis()
+            lcd.busyText = "Lecture de l'état de la radio…"
+            ui.postDelayed(startupTimeout, 3_000)
+        } else {
+            startupAt = 0L
+            val left = if (linger && lcd.busyText != null) STARTUP_MIN_SHOW_MS - (System.currentTimeMillis() - busyShownAt) else 0L
+            if (left > 0) ui.postDelayed(clearBusy, left) else lcd.busyText = null
+        }
     }
+    @Volatile private var startupAt = 0L
+    private var busyShownAt = 0L
+    private val clearBusy = Runnable { if (!startupReading && ::lcd.isInitialized) lcd.busyText = null }
     private val startupTimeout = Runnable {
         if (startupReading) { Journal.add("Éclairage : lecture de démarrage trop longue, témoin laissé sur la préférence"); setStartupReading(false) }
     }
@@ -1391,7 +1411,20 @@ class MainActivity : Activity() {
             } else if (first && r == null) {
                 Journal.add("Éclairage : lecture impossible à la connexion, témoin laissé sur la préférence")
             }
-            if (first) setStartupReading(false)
+            if (first) {
+                // 0.78 : preuve de la lecture au journal, même quand rien n'a changé
+                if (r != null) {
+                    val ms = if (startupAt > 0) System.currentTimeMillis() - startupAt else -1L
+                    val light = when (dark) {
+                        true -> "écran éteint"; false -> "éclairage normal"; null -> "éclairage non déterminé (furtif ou valeur absente)"
+                    }
+                    val scan = if (fwProtocol >= RadioSettings.PROTOCOL_SCANLIST)
+                        values?.get(RadioSettings.SCAN_LIST)?.let { ", liste de scan " + RadioSettings.scanShort(it) } ?: ", liste de scan non lue" else ""
+                    Journal.add("État de la radio lu à la connexion" +
+                        (if (ms >= 0) " (" + String.format(java.util.Locale.FRANCE, "%.1f", ms / 1000.0) + " s)" else "") + " : $light$scan")
+                }
+                setStartupReading(false, linger = true)
+            }
         }
     }
 
