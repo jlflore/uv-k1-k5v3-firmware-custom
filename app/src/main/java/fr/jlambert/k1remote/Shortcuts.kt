@@ -62,9 +62,9 @@ object Actions {
 
     val LIST = listOf(
         ActionDef("ab", "A ⇄ B", "Change la ligne principale, A ou B (appui long sur 2)", listOf(long("2"))),
-        ActionDef("power", "Puissance", "Puissance suivante à chaque appui (appui long sur 6)", listOf(long("6"))),
+        ActionDef("power", "Puissance", "Puissance suivante à chaque appui (appui long sur 6). Appui long sur le bouton : choisir la puissance au doigt", listOf(long("6"))),
         ActionDef("call", "Appel", "Va sur votre canal d'appel, choisi au réglage n°44 du menu (appui long sur 9)", listOf(long("9"))),
-        ActionDef("scan", "Scan", "Lance ou arrête le scan (appui long sur ✱)", listOf(long("*"))),
+        ActionDef("scan", "Scan", "Lance ou arrête le scan (appui long sur ✱). Appui long sur le bouton : choisir la liste de scan au doigt", listOf(long("*"))),
         ActionDef("lock", "Verrou", "Verrouille ou déverrouille le clavier de la radio (appui long sur F)", listOf(long("F"))),
         ActionDef("reverse", "Inv. relais", "Sur un relais, écoute directement votre correspondant (appui long sur 8)", listOf(long("8"))),
         ActionDef("fm", "Radio FM", "Allume ou éteint la radio FM (appui long sur 0)", listOf(long("0"))),

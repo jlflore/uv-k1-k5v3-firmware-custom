@@ -7,6 +7,8 @@
 - Choix d'une heure (mode nuit automatique) : fenêtre de l'appli, heures et minutes en gros chiffres avec ▲ / ▼ (appui long : défilement rapide), à la place de l'horloge Android.
 - Revue ChatGPT : l'annulation de l'envoi des canaux n'est acceptée qu'avant le début de l'écriture ; le passage à l'écriture est atomique (plus de « Annulation… » affichée pendant que l'écriture continue). Un envoi rend toujours un seul résultat, même si l'écran « Mes canaux » a disparu entre-temps.
 - Captures ajoutées : progression (envoi, lecture), message, confirmation, choix dans une liste, choix d'une heure, dans les trois thèmes.
+- Mode d'emploi revu de bout en bout pour r28-r32 / 0.70-0.76 : firmware Fusion v7 et Fusion PTT r32 recommandés, écran de démarrage, en-tête (▤, ⌖), témoins ● expliqués à part, refus (verrou, spectre), témoin d'équipe complet (relecture, A/B, réception), pas de fréquence, réglage en quelques secondes avec Fusion PTT (25 s sans), carte « Équipe configurée », tableau des révisions r28 à r32, nouvelle section « Le bouton Scan et les listes de scan », Écran éteint gardé par la radio, annulation de l'envoi des canaux, rubriques des Préférences complétées, trois problèmes fréquents ajoutés.
+- Aide contextuelle (« ? ») : fiche propre à chaque raccourci (appui long de Puissance et Scan, témoin ●, bouton d'équipe allumé) ; touches F (verrou dans l'appli), ✱ (raccourci Scan) et écran de la radio (« i aide », écran de démarrage) complétées.
 
 ## 0.75-essai — revue ChatGPT de r32 / 0.74
 - Numéro de liaison : une réponse arrivée après une déconnexion ou une reconnexion (même boîtier Bluetooth) ne modifie plus aucun témoin.

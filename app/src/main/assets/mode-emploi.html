@@ -51,7 +51,7 @@
 <h1>Mode d'emploi</h1>
 <p>K1 Remote 0.76-essai · télécommande pour Quansheng UV-K1 / UV-K5 V3 sous F4HWN Fusion, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
 </div>
-<nav class="toc" aria-label="Sommaire"><a class="c0" href="#avant">Avant de commencer</a><a class="c1" href="#brancher">Brancher la radio</a><a class="c2" href="#ecran">L'écran principal</a><a class="c3" href="#clavier">Le clavier de la radio</a><a class="c4" href="#raccourcis">Les raccourcis</a><a class="c5" href="#equipe">Configuration d'équipe et partage</a><a class="c1" href="#carte">La carte d'équipe</a><a class="c2" href="#ptt">Firmware Fusion PTT</a><a class="c3" href="#appelants">Savoir qui appelle</a><a class="c0" href="#puissance">Le bouton Puissance</a><a class="c1" href="#nuit">Mode nuit et mode furtif</a><a class="c3" href="#operation">En opération</a><a class="c0" href="#laterales">Touches F1 / F2</a><a class="c4" href="#canaux">Les canaux de la radio</a><a class="c2" href="#aide">L'aide « ? »</a><a class="c3" href="#preferences">Préférences et noms des appelants</a><a class="c4" href="#problemes">Problèmes fréquents</a></nav>
+<nav class="toc" aria-label="Sommaire"><a class="c0" href="#avant">Avant de commencer</a><a class="c1" href="#brancher">Brancher la radio</a><a class="c2" href="#ecran">L'écran principal</a><a class="c3" href="#clavier">Le clavier de la radio</a><a class="c4" href="#raccourcis">Les raccourcis</a><a class="c5" href="#equipe">Configuration d'équipe et partage</a><a class="c1" href="#carte">La carte d'équipe</a><a class="c2" href="#ptt">Firmware Fusion PTT</a><a class="c3" href="#appelants">Savoir qui appelle</a><a class="c0" href="#puissance">Le bouton Puissance</a><a class="c5" href="#scan">Le bouton Scan</a><a class="c1" href="#nuit">Mode nuit et mode furtif</a><a class="c3" href="#operation">En opération</a><a class="c0" href="#laterales">Touches F1 / F2</a><a class="c4" href="#canaux">Les canaux de la radio</a><a class="c2" href="#aide">L'aide « ? »</a><a class="c3" href="#preferences">Préférences et noms des appelants</a><a class="c4" href="#problemes">Problèmes fréquents</a></nav>
 <section class="s c0"><h2 id="avant">Avant de commencer</h2>
 <p>Il vous faut trois choses : la radio avec le bon firmware, un téléphone Android et le bon câble.</p>
 <div class="tw"><table>
@@ -66,7 +66,7 @@
 <tr>
 <td>Radio</td>
 <td>Quansheng UV-K1 ou UV-K5 V3</td>
-<td>Avec le firmware <strong>F4HWN Fusion</strong> (testé en 6.2). Le firmware d'origine n'envoie pas son écran : l'appli ne verrait rien.</td>
+<td>Avec le firmware <strong>F4HWN Fusion v7</strong>, et de préférence sa version <strong>Fusion PTT</strong> (r32 ou plus récente) pour toutes les fonctions : PTT à distance, réglages directs, témoins lus dans la radio, lecture et écriture des canaux. Le firmware d'origine de Quansheng n'envoie pas son écran : l'appli ne verrait rien.</td>
 </tr>
 <tr>
 <td>Téléphone</td>
@@ -97,6 +97,7 @@
 <li>La pastille d'état, en haut, indique la liaison. Touchez-la pour vous connecter si besoin ; un <strong>appui long</strong> dessus déconnecte.</li>
 <li>Les pastilles <strong>RX</strong> et <strong>TX</strong> s'allument quand la radio reçoit ou émet.</li>
 </ol>
+<p><strong>Écran de démarrage</strong> (firmware Fusion PTT r31 ou plus) : à chaque connexion, un anneau qui tourne et « Lecture de l'état de la radio… » s'affichent sur l'écran de l'appli. L'appli lit alors l'état réel de la radio (éclairage, verrou, liste de scan…) pour que ses boutons disent vrai dès le départ. Pendant cette lecture, ses touches et son PTT répondent « Patientez » ; elle dure une fraction de seconde par câble, 3 secondes au plus. Le PTT de la radio reste toujours libre.</p>
 <p>Bon à savoir : branchée, la radio se recharge sur le téléphone, ce qui vide la batterie du téléphone plus vite.</p>
 <h3>Sans fil, avec le boîtier K1 Relais</h3>
 <p>Le boîtier K1 Relais se branche sur la radio et relaie tout en Bluetooth : le téléphone reste dans la poche, sans câble.</p>
@@ -124,8 +125,8 @@
 <tbody>
 <tr>
 <td>En-tête</td>
-<td>Lune ☾, roue ⚙, point d'interrogation ?</td>
-<td>☾ : mode furtif (appli en nuit et écran de la radio éteint). ⚙ : Préférences. ? : aide sur une touche.</td>
+<td>Lune ☾, canaux ▤, carte ⌖, roue ⚙, point d'interrogation ?</td>
+<td>☾ : mode furtif (appli en nuit et écran de la radio éteint). ▤ : les canaux de la radio. ⌖ : la carte d'équipe. ⚙ : Préférences. ? : aide sur une touche ou un bouton.</td>
 </tr>
 <tr>
 <td>Pastille d'état</td>
@@ -140,7 +141,7 @@
 <tr>
 <td>Raccourcis</td>
 <td>Vos boutons programmés (9 au maximum), le compteur n/9</td>
-<td>Toucher : lancer. Appui long : modifier ou supprimer. « + Ajouter » : en créer un.</td>
+<td>Toucher : lancer. Appui long : modifier ou supprimer (Puissance et Scan : choix au doigt, voir plus bas). « + Ajouter » : en créer un.</td>
 </tr>
 <tr>
 <td>Clavier</td>
@@ -238,7 +239,7 @@
 <tbody>
 <tr>
 <td>Actions disponibles</td>
-<td>Une fonction toute prête : A ⇄ B, Puissance, Appel, Scan (appui long : choix de la liste de scan au doigt, comme la puissance), Verrou, Inv. relais, Radio FM, Spectre, Furtif, Écran éteint (éclairage de la radio coupé, même pendant les appels, sans mode nuit). Écran éteint, Furtif, Verrou, Scan, Spectre et Inv. relais s'allument (●) tant que la fonction est active sur la radio, et s'éteignent dès qu'elle ne l'est plus (Verrou, Scan, Spectre et Inv. relais lus dans la radio avec le firmware Fusion PTT r28 ou plus ; Écran éteint avec r31 ou plus, hors furtif). Avec r31, à chaque connexion, un anneau qui tourne sur l'écran de l'appli indique la lecture de l'état de la radio : les touches et le PTT de l'appli attendent la fin de cette lecture, une fraction de seconde. Les boutons d'équipe s'allument quand la ligne active a exactement les réglages de l'équipe (firmware r29).</td>
+<td>Une fonction toute prête : A ⇄ B, Puissance, Appel, Scan, Verrou, Inv. relais, Radio FM, Spectre, Furtif, Écran éteint (éclairage de la radio coupé, même pendant les appels, sans mode nuit).</td>
 <td>« Scan »</td>
 </tr>
 <tr>
@@ -263,12 +264,14 @@
 </tr>
 </tbody>
 </table></div>
-<p><strong>Modifier ou supprimer</strong> : maintenez le doigt environ une seconde sur le bouton, puis choisissez Modifier ou Supprimer. Le bouton « Modifier » en haut de la zone passe aussi tous les boutons en mode modification ; touchez « Terminé » pour en sortir.</p>
-<p>Pour revenir aux raccourcis de départ : Préférences › Réinitialiser les raccourcis.</p>
+<p><strong>Les témoins ●</strong> : Écran éteint, Furtif, Verrou, Scan, Spectre et Inv. relais s'allument tant que la fonction est active sur la radio, et s'éteignent dès qu'elle ne l'est plus. Avec le firmware Fusion PTT, l'appli lit cet état dans la radio : Verrou, Scan, Spectre et Inv. relais à partir de r28, Écran éteint à partir de r31 (sauf en furtif, où l'appli garde ce qu'elle sait). Un réglage changé directement sur la radio se voit donc aussi dans l'appli. Les boutons d'équipe ont leur propre témoin (section suivante).</p>
+<p><strong>Refus</strong> : clavier verrouillé, l'appli refuse ses raccourcis (sauf Verrou). Spectre ouvert sur la radio, seuls Écran éteint et Furtif passent. Le message dit toujours pourquoi.</p>
+<p><strong>Modifier ou supprimer</strong> : maintenez le doigt environ une seconde sur le bouton, puis choisissez Modifier ou Supprimer (pour Puissance et Scan, dont l'appui long sert au choix au doigt, passez par le bouton « Modifier »). Le bouton « Modifier » en haut de la zone passe aussi tous les boutons en mode modification ; touchez « Terminé » pour en sortir.</p>
+<p>Pour revenir aux raccourcis de départ : Préférences › Réinitialiser les raccourcis. Toutes les fenêtres de l'appli (choix, confirmations, progression) suivent le thème choisi ; une suppression se confirme toujours par un bouton rouge, et toucher à côté de la fenêtre l'annule.</p>
 </section>
 <section class="s c5"><h2 id="equipe">Configuration d'équipe et partage</h2>
-<p>Un seul bouton règle la radio pour l'équipe : fréquence, pas de fréquence (automatique ou choisi), sous-canal, puissance, largeur et squelch, règle aussi le bip (OFF par défaut), puis enregistre le tout dans un canal. Dans le profil, vous choisissez si la radio reste ensuite en mode fréquence (par défaut) ou passe sur le canal. Pour changer le nom ou les réglages d'un profil : appui long sur son bouton, puis Modifier.</p>
-<p>Avec le firmware Fusion PTT <strong>r30</strong>, le bouton d'équipe ne s'allume que si la radio a <strong>tous</strong> les réglages de l'équipe : ligne active (fréquence, sous-canaux, puissance, largeur) et réglages généraux relus dans la radio (pas, squelch, bip, veille SetOff, SetNFM, code d'appel et ses options). Seul le canal enregistré en mémoire n'est pas relu. Avec r29, seule la ligne active est vérifiée.</p>
+<p>Un seul bouton règle la radio pour l'équipe : fréquence, pas de fréquence (automatique ou choisi), sous-canal, puissance, largeur et squelch, règle aussi le bip (OFF par défaut), la veille (SetOff), SetNFM et votre code d'appel, puis enregistre le tout dans un canal. Dans le profil, vous choisissez si la radio reste ensuite en mode fréquence (par défaut) ou passe sur le canal. Pour changer le nom ou les réglages d'un profil : appui long sur son bouton, puis Modifier.</p>
+<p><strong>Le témoin du bouton d'équipe</strong> : avec le firmware Fusion PTT <strong>r30</strong> ou plus, le bouton ne s'allume que si la radio a <strong>tous</strong> les réglages de l'équipe : ligne active (fréquence, sous-canaux, puissance, largeur) et réglages généraux relus dans la radio (pas, squelch, bip, veille SetOff, SetNFM, code d'appel et ses options). Seul le canal enregistré en mémoire n'est pas relu. Avec r29, seule la ligne active est vérifiée. Les réglages sont relus toutes les 15 secondes au plus, et tout de suite quand vous changez de canal ou de ligne (A ⇄ B) : un réglage changé au clavier (squelch…) éteint le bouton. Une réception ne l'éteint pas ; un réglage sans rapport avec l'équipe (écran éteint…) non plus.</p>
 <p>Si le bouton d'équipe est déjà allumé (la radio a exactement les réglages de l'équipe), l'appli affiche « Cette radio a déjà les réglages de l'équipe » : <strong>Annuler</strong> ne change rien, <strong>Renvoyer quand même</strong> refait toute la configuration (utile si le canal en mémoire a été modifié à la main ; avec r29, aussi pour le squelch, le bip ou le code d'appel, que la radio ne signale pas). Avec r30, si un réglage diffère, la configuration part directement et l'appli indique lesquels différaient.</p>
 <p>Avec le firmware Fusion PTT, la configuration met aussi le réglage général <strong>SetNFM</strong> (menu 68) sur NARROW, la bande étroite standard du PMR446. Sur NARROWER, la radio affiche « N+ » et resserre aussi son émission : votre voix arriverait plus faible ou plus étouffée chez les autres. Ainsi, toute l'équipe a le même réglage.</p>
 <p><strong>Créer le bouton</strong> (référent radio)</p>
@@ -278,6 +281,7 @@
 <li><strong>Fréquence</strong> en MHz, par exemple 446.00625. Toute fréquence est acceptée ; une fréquence plus fine que le kHz est arrondie au kHz le plus proche, et l'appli l'indique ;</li>
 <li><strong>Sous-canal</strong> : Aucun, CTCSS (une tonalité en Hz) ou DCS (un code, N normal ou I inversé). Par défaut, le même sert en réception et en émission ; touchez « Sous-canal différent en émission… » pour régler chaque sens à part, « Aucun » compris ;</li>
 <li><strong>Puissance</strong> de LOW 1 à HIGH (tableau ci-dessous), <strong>Squelch</strong> de 0 (ouvert) à 9 (très fermé), <strong>Largeur</strong> étroite ou large ;</li>
+<li><strong>Pas</strong> de fréquence : automatique (déduit de la fréquence) ou choisi dans la liste ;</li>
 <li><strong>Canal</strong> où tout enregistrer, de 1 à 999.</li>
 </ul>
 </li>
@@ -326,8 +330,8 @@
 <p><strong>Lancer le réglage</strong></p>
 <ol>
 <li>Mettez la radio sur son écran principal (pas dans un menu).</li>
-<li>Touchez le bouton, puis <strong>ne touchez plus à rien pendant environ 25 secondes</strong> : l'appli tape tous les réglages.</li>
-<li>Le message « Réglage de la radio terminé » s'affiche. La radio est sur le canal d'équipe.</li>
+<li>Touchez le bouton. Avec le firmware Fusion PTT, tout part en quelques secondes, sans passer par les menus. Sans lui, <strong>ne touchez plus à rien pendant environ 25 secondes</strong> : l'appli tape tous les réglages au clavier.</li>
+<li>La carte « Équipe configurée » confirme le canal enregistré et votre code d'appel. Si des réglages avaient été changés (squelch…), elle dit lesquels ont été remis aux valeurs de l'équipe.</li>
 </ol>
 <p>Attention : le canal choisi est remplacé, et le squelch s'applique à toute la radio, pas seulement à ce canal.</p>
 <p><strong>Partager à l'équipe</strong></p>
@@ -355,12 +359,22 @@
 <p>Confidentialité : les positions sont <strong>chiffrées</strong> avec la clé secrète de l'équipe ; le relais Internet ne voit que des données illisibles. À l'arrêt du partage, votre dernière position est effacée. Les morceaux de carte déjà vus sont gardés sur le téléphone et restent visibles sans réseau. L'intervalle d'envoi (5 à 60 s) se règle dans les Préférences : plus il est court, plus la batterie baisse vite.</p>
 </section>
 <section class="s c2"><h2 id="ptt">Firmware Fusion PTT : PTT à distance et réglages directs</h2>
-<p>Le firmware <strong>« Fusion PTT »</strong> est le firmware d'Armel F4HWN v7 avec trois ajouts pour K1 Remote. Installez-le dans un emplacement Multiboot (le firmware d'origine reste en « Main ») ; la radio affiche « FusPTT r27 Edition » au démarrage (r27 = numéro de révision : prenez toujours le fichier au numéro le plus élevé). Après chaque installation, il faut aussi installer les « assets » (polices et textes) : sans eux, l'écran de la radio s'allume mais reste vide. Dans UV Studio, une fois le firmware écrit dans son emplacement Multiboot, ouvrez l'onglet de flashage du firmware : il propose alors l'installation des assets ; lancez-la, puis redémarrez la radio. Quand l'appli le reconnaît, elle l'annonce et la pastille d'état se termine par « · PTT » ; sous le titre s'affichent le modèle (selon le réglage SetNav) et la version.</p>
+<p>Le firmware <strong>« Fusion PTT »</strong> est le firmware d'Armel F4HWN v7 avec trois ajouts pour K1 Remote. Installez-le dans un emplacement Multiboot (le firmware d'origine reste en « Main ») ; la radio affiche « FusPTT r32 Edition » au démarrage (r32 = numéro de révision : prenez toujours le fichier au numéro le plus élevé). Après chaque installation, il faut aussi installer les « assets » (polices et textes) : sans eux, l'écran de la radio s'allume mais reste vide. Dans UV Studio, une fois le firmware écrit dans son emplacement Multiboot, ouvrez l'onglet de flashage du firmware : il propose alors l'installation des assets ; lancez-la, puis redémarrez la radio. Quand l'appli le reconnaît, elle l'annonce et la pastille d'état se termine par « · PTT » ; sous le titre s'affichent le modèle (selon le réglage SetNav) et la version.</p>
 <ul>
 <li><strong>Réglages directs</strong> : la configuration d'équipe, le mode furtif et les raccourcis de réglage sont envoyés à la radio en quelques secondes, sans parcourir les menus, avec la fréquence exacte. Chaque réglage est confirmé par la radio ; en cas de refus, l'appli s'arrête et dit pourquoi.</li>
 <li><strong>Touches muettes</strong> : les touches envoyées par le téléphone ne bipent jamais.</li>
 <li><strong>PTT à distance</strong>, décrit ci-dessous.</li>
+<li><strong>État de la radio lu en direct</strong> : les témoins des raccourcis, le bouton d'équipe, la puissance et la liste de scan reflètent ce que la radio contient vraiment, même si un réglage a été changé sur la radio.</li>
 </ul>
+<div class="tw"><table>
+<thead><tr><th>Révision</th><th>Ce qu'elle apporte à l'appli</th></tr></thead>
+<tbody>
+<tr><td>r28</td><td>État de la radio : témoins Verrou, Scan, Spectre, Inv. relais</td></tr>
+<tr><td>r29</td><td>Sous-canaux et spectre : témoin d'équipe (ligne active), Écran éteint pendant le spectre</td></tr>
+<tr><td>r30</td><td>Lecture des réglages : témoin d'équipe complet (squelch, bip, veille, code d'appel…)</td></tr>
+<tr><td>r31</td><td>Éclairage lu dans la radio : témoin Écran éteint fiable, écran de démarrage</td></tr>
+<tr><td>r32</td><td>Liste de scan lue et choisie au doigt ; changement de liste refusé pendant un scan</td></tr>
+</tbody></table></div>
 <p>Avec le firmware <strong>« Fusion PTT »</strong> sur la radio (une version d'Armel F4HWN v7 légèrement modifiée), un grand bouton <strong>« Maintenir pour émettre »</strong> apparaît sous le clavier : activez-le dans Préférences › Affichage › <strong>Bouton PTT à distance</strong>. Maintenez-le pour émettre, et parlez dans le micro de la radio ou de votre casque ; relâchez pour écouter.</p>
 <p>Sécurité : la radio coupe d'elle-même l'émission si elle ne reçoit plus de nouvelles du téléphone pendant 0,9 s (doigt levé, liaison perdue, appli fermée), et au plus tard au bout de 30 s. Le bouton de l'appli marche toujours en « maintenir pour émettre », même si la radio est en PTT « une pression » (indicateur OP en haut de l'écran). Si la radio refuse d'émettre, l'appli dit pourquoi au bout d'une seconde. Avec ce firmware, l'écran de la radio reste à jour dans l'appli pendant l'émission, barre d'émission comprise (le firmware d'origine le fige).</p>
 <p>Pendant qu'UV Studio échange avec la radio, celle-ci refuse d'émettre (elle se croit en cours de programmation) : fermez UV Studio ou débranchez le câble avant d'émettre.</p>
@@ -387,6 +401,16 @@
 <li>« Puiss. A » ou « Puiss. B » indique la ligne concernée.</li>
 <li><strong>Appui long</strong> : une colonne de puissances s'ouvre sous le doigt (HIGH en haut, LOW 1 en bas). Sans lâcher, glissez jusqu'à la puissance voulue, puis levez le doigt : elle clignote, la colonne se ferme et la radio passe à cette puissance.</li>
 <li>Si la puissance ne s'affiche pas, la radio n'est pas sur son écran principal : revenez-y avec EXIT.</li>
+</ul>
+</section>
+<section class="s c5"><h2 id="scan">Le bouton Scan et les listes de scan</h2>
+<p>Le bouton Scan lance ou arrête le scan, comme l'appui long sur ✱. Pendant un scan, il porte le témoin ●. Avec le firmware Fusion PTT r32, il affiche aussi la liste de scan réglée dans la radio : « Scan · L2 », « Scan · ALL » (toutes les listes) ou « Scan · MIX » (listes combinées).</p>
+<ul>
+<li><strong>Appui bref</strong> : le scan démarre avec la liste réglée, ou s'arrête.</li>
+<li><strong>Appui long</strong> (ligne active en mode canal) : une colonne s'ouvre sous le doigt, placée sur la liste actuelle. Elle propose ALL, puis les listes qui contiennent des canaux, avec leur nom ; MIX seulement si la radio y est déjà réglée. Glissez jusqu'à la liste voulue et levez le doigt : elle clignote, puis « Liste de scan demandée » s'affiche ; le bouton se met à jour quand la radio a confirmé. S'il y a trop de listes pour l'écran, une fenêtre défilante prend le relais.</li>
+<li>Les listes proposées et leurs noms viennent de votre dernière lecture des canaux (▤ › Lire la radio) : la colonne rappelle sa date. Sans lecture, l'appli propose de la faire.</li>
+<li>Pendant un scan, le changement de liste est refusé : arrêtez d'abord le scan. En mode fréquence, les listes ne servent pas : passez en mode canal (appui long sur 3).</li>
+<li>Si la liste demandée ne contient aucun canal, la radio peut passer d'elle-même à la suivante au lancement du scan : l'appli le signale.</li>
 </ul>
 </section>
 <section class="s c1"><h2 id="nuit">Mode nuit et mode furtif</h2>
@@ -427,6 +451,7 @@
 <ul>
 <li>La lune et le raccourci Furtif font désormais la même chose : l'un ou l'autre fait entrer dans le furtif ou en sortir. Radio non connectée, la lune ne passe que l'appli en nuit. Le mode nuit automatique (heures programmées) ne touche pas à la radio.</li>
 <li>Radio débranchée en furtif : rebranchez-la et touchez Furtif. Sans téléphone, remettez à la main les menus 39 BLTxRx, 38 BLMax, 36 BLTime et 60 SetInv. De jour, l'écran se lit sans éclairage.</li>
+<li><strong>Écran éteint</strong> (raccourci) : avec le firmware r31 ou plus, son témoin suit l'éclairage réellement réglé dans la radio. Ce réglage est gardé par la radio : éteinte puis rallumée, elle reste sans éclairage, et le bouton le montre.</li>
 <li>La petite LED en haut de la radio (rouge en émission, verte en réception) reste allumée : un morceau de ruban adhésif noir la masque.</li>
 </ul>
 </section>
@@ -456,14 +481,14 @@
 <ol>
 <li>avec le boîtier K1 Relais (version 1.5 ou plus), l'appli demande un <strong>appui bref sur BOOT</strong> du boîtier dans les 30 secondes (lumière orange clignotante) ; l'autorisation dure 10 minutes au plus et cesse à la déconnexion. Un nouvel appui bref la referme ;</li>
 <li>l'appli relit toute la radio et la sauvegarde (« Avant écriture ») ; si les canaux ont changé depuis votre lecture, elle s'arrête sans rien écrire ;</li>
-<li>elle écrit les seuls blocs modifiés, les relit un à un et ne déclare la réussite qu'après vérification ;</li>
+<li>elle écrit les seuls blocs modifiés, les relit un à un et ne déclare la réussite qu'après vérification. Une fenêtre montre l'étape et le pourcentage. « Annuler » n'est possible qu'avant le début de l'écriture : ensuite, le bouton disparaît et l'écriture va jusqu'au bout, pour ne jamais laisser la radio à moitié écrite ;</li>
 <li><strong>éteignez puis rallumez la radio</strong> : elle ne prend les nouveaux canaux en compte qu'au démarrage.</li>
 </ol>
 <p>Sécurité : le boîtier vérifie chaque trame en entier avant de la transmettre. Il n'accepte d'écrire que les canaux, leurs noms et leurs attributs, et jamais par Bluetooth le changement de firmware, d'emplacement Multiboot ou la calibration.</p>
 </section>
 <section class="s c2"><h2 id="aide">L'aide « ? »</h2>
 <p><strong>Aide de l'écran de la radio</strong> : quand la radio est dans un menu (ou sur la radio FM, le journal…), toucher son écran dans l'appli ouvre directement l'aide de ce qui est affiché. Vous pouvez aussi toucher la pastille <strong>i</strong> orange « i aide », posée sur le coin bas droit du cadre de l'écran, (ou « ? » puis l'écran). Si la radio est dans un menu, une fiche explique le réglage affiché (à quoi il sert, ses valeurs, un conseil pour l'airsoft) ; sinon, l'écran en cours (catégories, radio FM, journal…). Le détail de chaque réglage demande le firmware Fusion PTT r7 ou plus : la radio dit elle-même quel réglage elle affiche.</p>
-<p>Touchez <strong>?</strong> en haut, puis n'importe quelle touche, raccourci ou l'écran de la radio : une fiche explique ce qu'il fait, en appui court et en appui long.</p>
+<p>Touchez <strong>?</strong> en haut, puis n'importe quelle touche, raccourci ou l'écran de la radio : une fiche explique ce qu'il fait, en appui court et en appui long. Pour un raccourci, elle dit aussi ce que signifie son témoin ● et ce que fait son appui long (choix au doigt pour Puissance et Scan, partage pour un bouton d'équipe).</p>
 <ul>
 <li>Dans la fiche, <strong>« Aide complète »</strong> ouvre l'aide du firmware F4HWN directement à la bonne touche. Elle est intégrée à l'appli et fonctionne sans réseau.</li>
 <li>Retouchez ? pour quitter le mode aide.</li>
@@ -506,6 +531,22 @@
 <tr>
 <td>Raccourcis</td>
 <td>Réinitialiser les raccourcis de départ</td>
+</tr>
+<tr>
+<td>Liaison avec la radio</td>
+<td>Auto, câble ou Bluetooth ; oublier le boîtier ; lumière et veille du boîtier K1 Relais</td>
+</tr>
+<tr>
+<td>Touches latérales</td>
+<td>Fonctions de F1, F2 et de l'appui long sur MENU (envoyées à la radio)</td>
+</tr>
+<tr>
+<td>Carte d'équipe</td>
+<td>Créer ou rejoindre une équipe, votre nom, intervalle d'envoi</td>
+</tr>
+<tr>
+<td>Interface, Journal</td>
+<td>Interface « En opération », vibration aux appuis longs ; journal des appels et journal technique</td>
 </tr>
 <tr>
 <td>À propos</td>
@@ -565,8 +606,7 @@
 <p><strong>Savoir qui appelle</strong></p>
 <p>Chaque radio peut envoyer un court code en début d'appel (un « bip-bip ») ; l'appli traduit ce code en prénom.</p>
 <ol>
-<li>Sur la radio de chaque coéquipier : un code unique au menu 45 UPCode (par exemple A1, A2…) et l'envoi activé au menu 47 PTT ID.</li>
-<li>Sur votre radio : menu 50 D Live sur ON, pour afficher les codes reçus.</li>
+<li>Chaque coéquipier saisit un code unique (A1, A2…) dans Préférences › Noms des appelants › Mon code d'appel, puis lance la configuration d'équipe : avec le firmware Fusion PTT, elle écrit le code (45 UPCode), son envoi (47 PTT ID) et l'affichage des codes reçus (50 D Live). Sans ce firmware, réglez ces trois menus à la main ou avec UV Studio.</li>
 <li>Dans Préférences › Noms des appelants, une ligne par coéquipier : <code>A1 = Paul</code>.</li>
 <li>À chaque appel, l'appli affiche « Appel de Paul (A1) ».</li>
 </ol>
@@ -614,12 +654,24 @@
 <td>Au lancement suivant, un rapport d'erreur s'affiche : touchez « Copier » et envoyez-le au référent radio.</td>
 </tr>
 <tr>
+<td>Le bouton d'équipe ne s'allume pas</td>
+<td>Un réglage diffère de l'équipe (le journal technique dit lequel) : touchez le bouton pour tout remettre. Vérifiez aussi que la radio est sur la ligne et le canal de l'équipe, et qu'elle a le firmware Fusion PTT r30 ou plus.</td>
+</tr>
+<tr>
+<td>« Arrêtez le scan avant de changer de liste »</td>
+<td>Le changement de liste de scan est refusé pendant un scan : arrêtez-le (appui bref sur Scan), puis recommencez.</td>
+</tr>
+<tr>
+<td>« Patientez : lecture de l'état de la radio »</td>
+<td>L'appli lit l'état de la radio juste après la connexion : attendez une seconde. Par le boîtier, cela peut prendre jusqu'à 3 secondes.</td>
+</tr>
+<tr>
 <td>Le téléphone se vide vite</td>
 <td>La radio se recharge sur lui : débranchez-la quand vous ne l'utilisez pas.</td>
 </tr>
 </tbody>
 <tr><td>La radio émet d'un appui et s'arrête au suivant ; bip long ; minuteur à 00:00</td><td>La radio est passée en PTT « une pression » (OP en haut de l'écran, au lieu de CL). Une touche latérale (ou M long) réglée sur l'action « PTT » l'a basculée. Appuyez de nouveau sur cette touche, ou éteignez puis rallumez la radio ; puis changez la fonction de cette touche (menus 23 à 27).</td></tr>
 </table></div></section>
-<p class="foot">K1 Remote · votre téléphone devient la télécommande de la radio, par le câble USB.</p>
+<p class="foot">K1 Remote · votre téléphone devient la télécommande de la radio, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
 </body>
 </html>

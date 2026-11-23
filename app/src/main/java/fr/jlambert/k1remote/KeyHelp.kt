@@ -14,7 +14,8 @@ object KeyHelp {
             "À L'ÉCRAN · BARRE DU HAUT" to "Batterie (pourcentage ou tension) à droite ; prise USB quand la radio est branchée ; « F » quand la touche F vient d'être appuyée ; cadenas quand le clavier est verrouillé ; « DW » ou « XB » quand la double veille ou le mode croisé est actif ; « VOX » quand l'émission à la voix est active.",
             "À L'ÉCRAN · CHAQUE LIGNE (A, B)" to "Le triangle ▶ montre la ligne active. Grands chiffres : la fréquence, ou « CH-001 » et le nom du canal en mode canal. À droite et dessous : la puissance (L1 à L5 faible, M moyenne, H forte), la modulation (FM, AM, USB), la largeur (W ou WIDE : large ; N ou NAR : étroite ; N+ ou NAR+ : encore plus étroite, quand le réglage SetNFM est sur NARROWER), le sous-ton (CTCSS 88.5Hz, ou DCS D023N/D023I), « + » ou « − » s'il y a un décalage relais, « R » si l'inversion est active, « SCR » si le brouilleur est actif.",
             "À L'ÉCRAN · RÉCEPTION, SCAN" to "« RX » ou la barre du S-mètre quand un signal arrive (S1 faible à S9 fort, valeur en dBm) ; « TX » en émission ; à droite, en mode canal : la liste de scan du canal (son nom de 3 lettres, ou son numéro de 01 à 24 ; « ALL » : toutes les listes ; « OFF » : aucune) ; « ScnRng » : balayage d'une plage de fréquences ; « MONI » : écoute forcée (squelch ouvert).",
-            "À SAVOIR" to "Le toucher ne change de ligne que sur l'écran principal. Dans les menus et le spectre, toucher l'écran ouvre l'aide de cet écran (firmware r22 ou plus pour le spectre).")),
+            "À SAVOIR" to "Le toucher ne change de ligne que sur l'écran principal. Dans les menus et le spectre, toucher l'écran ouvre l'aide de cet écran (firmware r22 ou plus pour le spectre). La pastille « i aide » ouvre aussi cette aide.",
+            "À LA CONNEXION" to "Avec le firmware Fusion PTT r31 ou plus, un anneau qui tourne et « Lecture de l'état de la radio… » s'affichent un instant : l'appli lit l'état de la radio (éclairage, liste de scan…). Ses touches et son PTT attendent la fin de cette lecture, 3 secondes au plus. Par câble, c'est souvent trop rapide pour être vu.")),
         "MENU" to KeyHelpEntry("MENU", "Réglages de la radio", listOf(
             COURT to "Ouvre le menu des réglages de la radio. Pendant un scan : arrête le scan et reste sur le canal trouvé.",
             LONG to "Lance l'action que vous avez choisie dans le menu de la radio, au réglage n°27 « M Long ».")),
@@ -69,12 +70,14 @@ object KeyHelp {
         "*" to KeyHelpEntry("Touche ✱ · Scan", "Codes, tonalités, scan", listOf(
             COURT to "Permet de taper un code DTMF : les bips de numérotation utilisés par certains relais.",
             "F + ✱" to "Cherche le code de tonalité (CTCSS ou DCS) utilisé sur la fréquence affichée. Ces codes servent à n'entendre que son groupe.",
-            LONG to "Lance le scan : la radio parcourt les canaux ou les fréquences et s'arrête dès qu'elle entend quelqu'un.")),
+            LONG to "Lance le scan : la radio parcourt les canaux ou les fréquences et s'arrête dès qu'elle entend quelqu'un.",
+            "DANS L'APPLI" to "Le raccourci Scan fait la même chose. Un appui long sur ce raccourci (en mode canal) choisit la liste parcourue : ALL ou une de vos listes, au doigt. Avec le firmware Fusion PTT r32, le raccourci affiche la liste réglée (« Scan · L2 »).")),
         "0" to KeyHelpEntry("Touche 0 · Radio FM", "Chiffre 0, radio FM", listOf(
             COURT to "Tape le chiffre 0.",
             "F + 0 OU APPUI LONG" to "Allume ou éteint la radio FM : les stations de radio classiques, de 76 à 108 MHz.")),
         "F" to KeyHelpEntry("Touche F · Verrou", "Fonction, verrouillage", listOf(
             COURT to "Touche « fonction » : la touche suivante fera sa deuxième action, comme la touche Maj d'un clavier.",
-            LONG to "Verrouille ou déverrouille le clavier, pour éviter les appuis accidentels."))
+            LONG to "Verrouille ou déverrouille le clavier, pour éviter les appuis accidentels.",
+            "DANS L'APPLI" to "Clavier verrouillé, la touche affiche « F 🔒 » (« VERROU » en mode nuit) et l'appli refuse aussi ses touches et ses raccourcis, sauf l'appui long sur F et le raccourci Verrou. Avec le firmware Fusion PTT r28 ou plus, l'état est lu dans la radio : un verrou posé sur la radio elle-même s'affiche aussi."))
     )
 }

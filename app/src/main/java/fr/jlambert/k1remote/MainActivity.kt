@@ -3452,7 +3452,28 @@ class MainActivity : Activity() {
     private fun fillShortcutHelp(card: LinearLayout, s: Shortcut) {
         sheetTitle(card, "★", "Raccourci « " + s.name + " »", "Bouton de l'appli")
         sheetRow(card, "APPUI", s.describe())
-        sheetRow(card, "APPUI LONG", "Ouvre le menu Modifier / Supprimer.")
+        // 0.76 : aide propre à chaque bouton (appui long, témoin), à jour des firmwares r28 à r32
+        val edit = "Pour le modifier ou le supprimer : bouton « Modifier » au-dessus des raccourcis."
+        when {
+            s.isPower -> {
+                sheetRow(card, "APPUI LONG", "Une colonne de puissances s'ouvre sous le doigt (HIGH en haut, LOW 1 en bas). Glissez sans lâcher jusqu'à la puissance voulue, puis levez le doigt.")
+                sheetRow(card, "BOUTON", "Affiche la puissance de la ligne active : vert pour LOW, orange pour MID, rouge pour HIGH. $edit")
+            }
+            s.isScan -> {
+                sheetRow(card, "APPUI LONG", "En mode canal : une colonne propose ALL et les listes qui contiennent des canaux (d'après votre dernière lecture de « Mes canaux »). Glissez jusqu'à la liste voulue, puis levez le doigt. Refusé pendant un scan : arrêtez-le d'abord.")
+                sheetRow(card, "BOUTON", "Avec le firmware Fusion PTT r32, affiche la liste réglée dans la radio (« Scan · L2 », « Scan · ALL ») ; ● quand un scan est en cours. $edit")
+            }
+            s.type == "team" -> {
+                sheetRow(card, "BOUTON ALLUMÉ", "La radio a déjà les réglages de l'équipe. Firmware r30 ou plus : ligne active (fréquence, sous-canaux, puissance, largeur) et réglages relus dans la radio (pas, squelch, bip, veille, SetNFM, code d'appel). Seul le canal en mémoire n'est pas relu. Firmware r29 : ligne active seulement.")
+                sheetRow(card, "APPUI, BOUTON ALLUMÉ", "Demande avant de tout renvoyer (« Cette radio a déjà les réglages de l'équipe »).")
+                sheetRow(card, "APPUI LONG", "Partager à l'équipe (QR code), Modifier, Supprimer.")
+            }
+            s.type == "action" && s.action in ShortcutStates.TOGGLES -> {
+                sheetRow(card, "TÉMOIN ●", "Allumé tant que la fonction est active sur la radio. Lu dans la radio avec le firmware Fusion PTT (r28 ou plus ; « Écran éteint » r31 ou plus, sauf en furtif). Un nouvel appui désactive la fonction.")
+                sheetRow(card, "APPUI LONG", "Ouvre le menu Modifier / Supprimer.")
+            }
+            else -> sheetRow(card, "APPUI LONG", "Ouvre le menu Modifier / Supprimer.")
+        }
         sheetButtons(card,
             Triple("Aide complète", 0, { openFullHelp(null) }),
             Triple("Compris", 1, { closeSheet() }))
