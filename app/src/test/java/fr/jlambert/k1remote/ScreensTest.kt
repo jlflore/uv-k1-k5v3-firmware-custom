@@ -152,10 +152,10 @@ class ScreensTest {
                 ChoiceSheet.Option("✎", "Nommer", "Ex. Airsoft, Écoute aviation…") {},
                 ChoiceSheet.Option("✕", "Supprimer", "Efface le fichier du téléphone, la radio n'est pas concernée", danger = true) {}), "Retour")
         }
-        captureDialog("scan_listes_$tag", "Appui long sur Scan · $label") { act ->
+        captureDialog("scan_listes_$tag", "Appui long sur Scan · $label", withDialog = false) { act ->
             act.captureScanPicker(listOf("ALL · toutes les listes", "L1 · EQUI", "L2 · AIR", "L5 · PMR"), 1)
         }
-        captureDialog("demarrage_$tag", "Lecture de l'état à la connexion · $label") { act ->
+        captureDialog("demarrage_$tag", "Lecture de l'état à la connexion · $label", withDialog = false) { act ->
             val f = MainActivity::class.java.getDeclaredField("lcd").apply { isAccessible = true }
             (f.get(act) as LcdView).busyText = "Lecture de l'état de la radio…"
         }
@@ -168,7 +168,8 @@ class ScreensTest {
         }
     }
 
-    private fun captureDialog(name: String, label: String, show: (MainActivity) -> Unit) {
+    /** [withDialog] = faux : capture de l'écran seul (voile, colonne « glisser »), sans fenêtre par-dessus. */
+    private fun captureDialog(name: String, label: String, withDialog: Boolean = true, show: (MainActivity) -> Unit) {
         RuntimeEnvironment.setQualifiers("w360dp-h780dp-port-xxhdpi")
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val act = controller.get()
@@ -182,6 +183,12 @@ class ScreensTest {
         root.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY))
         root.layout(0, 0, w, h)
         root.draw(c)
+        if (!withDialog) {
+            File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            shots += name to label
+            controller.pause().stop().destroy()
+            return
+        }
         c.drawColor(android.graphics.Color.argb(110, 0, 0, 0))
         val dlg = org.robolectric.shadows.ShadowDialog.getLatestDialog()
         val dv = dlg.window!!.decorView
