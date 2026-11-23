@@ -3,6 +3,8 @@
 ## 0.66-essai
 - Écran éteint + Furtif : une seule règle calcule l'éclairage de la radio pour la combinaison des deux (LightPlan). Sortir du furtif ne rallume plus l'écran quand « Écran éteint » est actif ; rallumer l'écran pendant le furtif ne casse plus le furtif. Contrôlée dans ses 72 combinaisons et dans toutes les suites de 4 appuis (LightPlanTest).
 - Écran éteint et Furtif ne sont notés (témoin, thème nuit) qu'une fois tous les réglages acceptés par la radio : un refus ne laisse plus un témoin allumé sans effet réel.
+- Spectre ouvert pendant la vérification du firmware (connexion, coupure du boîtier) : la réponse « occupée » n'est plus prise pour un firmware sans commandes directes. Avant, l'appli repassait aux appuis de touches, et « Écran éteint » tapait MENU, chiffres… dans le spectre, dont il changeait les réglages. L'appli attend désormais la fermeture du spectre pour finir la vérification, et refuse raccourcis et réglages tant qu'il est ouvert (les touches simples du clavier restent permises : elles pilotent le spectre).
+- Boutons d'équipe : plus de pastille ◆, qui laissait croire que la ligne active était réglée pour l'équipe (l'appli ne le vérifie pas : le sous-canal n'est pas dans l'état 0x09 v1).
 - Spectre ouvert : la radio refuse les réglages ; l'appli le dit clairement (« Spectre ouvert… quittez-le (EXIT) ») au lieu du message erroné « fréquence hors des bandes », et n'envoie rien.
 
 ## 0.65-essai

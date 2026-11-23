@@ -232,9 +232,21 @@ class MainActivity : Activity() {
 
     private fun probeLoop(c: RadioLink) {
         run {
-            repeat(3) {
+            var tries = 0
+            while (tries < 3) {
                 if (cdc !== c) return@run
-                val r = request(c, K5ViewerProtocol.PING, 700)
+                var r = request(c, K5ViewerProtocol.PING, 700)
+                // Réponse « occupée » (04 04) : seul Fusion PTT répond ainsi, spectre ouvert. On attend
+                // qu'il se ferme au lieu de conclure à un firmware sans commandes directes : sinon les
+                // réglages repassaient aux appuis de touches, tapés DANS le spectre (bug 0.65).
+                var waited = 0L
+                while (r != null && r.size >= 2 && r[0].toInt() == 4 && r[1].toInt() == 4 && cdc === c && waited < 600_000) {
+                    if (waited == 0L) Journal.add("Spectre ouvert : vérification du firmware à sa fermeture")
+                    synchronized(rstate) { rstate.onResult(RadioStatus.Result.Refused(4), System.currentTimeMillis()) }
+                    Thread.sleep(2000); waited += 2000
+                    r = request(c, K5ViewerProtocol.PING, 700)
+                }
+                tries++
                 if (r != null && r.size >= 5 && r[0].toInt() == 4 && r[2] == 'K'.code.toByte()) {
                     direct = true
                     Journal.add("Radio reconnue : Fusion PTT " + (if (r.size > 7) String(r, 7, r.size - 7) else "") +
@@ -1460,6 +1472,12 @@ class MainActivity : Activity() {
         // involontaires (choix de D'jé, 0.64). Touches et raccourcis sont refusés, sauf l'appui long
         // sur F (raccourci Verrou compris), qui déverrouille. Avant la 0.64, un raccourci de plusieurs
         // touches déverrouillait, agissait puis reverrouillait tout seul.
+        // Spectre ouvert (statut 4) : la radio refuse les réglages, et des appuis de touches
+        // tomberaient dans le spectre. Seules les touches simples passent (elles pilotent le spectre).
+        if (spectrumOpen() && (input.size > 1 || input.any { it.cmd != null })) {
+            toast(SPECTRUM_REFUSAL)
+            return false
+        }
         val lockedNow = live.locked
         if (lockedNow && !(input.size == 1 && input[0].keyId == "F" && input[0].long)) {
             toast("Clavier verrouillé : appui long sur F pour le déverrouiller")
@@ -2251,11 +2269,8 @@ class MainActivity : Activity() {
             box.addView(badge, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(5) })
             box.contentDescription = "Puissance actuelle de la ligne $vfo : ${ScreenReader.pretty(power)}. Toucher pour passer à la suivante."
         } else {
-            if (s.type == "team" && !editMode) {
-                // Pastille « équipe » pour distinguer ce bouton
-                box.addView(text("◆", if (L) 9f else 10f, p.primaryBorder, Typeface.DEFAULT_BOLD),
-                    LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(4) })
-            }
+            // 0.66 : plus de ◆ sur les boutons d'équipe ; il laissait croire que la ligne active était
+            // réglée pour l'équipe, ce que l'appli ne vérifie pas (le sous-canal n'est pas dans 0x09 v1)
             // Fonction restée active (écran éteint, verrou, furtif, scan, spectre) : le bouton le montre
             val darkOn = s.type == "action" && !editMode && shortcutActive(s.action)
             if (darkOn) {
