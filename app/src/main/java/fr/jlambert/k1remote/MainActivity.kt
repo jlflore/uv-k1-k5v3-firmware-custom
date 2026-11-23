@@ -251,14 +251,20 @@ class MainActivity : Activity() {
                     direct = true
                     Journal.add("Radio reconnue : Fusion PTT " + (if (r.size > 7) String(r, 7, r.size - 7) else "") +
                         (if (r.size >= 7) (if (r[6].toInt() == 1) " · UV-K5 V3" else " · UV-K1") else ""))
+                    // 0.72 (revue) : capacités du firmware et verrou de démarrage établis AVANT de lancer
+                    // la surveillance, pour qu'aucune commande de l'appli ne passe avant le verrou.
+                    fwProtocol = if (r.size >= 6) r[5].toInt() and 0xFF else 0
+                    if (fwProtocol >= RadioSettings.PROTOCOL_LIGHTS) {
+                        lightsReadAt = 0L
+                        startupReading = true                       // verrou posé tout de suite (fil de sonde)
+                        ui.post { if (cdc === c && startupReading) setStartupReading(true) }   // affichage
+                    }
                     startWatcher(c)
                     // Protocole 2 : modèle (réglage SetNav) et version du firmware
                     val model = if (r.size >= 7) (if (r[6].toInt() == 1) "UV-K5 V3" else "UV-K1") else null
                     val ver = if (r.size > 7) String(r, 7, r.size - 7) else ""
                     fwRevision = Regex("""r(\d+)""").find(ver)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-                    fwProtocol = if (r.size >= 6) r[5].toInt() and 0xFF else 0
-                    // 0.72 : r31 et plus, l'état de l'éclairage est lu avant de rendre la main
-                    if (fwProtocol >= RadioSettings.PROTOCOL_LIGHTS) { lightsReadAt = 0L; ui.post { setStartupReading(true) } }
+
                     // Firmwares r10 à r23 : réponse limitée à 16 octets, « r23 » arrivait tronqué en « r2 ».
                     // Réponse pleine et un seul chiffre : c'est au moins la dizaine (r2 → r20 et plus).
                     if (r.size == 16 && fwRevision in 1..9) fwRevision *= 10
@@ -1314,6 +1320,8 @@ class MainActivity : Activity() {
             stealth = prefs.stealth || radioStealth)
         val first = startupReading
         ui.post {
+            // Revue 0.72 : une réponse d'une liaison qui n'est plus active ne recale rien
+            if (cdc !== c) return@post
             if (dark != null && dark != prefs.screenDark) {
                 prefs.screenDark = dark
                 Journal.add("Écran éteint : la radio est " + (if (dark) "sans éclairage" else "éclairée") + ", témoin recalé sur la radio")
