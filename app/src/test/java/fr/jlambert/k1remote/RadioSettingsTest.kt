@@ -138,6 +138,25 @@ class RadioSettingsTest {
         assertNull(RadioSettings.stableKey(snap.copy(a = null)))
     }
 
+    /** Revue 0.70 : une lecture ne vaut que pour la ligne qui l'a validée, et 45 s au plus. */
+    @Test fun lecture_liee_a_la_ligne_et_a_son_age() {
+        val r = RadioSettings.Reading(0, emptyMap(), at = 1_000, key = RadioSettings.stableKey(snap))
+        assertTrue(RadioSettings.applies(r, snap, now = 1_000))
+        assertTrue(RadioSettings.applies(r, snap.copy(function = RadioStatus.Function.RECEIVE), now = 46_000))  // réception : sans effet
+        assertTrue(!RadioSettings.applies(r, snap, now = 46_001))                                               // trop ancienne
+        assertTrue(!RadioSettings.applies(r, snap.copy(a = line.copy(number = 13)), now = 2_000))               // autre canal
+        assertTrue(!RadioSettings.applies(r, snap.copy(selected = 1), now = 2_000))                             // autre ligne
+        assertTrue(!RadioSettings.applies(r, null, now = 2_000))                                                // état inconnu
+        assertTrue(!RadioSettings.applies(r.copy(key = null), snap, now = 2_000))                               // lecture non validée
+    }
+
+    @Test fun sans_code_d_appel_ses_options_ne_sont_pas_attendues() {
+        val team = TeamProfile(freq = "446.00625", tone = "ctcss", toneIdx = 9, power = 2, narrow = true, channel = 12)
+        assertEquals(6, team.expectedSettings(null).size)
+        assertEquals(10, team.expectedSettings("A1").size)
+        assertEquals(RadioSettings.WHITELIST.toSet(), team.expectedSettings("A1").keys)
+    }
+
     /**
      * Ce que la configuration d'équipe écrit (op 01 / op 03 dans directSteps) = ce que l'appli
      * s'attend à relire (expectedSettings). Une évolution de l'une sans l'autre fait échouer ce test.

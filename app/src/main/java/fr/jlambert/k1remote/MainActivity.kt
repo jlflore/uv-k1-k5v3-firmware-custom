@@ -1162,6 +1162,8 @@ class MainActivity : Activity() {
             RadioState.Change.STATE -> ui.post { applyFirmwareState() }
             RadioState.Change.NONE -> if (raw == null && synchronized(rstate) { rstate.usesFirmware }) ui.post { refreshChips() }
         }
+        // Ligne changée depuis la lecture 0x0A : elle est abandonnée (jamais réutilisée au retour)
+        teamSettings?.let { r -> if (r.key != synchronized(rstate) { rstate.snapshot }?.let { RadioSettings.stableKey(it) }) teamSettings = null }
         ui.post { refreshIfActiveChanged() }
         if (raw != null && change != RadioState.Change.SUPPORT_SCREEN) maybeReadTeamSettings(c)
     }
@@ -1246,7 +1248,11 @@ class MainActivity : Activity() {
     /** Réglages différents du profil ; null = lecture absente ou trop ancienne (inconnu ≠ conforme). */
     private fun teamSettingsDiff(t: TeamProfile): List<String>? {
         val r = teamSettings ?: return null
-        if (System.currentTimeMillis() - r.at > 45_000) return null
+        val snap = synchronized(rstate) { rstate.snapshot }
+        // Revue 0.70 : la lecture n'est valable que pour la ligne qui l'a validée (clé stable),
+        // pas seulement pendant 45 s : un aller-retour de canal avec un réglage changé entre-temps
+        // ne doit pas rallumer le témoin sur une ancienne lecture.
+        if (!RadioSettings.applies(r, snap, System.currentTimeMillis())) return null
         return RadioSettings.differences(t.expectedSettings(prefs.myCallCode.ifEmpty { null }), r)
     }
 
@@ -1298,7 +1304,7 @@ class MainActivity : Activity() {
         val keyBefore = RadioSettings.stableKey(before)
         val ok = reading != null && after != null && keyBefore != null &&
             keyBefore == RadioSettings.stableKey(after) && after.selected == reading.vfo
-        teamSettings = if (ok) reading else null
+        teamSettings = if (ok) reading!!.copy(key = keyBefore) else null
         val note = when {
             reading == null -> "Réglages 0x0A illisibles : " + parts.joinToString { it.toString() }.take(160)
             !ok -> "Réglages 0x0A ignorés : la ligne a changé pendant la lecture"
@@ -2813,9 +2819,13 @@ class MainActivity : Activity() {
             if (!force && teamActive(s)) {
                 val full = fwProtocol >= RadioSettings.PROTOCOL
                 ChoiceSheet.show(this, "Cette radio a déjà les réglages de l'équipe",
-                    if (full) "« ${s.name} » : tout est vérifié dans la radio — fréquence, sous-canaux, puissance, largeur, pas, squelch, bip, veille, SetNFM" +
-                        (if (prefs.myCallCode.isNotEmpty()) " et code d'appel." else ".")
-                    else "« ${s.name} » : fréquence, sous-canaux, puissance et largeur sont déjà les bons.",
+                    if (full) {
+                        val code = prefs.myCallCode.ifEmpty { null }
+                        val checked = t.expectedSettings(code).keys.mapNotNull { RadioSettings.LABELS[it] }
+                        "« ${s.name} » : vérifié à l'instant dans la radio — fréquence, sous-canaux, puissance, largeur, " +
+                            checked.joinToString(", ") + "." +
+                            (if (code == null) "\nAucun code d'appel dans vos préférences : le code et ses options ne sont pas contrôlés." else "")
+                    } else "« ${s.name} » : fréquence, sous-canaux, puissance et largeur sont déjà les bons.",
                     listOf(ChoiceSheet.Option("↻", "Renvoyer quand même",
                         if (full) "Réécrit aussi le canal ${t.channel} en mémoire (l'appli ne le relit pas)"
                         else "Réécrit aussi le canal ${t.channel} et le code d'appel, si l'un d'eux a été modifié à la main") { runShortcut(s, force = true) }),

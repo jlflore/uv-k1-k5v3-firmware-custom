@@ -88,8 +88,15 @@ object RadioSettings {
         return Result.Ok(vfo, out)
     }
 
-    /** Résultat des deux lectures (5 + 5) réunies. */
-    data class Reading(val vfo: Int, val values: Map<Int, Value?>, val at: Long)
+    /**
+     * Résultat des deux lectures (5 + 5) réunies. [key] = clé stable (stableKey) de la ligne
+     * validée par la séquence : la lecture ne vaut que tant que la ligne courante a la même clé.
+     */
+    data class Reading(val vfo: Int, val values: Map<Int, Value?>, val at: Long, val key: String? = null)
+
+    /** Lecture encore applicable : même ligne (clé stable identique) et moins de [maxAgeMs]. */
+    fun applies(r: Reading, current: RadioStatus.Snapshot?, now: Long, maxAgeMs: Long = 45_000): Boolean =
+        r.key != null && current != null && stableKey(current) == r.key && now - r.at <= maxAgeMs
 
     fun merge(parts: List<Result>, at: Long): Reading? {
         val oks = parts.map { it as? Result.Ok ?: return null }
