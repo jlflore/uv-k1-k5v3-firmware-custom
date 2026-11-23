@@ -132,10 +132,11 @@ class RadioStatusTest {
         assertEquals(REF2.replace(" ", ""), RadioStatus.encode(ok(hex(REF2))).joinToString("") { String.format("%02x", it) })
     }
 
+    // Seuls écarts voulus entre REF et REF2 sur la partie v1 : largeur et écoute seule de la ligne A
     @Test fun etat_format2_lu_par_un_decodeur_format1_meme_prefixe() {
         val v2 = ok(hex(REF2)); val v1 = ok(hex(REF))
         assertEquals(v1.copy(format = 2), v2.copy(spectrumActive = null,
-            a = v2.a!!.copy(rxTone = null, txTone = null, width = v1.a!!.width, rxOnly = v1.a!!.rxOnly)   // seuls écarts voulus entre REF et REF2, b = v2.b!!.copy(rxTone = null, txTone = null)))
+            a = v2.a!!.copy(rxTone = null, txTone = null, width = v1.a!!.width, rxOnly = v1.a!!.rxOnly), b = v2.b!!.copy(rxTone = null, txTone = null)))
     }
 
     @Test fun etat_format2_partie_etendue_douteuse_ignoree_sans_perdre_v1() {
