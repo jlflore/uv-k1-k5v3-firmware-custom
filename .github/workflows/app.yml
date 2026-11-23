@@ -21,12 +21,18 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Compilation de l'APK
         run: ./gradlew --no-daemon assembleDebug
+      - name: Tous les fichiers de test sont lancés
+        run: |
+          for t in app/src/test/java/fr/jlambert/k1remote/*Test.kt; do
+            n=$(basename "$t" .kt)
+            grep -q "fr.jlambert.k1remote.$n\b" .github/workflows/app.yml || { echo "Test $n absent de la CI"; exit 1; }
+          done
       - name: Captures d'écran (Robolectric, sans radio)
         run: ./gradlew --no-daemon testDebugUnitTest --tests fr.jlambert.k1remote.ScreensTest
       - name: Contrôle des fonctions (sans radio)
         if: always()
         run: |
-          ./gradlew --no-daemon testDebugUnitTest --tests fr.jlambert.k1remote.FunctionsTest --tests fr.jlambert.k1remote.RadioStatusTest --tests fr.jlambert.k1remote.RadioStateTest --tests fr.jlambert.k1remote.ShortcutStatesTest --tests fr.jlambert.k1remote.LightPlanTest --tests fr.jlambert.k1remote.TeamMatchTest
+          ./gradlew --no-daemon testDebugUnitTest --tests fr.jlambert.k1remote.FunctionsTest --tests fr.jlambert.k1remote.RadioStatusTest --tests fr.jlambert.k1remote.RadioStateTest --tests fr.jlambert.k1remote.ShortcutStatesTest --tests fr.jlambert.k1remote.LightPlanTest --tests fr.jlambert.k1remote.TeamMatchTest --tests fr.jlambert.k1remote.RadioSettingsTest
       - name: APK
         if: always()
         uses: actions/upload-artifact@v4
