@@ -1290,10 +1290,11 @@ class MainActivity : Activity() {
         val teams = runCatching { shortcuts.toList() }.getOrDefault(emptyList()).mapNotNull { it.team }
         if (teams.none { teamLineMatches(it) }) return
         teamSettingsAskedAt = now
-        // Revue 0.70 : dès qu'une nouvelle vérification commence, l'ancienne lecture ne compte
-        // plus. Un échec (pas de réponse, réponse incohérente) laisse donc le témoin éteint.
-        teamSettings = null
+        // Revue 0.70 : une vérification qui échoue (pas de réponse, réponse incohérente, ligne
+        // changée) efface l'ancienne lecture : le témoin s'éteint. On ne l'efface pas dès le début
+        // de la vérification, pour que le témoin ne clignote pas toutes les 15 s.
         fun failed(why: String) {
+            teamSettings = null
             if (why != lastSettingsDiff) { lastSettingsDiff = why; Journal.add(why) }
             ui.post { refreshIfActiveChanged() }
         }
