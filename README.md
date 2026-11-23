@@ -3,6 +3,7 @@
 ## 0.64-essai
 - Mes canaux : « Passer la radio sur ce canal » (appui long sur un canal, ou bouton dans sa fiche). Mêmes touches que le raccourci « Aller à un canal », passage en mode canal compris ; avec le r28, le passage est confirmé par la radio. Si le canal a été modifié sans être envoyé, l'appli prévient que la radio utilisera la version enregistrée chez elle.
 - Témoins sur les raccourcis : Verrou, Furtif, Scan et Spectre s'allument comme « Écran éteint » tant que la fonction est active sur la radio (avec le r28 ; sans lui, Verrou d'après l'écran et Furtif d'après l'appli), et s'éteignent dès qu'elle ne l'est plus.
+- Clavier de la radio verrouillé : les raccourcis et touches de l'appli sont refusés aussi (« Clavier verrouillé : appui long sur F… »), sauf l'appui long sur F et le raccourci Verrou. Avant, un raccourci de plusieurs touches déverrouillait, agissait puis reverrouillait tout seul.
 - Touche F du clavier de l'appli : « F 🔒 » tant que le clavier de la radio est verrouillé (appui long sur F pour le déverrouiller).
 - Le raccourci « Aller à un canal » est lui aussi confirmé par la radio (r28).
 

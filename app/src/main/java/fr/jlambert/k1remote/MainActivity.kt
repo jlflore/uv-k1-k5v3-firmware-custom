@@ -1202,6 +1202,7 @@ class MainActivity : Activity() {
     /** « Mes canaux » › Passer la radio sur ce canal : mêmes touches que le raccourci « Aller à un canal ». */
     private fun selectChannel(n: Int): String? {
         if (cdc == null) return "Radio non connectée"
+        if (live.locked) return "Clavier verrouillé : appui long sur F pour le déverrouiller"
         val mode = live.mainMode ?: return "Revenez à l'écran principal de la radio (ligne active non reconnue)"
         if (!sendSteps(Shortcut.channelSteps(n.toString(), fromFreqMode = mode == 'F'))) return "Envoi impossible pour l'instant"
         expectChannel(n)
@@ -1441,11 +1442,13 @@ class MainActivity : Activity() {
         if (longSequenceRunning) { toast("Patientez : réglage de la radio en cours"); return false }
         // Réglage long et bip actif : on coupe le bip d'abord (quelques bips au lieu de dizaines),
         // puis on le rétablit à la fin. Inutile en furtif : le bip y est déjà coupé.
-        // Clavier de la radio verrouillé (cadenas) : les touches envoyées seraient ignorées.
-        // Pour un réglage, on déverrouille (appui long sur F), puis on reverrouille à la fin.
+        // Clavier de la radio verrouillé (cadenas) : le verrou protège aussi l'appli des touchers
+        // involontaires (choix de D'jé, 0.64). Touches et raccourcis sont refusés, sauf l'appui long
+        // sur F (raccourci Verrou compris), qui déverrouille. Avant la 0.64, un raccourci de plusieurs
+        // touches déverrouillait, agissait puis reverrouillait tout seul.
         val lockedNow = live.locked
-        if (lockedNow && input.size <= 1 && !(input.firstOrNull()?.let { it.keyId == "F" && it.long } ?: false)) {
-            toast("Clavier de la radio verrouillé : appui long sur F pour le déverrouiller")
+        if (lockedNow && !(input.size == 1 && input[0].keyId == "F" && input[0].long)) {
+            toast("Clavier verrouillé : appui long sur F pour le déverrouiller")
             return false
         }
         val unlocked = if (lockedNow && input.size > 1)
