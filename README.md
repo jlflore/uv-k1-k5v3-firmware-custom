@@ -1,5 +1,10 @@
 # K1 Remote Essai · version 0.76-essai (firmware Fusion PTT r32)
 
+## 0.79-essai — sortie du spectre à l'allumage
+
+- Bug (23/11) : radio allumée en spectre, l'appli ne pouvait pas en sortir. La vérification du firmware attend la fermeture du spectre (jusqu'à 10 min) et tournait sur le fil qui envoie les touches : EXIT et les autres appuis restaient en file, puis partaient tous d'un coup une fois le spectre fermé sur la radio. Elle tourne désormais sur son propre fil (une seule à la fois).
+- Journal : durée de la lecture de démarrage en millisecondes sous 1 s (« 44 ms » au lieu de « 0,0 s »).
+
 ## 0.78-essai — lecture de démarrage visible
 
 - Anneau « Lecture de l'état de la radio… » affiché au moins 0,6 s (la lecture, une fraction de seconde, passait inaperçue) ; les touches sont libérées dès la fin réelle de la lecture.

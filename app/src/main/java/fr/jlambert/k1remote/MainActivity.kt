@@ -224,11 +224,20 @@ class MainActivity : Activity() {
     }
 
     /** Demande à la radio si elle comprend les commandes directes. */
+    /**
+     * 0.79 : la vérification tourne sur son propre fil, plus sur celui des touches. Radio allumée
+     * en spectre, elle attend la fermeture du spectre (jusqu'à 10 min) : sur le fil des touches,
+     * elle bloquait tous les appuis de l'appli, EXIT compris — impossible de sortir du spectre
+     * depuis l'appli (bug du 23/11), et les appuis en attente partaient tous d'un coup ensuite.
+     * Une seule vérification à la fois ([probing]).
+     */
+    private val probing = java.util.concurrent.atomic.AtomicBoolean(false)
     private fun probeDirect(then: (() -> Unit)? = null) {
         val c = cdc ?: run { then?.let { ui.post(it) }; return }
-        sender.execute {
-            try { probeLoop(c) } finally { then?.let { ui.post(it) } }
-        }
+        if (!probing.compareAndSet(false, true)) { then?.let { ui.post(it) }; return }
+        Thread({
+            try { probeLoop(c) } finally { probing.set(false); then?.let { ui.post(it) } }
+        }, "k1-probe").start()
     }
 
     private fun probeLoop(c: RadioLink) {
@@ -1421,7 +1430,7 @@ class MainActivity : Activity() {
                     val scan = if (fwProtocol >= RadioSettings.PROTOCOL_SCANLIST)
                         values?.get(RadioSettings.SCAN_LIST)?.let { ", liste de scan " + RadioSettings.scanShort(it) } ?: ", liste de scan non lue" else ""
                     Journal.add("État de la radio lu à la connexion" +
-                        (if (ms >= 0) " (" + String.format(java.util.Locale.FRANCE, "%.1f", ms / 1000.0) + " s)" else "") + " : $light$scan")
+                        (if (ms >= 0) " (" + (if (ms < 1000) "$ms ms" else String.format(java.util.Locale.FRANCE, "%.1f s", ms / 1000.0)) + ")" else "") + " : $light$scan")
                 }
                 setStartupReading(false, linger = true)
             }
