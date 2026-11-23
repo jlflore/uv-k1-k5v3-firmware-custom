@@ -1,4 +1,4 @@
-# Contrat K1R op 0x0A « lire des réglages » — v2.0 (r31, en revue ; v1.4 = r30 approuvée par ChatGPT le 23/11/2026)
+# Contrat K1R op 0x0A « lire des réglages » — v2.0 (r31, validée par ChatGPT le 23/11/2026 ; v1.4 = r30)
 
 0x0A renvoie les réglages **actuellement chargés** dans le firmware. Pour STEP et PTT ID, ce sont les valeurs du VFO sélectionné, pas forcément celles enregistrées dans le canal mémoire. Le contenu mémorisé se contrôle à part (voir plus bas).
 
@@ -72,7 +72,10 @@ Protocole 5 = r30 (10 réglages) ; protocole 6 = r31 (12 réglages). L'appli n'e
 
 ## Usage de l'éclairage (r31, appli 0.72)
 - Lecture de [36, 39] à chaque connexion, derrière un écran de démarrage (touches et PTT de l'appli bloqués, 3 s au plus), puis toutes les 15 s au plus, appli à l'écran, jamais pendant le PTT.
-- Écran éteint = BLTime 0 et BLTxRx 0. En furtif (préférence ou drapeau 0x10 de 0x09), l'état est ambigu : l'appli garde sa préférence.
+- Écran éteint = BLTime 0 et BLTxRx 0. C'est la **configuration** « Écran éteint », pas l'état physique des LED à l'instant : un allumage manuel (SIDE2, spectre) n'est pas « corrigé » en modifiant les réglages enregistrés.
+- En furtif (préférence de l'appli pour le furtif léger, drapeau 0x10 de 0x09 pour le furtif profond), l'état est ambigu : l'appli garde sa préférence.
+- Spectre ouvert : 0x0A répond 4. L'état précédent est gardé, et la synchronisation n'est pas déclarée réussie.
+- Le verrou de démarrage est posé avant le lancement de la surveillance. Il est levé à la première lecture exploitable, après 3 s au plus, ou à la perte de la liaison. Une réponse d'une liaison qui n'est plus active ne recale rien.
 
 ## Côté appli : règle du témoin d'équipe
 - La séquence de contrôle est : lecture 0x09, deux requêtes 0x0A (5 + 5 réglages), puis nouvelle lecture 0x09.
