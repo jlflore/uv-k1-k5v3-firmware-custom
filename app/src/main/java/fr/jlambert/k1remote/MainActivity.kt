@@ -972,7 +972,7 @@ class MainActivity : Activity() {
             // on vérifiera de nouveau son firmware à la première image.
             direct = false
             radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null
             lastProbeAt = 0L
             watcherFor = null
             lcd.placeholder = "Allumez la radio et branchez-la sur le boîtier"
@@ -1322,6 +1322,17 @@ class MainActivity : Activity() {
         if (fwProtocol >= RadioSettings.PROTOCOL_SCANLIST) {
             val scan = values?.get(RadioSettings.SCAN_LIST)
             if (scan != radioScanList) { radioScanList = scan; ui.post { if (cdc === c && editor == null) buildUi() } }
+            // Revue 0.74 : la radio peut garder une autre liste (liste demandée vide…) : on le dit
+            scanRequested?.let { (want, label) ->
+                if (scan != null) {
+                    scanRequested = null
+                    if (scan != want) {
+                        val got = RadioSettings.scanShort(scan)
+                        Journal.add("Liste de scan : $label demandée, la radio est sur $got")
+                        ui.post { toast("La radio est restée sur $got (liste $label vide ?)") }
+                    }
+                }
+            }
         }
         val radioStealth = synchronized(rstate) { rstate.snapshot }?.stealth == true
         val dark = LightPlan.screenDarkFromRadio(values?.get(RadioSettings.BL_TIME), values?.get(RadioSettings.BL_TXRX),
@@ -1605,7 +1616,7 @@ class MainActivity : Activity() {
         synchronized(rstate) { rstate.reset() }
         lastStatusAt = 0L
         radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null
         lastProbeAt = 0L
         parser.reset()
         lastFlags = 0
@@ -1748,6 +1759,7 @@ class MainActivity : Activity() {
                                     // « hors des bandes » seulement pour un changement de fréquence (op 02) hors spectre
                                     4 -> if (op == 0x02 && !spectrumOpen()) "fréquence hors des bandes de la radio"
                                          else "spectre ouvert sur la radio : quittez-le (EXIT), puis réessayez"
+                                    5 -> "scan en cours sur la radio : arrêtez le scan avant de changer de liste"
                                     else -> "réglage refusé (code ${r[1]})"
                                 }
                                 // Refus prouvé par l'accusé (statut non nul) : la commande attendue est refusée
@@ -2579,7 +2591,11 @@ class MainActivity : Activity() {
         val current: Int,
         val style: (TextView, Int, Boolean) -> Unit,
         val apply: (Int) -> Unit,
-        val widthDp: Int = 196)
+        val widthDp: Int = 196,
+        /** Petite ligne au-dessus des choix (origine des données…), ou null. */
+        val caption: String? = null,
+        /** Trop de choix pour tenir à l'écran (revue 0.74) : fenêtre défilante à la place. */
+        val fallback: (() -> Unit)? = null)
 
     private var dragSpec: DragSpec? = null
 
@@ -2597,7 +2613,9 @@ class MainActivity : Activity() {
             fired = true
             v.isPressed = false
             longPressFeedback(v)
-            picking = spec()?.let { showDragPicker(it, rawX, rawY) } ?: false
+            picking = spec()?.let { sp ->
+                if (showDragPicker(sp, rawX, rawY)) true else { sp.fallback?.invoke(); false }
+            } ?: false
             if (picking) v.parent?.requestDisallowInterceptTouchEvent(true)
         }
         v.setOnTouchListener { _, ev ->
@@ -2663,8 +2681,13 @@ class MainActivity : Activity() {
 
     private fun showDragPicker(spec: DragSpec, rawX: Float, rawY: Float): Boolean {
         if (picker != null || spec.labels.isEmpty()) return false
-        val itemH = dp(46)
         val pad = dp(5)
+        val capH = if (spec.caption != null) dp(24) else 0
+        // Revue 0.74 : la colonne doit tenir à l'écran. Lignes de 46 dp, réduites jusqu'à 34 dp ;
+        // en dessous, le doigt ne choisirait plus sûrement : la fenêtre de secours prend le relais.
+        val avail = overlay.height - 2 * pad - capH - dp(8)
+        val itemH = minOf(dp(46), if (spec.labels.isNotEmpty()) avail / spec.labels.size else dp(46))
+        if (itemH < dp(34)) return false
         val w = dp(spec.widthDp)
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -2682,18 +2705,24 @@ class MainActivity : Activity() {
                 setTextColor(p.text)
             }
         }
+        spec.caption?.let { cap ->
+            box.addView(TextView(this).apply {
+                text = cap; textSize = 11f; gravity = Gravity.CENTER; setTextColor(p.muted)
+                maxLines = 1; ellipsize = TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(-1, capH))
+        }
         items.forEach { box.addView(it, LinearLayout.LayoutParams(-1, itemH)) }
-        val totalH = itemH * items.size + 2 * pad
+        val totalH = itemH * items.size + 2 * pad + capH
         val loc = IntArray(2)
         overlay.getLocationOnScreen(loc)
         val row = spec.current.coerceIn(0, items.size - 1)
-        val top = (rawY - loc[1] - pad - row * itemH - itemH / 2f).toInt().coerceIn(0, maxOf(0, overlay.height - totalH))
+        val top = (rawY - loc[1] - pad - capH - row * itemH - itemH / 2f).toInt().coerceIn(0, maxOf(0, overlay.height - totalH))
         val left = (rawX - loc[0] - w / 2f).toInt().coerceIn(0, maxOf(0, overlay.width - w))
         overlay.addView(box, FrameLayout.LayoutParams(w, totalH).apply { leftMargin = left; topMargin = top })
         picker = box
         dragSpec = spec
         pickerItems = items
-        pickerTop = (loc[1] + top + pad).toFloat()
+        pickerTop = (loc[1] + top + pad + capH).toFloat()
         pickerItemH = itemH
         pickerSel = row
         items.forEachIndexed { k, t -> spec.style(t, k, k == row) }
@@ -2741,6 +2770,11 @@ class MainActivity : Activity() {
         val kind = synchronized(rstate) { rstate.snapshot }?.selectedLine?.kind
         val channelMode = kind?.let { it == RadioStatus.LineKind.MEMORY } ?: (live.mainMode == 'M')
         if (!channelMode) { toast("Listes de scan : passez la ligne active en mode canal"); return null }
+        // Revue 0.74 : pas de changement de liste pendant un scan (le firmware r32 le refuse aussi)
+        val snap = synchronized(rstate) { rstate.snapshot }
+        if (snap != null && snap.function == RadioStatus.Function.SCAN_OR_SPECTRUM && snap.spectrumActive != true) {
+            toast("Arrêtez le scan avant de changer de liste"); return null
+        }
         val last = RadioMemory.list(this).firstOrNull()
         val mem = last?.let { runCatching { RadioMemory.load(it) }.getOrNull() }
         if (mem == null) {
@@ -2758,20 +2792,33 @@ class MainActivity : Activity() {
             RadioSettings.SCAN_MIX -> "MIX · listes combinées"
             else -> "L$v" + (mem.listName(v)?.let { " · $it" } ?: "")
         }
+        val saved = java.text.SimpleDateFormat("d/MM", java.util.Locale.FRANCE).format(java.util.Date(last.lastModified()))
         return DragSpec(
             labels = choices.map { label(it) },
             current = cur?.let { choices.indexOf(it) }?.takeIf { it >= 0 } ?: 0,
             style = { t, _, on -> styleAccentItem(t, on) },
             apply = { k -> applyScanList(choices[k], label(choices[k])) },
-            widthDp = 220)
+            widthDp = 220,
+            caption = "Listes d'après la sauvegarde du $saved",
+            fallback = {
+                ChoiceSheet.show(this, "Liste de scan",
+                    "Listes et noms d'après la sauvegarde du $saved. Seule la liste réglée est lue en direct dans la radio.",
+                    choices.map { v ->
+                        ChoiceSheet.Option(if (v == RadioSettings.SCAN_ALL) "∗" else RadioSettings.scanShort(v).removePrefix("L"),
+                            label(v), badge = if (v == cur) "RÉGLÉE" else null) { applyScanList(v, label(v)) }
+                    }, "Annuler")
+            })
     }
 
     /** Captures automatiques uniquement : ouvre la colonne des listes de scan au centre de l'écran. */
     internal fun captureScanPicker(labels: List<String>, current: Int) {
         val loc = IntArray(2); overlay.getLocationOnScreen(loc)
-        showDragPicker(DragSpec(labels, current, { t, _, on -> styleAccentItem(t, on) }, {}, 220),
+        showDragPicker(DragSpec(labels, current, { t, _, on -> styleAccentItem(t, on) }, {}, 220, caption = "Listes d'après la sauvegarde du 22/11"),
             loc[0] + overlay.width / 2f, loc[1] + overlay.height * 0.55f)
     }
+
+    /** Liste demandée, en attente de confirmation par la relecture (r32) ; null sinon. */
+    @Volatile private var scanRequested: Pair<Int, String>? = null
 
     private fun applyScanList(v: Int, label: String) {
         if (v == radioScanList) return
@@ -2779,8 +2826,9 @@ class MainActivity : Activity() {
         if (sendSteps(listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(RadioSettings.SCAN_LIST, v))), onDone = {
                 // Relue dans la radio pour confirmer (r32) ; sinon, on affiche ce qui a été accepté
                 if (fwProtocol < RadioSettings.PROTOCOL_SCANLIST) radioScanList = v
+                else scanRequested = v to label
                 lightsReadAt = 0L
-                toast("Liste de scan : $label")
+                toast("Liste de scan demandée : $label")
                 if (editor == null) buildUi()
             })) Journal.add("Appli : liste de scan → $label")
     }

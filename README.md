@@ -4,7 +4,10 @@
 - Raccourci Scan : appui bref = scan avec la liste réglée (inchangé) ; appui long = colonne sous le doigt, comme la puissance : on glisse jusqu'à la liste voulue et on lâche. Choix proposés : ALL, les listes qui contiennent des canaux (avec leur nom, d'après la dernière sauvegarde de « Mes canaux »), et MIX seulement si la radio y est déjà réglée.
 - Le bouton affiche la liste réglée (« Scan · L2 », « Scan · ALL »), lue dans la radio avec le firmware r32 (menu 18 ScList, commande 0x0A).
 - Sans sauvegarde des canaux : une fenêtre propose de lire la radio. En mode fréquence : message « passez en mode canal ».
-- La colonne de la puissance et celle des listes partagent désormais le même composant (même geste, même rendu).
+- La colonne de la puissance et celle des listes partagent désormais le même composant (même geste, même rendu). Elle s'adapte à la hauteur de l'écran (lignes de 46 à 34 dp) ; au-delà, une fenêtre défilante prend le relais.
+- La colonne indique d'où viennent les listes (« d'après la sauvegarde du … ») : seul le numéro réglé est lu en direct.
+- Pendant un scan, le changement de liste est refusé (« Arrêtez le scan avant de changer de liste »), par l'appli et par le firmware r32 (statut 5).
+- Le choix est annoncé comme « demandé » ; le bouton affiche la liste relue. Si la radio en garde une autre (liste vide), l'appli le dit.
 
 ## 0.73-essai — retours des essais r31 (23/11)
 - Le bouton d'équipe ne clignote plus à chaque réglage sans rapport avec l'équipe (écran éteint, furtif profond, DTMF) : seuls les envois qui peuvent changer un réglage d'équipe (un des 10 menus vérifiés, fréquence, code d'appel, ou un appui de touche simulé) effacent la lecture. Dans tous les cas, les réglages sont relus dès la fin de l'envoi. RadioSettingsTest 16.
