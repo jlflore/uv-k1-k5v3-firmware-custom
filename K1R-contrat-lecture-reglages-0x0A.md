@@ -1,4 +1,4 @@
-# Contrat K1R op 0x0A « lire des réglages » — v1.2 (r30, approuvé par ChatGPT le 23/11/2026)
+# Contrat K1R op 0x0A « lire des réglages » — v1.3 (r30 ; v1.2 approuvée par ChatGPT le 23/11/2026, v1.3 corrige la liste blanche)
 
 0x0A renvoie les réglages **actuellement chargés** dans le firmware. Pour STEP et PTT ID, ce sont les valeurs du VFO sélectionné, pas forcément celles enregistrées dans le canal mémoire. Le contenu mémorisé se contrôle à part (voir plus bas).
 
@@ -30,18 +30,24 @@ Lecture seule. Aucune écriture, aucune reconfiguration radio, aucune actualisat
   | 2 | Position hors liste | 0 |
   | 3 | Menu hors liste blanche, ou fonction non compilée | 0 |
 
-## Liste blanche r30 (8 réglages, figée pour r30)
+## Liste blanche r30 (10 réglages, figée pour r30)
 
-| Menu | Source | Format |
+Correction v1.3 : la configuration d'équipe règle **SetOff** (veille, menu 67), et non **BatSav** (MENU_SAVE), qui sort de la liste. Elle règle aussi **D ST** et **D Prel**, qui y entrent. La liste correspond désormais exactement aux réglages généraux envoyés par la configuration d'équipe.
+
+| Menu (position Fusion v7) | Source | Format |
 |---|---|---|
-| MENU_SQL | `gEeprom.SQUELCH_LEVEL` | u16 LE |
-| MENU_BEEP | `gEeprom.BEEP_CONTROL` | u16 LE |
-| MENU_SAVE | `gEeprom.BATTERY_SAVE` | u16 LE |
-| MENU_SET_NFM | `gSetting_set_nfm` (si compilé) | u16 LE |
-| MENU_STEP | `FREQUENCY_GetSortedIdxFromStepIdx(gTxVfo->STEP_SETTING)` | u16 LE, réglage de ligne (VFO v) |
-| MENU_PTT_ID | `gTxVfo->DTMF_PTT_ID_TX_MODE` | u16 LE, réglage de ligne (VFO v) |
-| MENU_D_LIVE_DEC | `gSetting_live_DTMF_decoder` | u16 LE |
-| MENU_UPCODE | `gEeprom.DTMF_UP_CODE` (champ de 16 octets, chargé par `SETTINGS_LoadEepromDtmf`) | `len` de 0 à 16 : octets jusqu'au premier 0x00 ou 0xFF exclu, au plus 16. Aucun `strlen`. |
+| MENU_STEP (1) | `FREQUENCY_GetSortedIdxFromStepIdx(gTxVfo->STEP_SETTING)` | u16 LE, réglage de ligne (VFO v) |
+| MENU_BEEP (40) | `gEeprom.BEEP_CONTROL` (menu_settings.def) | u16 LE |
+| MENU_UPCODE (45) | `gEeprom.DTMF_UP_CODE` (16 octets) | `len` de 0 à 16 : octets jusqu'au premier 0x00 ou 0xFF exclu. Aucun `strlen`. |
+| MENU_PTT_ID (47) | `gTxVfo->DTMF_PTT_ID_TX_MODE` | u16 LE, réglage de ligne (VFO v) |
+| MENU_D_ST (48) | `gEeprom.DTMF_SIDE_TONE` (menu_settings.def) | u16 LE |
+| MENU_D_PRE (49) | `gEeprom.DTMF_PRELOAD_TIME / 10` (unité du menu, 10 ms) | u16 LE |
+| MENU_D_LIVE_DEC (50) | `gSetting_live_DTMF_decoder` | u16 LE |
+| MENU_SQL (54) | `gEeprom.SQUELCH_LEVEL` | u16 LE |
+| MENU_SET_OFF (67) | `gSetting_set_off` (menu_settings.def, si ENABLE_FEAT_F4HWN_SLEEP) | u16 LE |
+| MENU_SET_NFM (68) | `gSetting_set_nfm` (si ENABLE_FEAT_F4HWN_NARROWER) | u16 LE |
+
+Un menu non compilé répond s = 3.
 
 Les valeurs numériques sont celles que l'op 01 accepte pour le même menu : une lecture renvoie ce qu'il faut écrire pour retrouver le même réglage.
 
@@ -62,7 +68,7 @@ Les valeurs numériques sont celles que l'op 01 accepte pour le même menu : une
 Le protocole passe à 5. L'appli n'envoie 0x0A que si le protocole est au moins 5.
 
 ## Côté appli : règle du témoin d'équipe
-- La séquence de contrôle est : lecture 0x09, deux requêtes 0x0A (4 + 4 réglages), puis nouvelle lecture 0x09.
+- La séquence de contrôle est : lecture 0x09, deux requêtes 0x0A (5 + 5 réglages), puis nouvelle lecture 0x09.
 - Le témoin s'allume seulement si :
   - les champs **de configuration stables** sont identiques dans les deux lectures 0x09 : VFO sélectionné, type et numéro de canal, fréquence, puissance, modulation, largeur, sous-canaux, décalage, inversion. Les indicateurs d'activité (réception, squelch, fonction courante, ligne écoutée) sont exclus de la comparaison : une réception n'éteint pas le témoin ;
   - `v` est le même dans les deux réponses 0x0A ;
@@ -79,6 +85,11 @@ Le protocole passe à 5. L'appli n'envoie 0x0A que si le protocole est au moins 
 - La création d'un op 0x0B est différée.
 
 ## CI
+`tools/k1r_check_0x0A.py` tourne à chaque compilation, avant le firmware. Il échoue si :
+- la liste blanche d'app.c diffère de celle du contrat ;
+- une source lue par 0x0A diffère de celle du menu (`menu_settings.def` ou `MENU_ShowCurrentSetting`) ;
+- un menu de la liste est refusé en écriture par l'op 01.
+
 Une table explicite de correspondance est contrôlée : `MENU_*` → source firmware → valeur renvoyée par 0x0A → valeur attendue par l'op d'écriture.
 - L'op d'écriture est 0x01 pour 7 réglages, et **0x03** pour MENU_UPCODE.
 - `menu_settings.def` ne couvre que MENU_SAVE et MENU_BEEP. Les autres sont comparés aux branches de `MENU_ShowCurrentSetting`.

@@ -1931,7 +1931,7 @@ volatile bool gK1R_Stealth = false;
 // Révision des ajouts K1 Remote (r1 PTT, r2 écran en émission, r3 réglages directs, r4 modèle/version,
 // r5 retrait de l'écran en émission, r6 diagnostic, r7 écran affiché pour l'aide, r8 enregistrement immédiat des réglages directs, r9 PTT à distance aussi en mode une pression, r10 écran complet à la connexion, r11 origine de la « programmation PC » dans le diagnostic, r12 registres BK4819 dans le diagnostic, r13 nom court + correction du débordement d'écran au démarrage, r14 affichage borné sans casser les positions sur la ligne suivante)
 #ifndef K1R_REVISION
-#define K1R_REVISION "29"
+#define K1R_REVISION "30"
 #endif
 
 // Enregistre tout de suite ce qu'une commande directe a changé, comme le fait
@@ -2203,6 +2203,83 @@ static void K1R_SendStatus(void)
     K5VIEWER_SendReply(d, sizeof(d));
 }
 
+/* r30 — op 0x0A « lire des réglages » (contrat K1R-contrat-lecture-reglages-0x0A.md v1.2).
+ * Lecture seule : ne touche ni gSubMenuSelection, ni gMenuCursor, ni gScanUseCssResult ;
+ * aucune écriture, aucune reconfiguration radio, aucun rafraîchissement d'écran.
+ * Liste blanche fermée de 10 réglages (contrat v1.3) ; tout autre menu répond s = 3, len = 0.
+ * Renvoie le nombre d'octets de valeur écrits dans out (au plus 16), ou -1 si non lisible. */
+static int8_t K1R_ReadSetting(uint8_t id, uint8_t *out)
+{
+    uint16_t v;
+    switch (id) {
+        case MENU_SQL:        v = gEeprom.SQUELCH_LEVEL; break;
+        case MENU_BEEP:       v = gEeprom.BEEP_CONTROL; break;
+#ifdef ENABLE_FEAT_F4HWN_SLEEP
+        case MENU_SET_OFF:    v = gSetting_set_off; break;            // veille (SetOff, minutes)
+#endif
+        case MENU_D_ST:       v = gEeprom.DTMF_SIDE_TONE; break;
+        case MENU_D_PRE:      v = gEeprom.DTMF_PRELOAD_TIME / 10; break;  // même unité que le menu
+#ifdef ENABLE_FEAT_F4HWN_NARROWER
+        case MENU_SET_NFM:    v = gSetting_set_nfm; break;
+#endif
+        case MENU_STEP:       v = FREQUENCY_GetSortedIdxFromStepIdx(gTxVfo->STEP_SETTING); break;
+        case MENU_PTT_ID:     v = (uint16_t)gTxVfo->DTMF_PTT_ID_TX_MODE; break;
+        case MENU_D_LIVE_DEC: v = gSetting_live_DTMF_decoder; break;
+        case MENU_UPCODE: {
+            // Champ de 16 octets sans terminateur garanti : jamais de strlen.
+            uint8_t len = 0;
+            while (len < sizeof(gEeprom.DTMF_UP_CODE) && len < 16) {
+                const uint8_t ch = (uint8_t)gEeprom.DTMF_UP_CODE[len];
+                if (ch == 0x00 || ch == 0xFF) break;
+                out[len++] = ch;
+            }
+            return (int8_t)len;
+        }
+        default:
+            return -1;
+    }
+    out[0] = (uint8_t)v;
+    out[1] = (uint8_t)(v >> 8);
+    return 2;
+}
+
+static void K1R_ReadSettings(const uint8_t *c, uint8_t n)
+{
+    // Pire cas : 4 + 7 × (3 + 16) = 137 octets
+    uint8_t r[4 + 7 * (3 + 16)];
+    r[0] = 0x0A;
+    const uint8_t count = (n >= 2) ? c[1] : 0;
+    if (n < 2 || count < 1 || count > 7 || n != (uint8_t)(count + 2)) {
+        r[1] = 1;                                   // trame mal formée : exactement 2 octets
+        K5VIEWER_SendReply(r, 2);
+        return;
+    }
+    uint8_t menus = 0;
+    while (menus < 0xFE && MenuListId[menus] != 0xFF) menus++;   // borné, comme l'op 01
+    r[1] = 0;
+    r[2] = gEeprom.TX_VFO;                          // VFO des réglages de ligne (STEP, PTT ID)
+    r[3] = count;
+    uint8_t off = 4;
+    for (uint8_t i = 0; i < count; i++) {
+        const uint8_t p = c[2 + i];
+        uint8_t val[16];
+        int8_t len = -1;
+        uint8_t st;
+        if (p < 1 || p > menus) st = 2;
+        else {
+            len = K1R_ReadSetting(MenuListId[p - 1], val);
+            st = (len < 0) ? 3 : 0;
+        }
+        if (st != 0) len = 0;
+        if ((uint16_t)off + 3 + (uint16_t)len > sizeof(r)) break;   // impossible par construction
+        r[off++] = p;
+        r[off++] = st;
+        r[off++] = (uint8_t)len;
+        for (int8_t k = 0; k < len; k++) r[off++] = val[k];
+    }
+    K5VIEWER_SendReply(r, off);
+}
+
 static void K1R_RunCommand(void)
 {
     uint8_t c[9], n = 0, status = 0;
@@ -2336,6 +2413,9 @@ static void K1R_RunCommand(void)
         case 0x09:
             K1R_SendStatus();      // état de la radio, contrat 0x09 v1 (r28)
             return;
+        case 0x0A:
+            K1R_ReadSettings(c, n);   // lecture de réglages, contrat 0x0A v1.2 (r30)
+            return;
         case 0x05: {
             // Diagnostic : état d'émission vu par la radio
             const uint32_t f = gTxVfo->pTX->Frequency;
@@ -2378,7 +2458,7 @@ static void K1R_RunCommand(void)
     // Présence : « K1R », version du protocole, modèle (selon SetNav : 0 = UV-K1, 1 = UV-K5 V3),
     // puis la version du firmware (ex. « v7.0.0 »)
     // 24 octets : « v7.0.0 r23 » (10 caractères) dépassait l'ancien tampon de 16 → « r2 »
-    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 4, gEeprom.SET_NAV ? 1 : 0 };   // protocole 4 : 0x09 format 2 (r29)
+    uint8_t reply[24] = { c[0], status, 'K', '1', 'R', 5, gEeprom.SET_NAV ? 1 : 0 };   // protocole 5 : op 0x0A (r30) ; 4 : 0x09 format 2 (r29)
     uint8_t len = 2;
     if (c[0] == 0x04) {
         len = 7;
