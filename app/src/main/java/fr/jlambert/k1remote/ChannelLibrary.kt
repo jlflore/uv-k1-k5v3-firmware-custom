@@ -49,6 +49,14 @@ object ChannelLibrary {
                 ch("VHF20", 157.000, 0, false, 5, rxOnly = true),
                 ch("VHF22 Roch", 157.100, 0, false, 5, rxOnly = true)
             )),
+        // 0.80 : demandé par D'jé. Sources vérifiées le 23/11/2026 (voir README).
+        Preset("Secours montagne · Canal E",
+            "Canal E 161,300 MHz : Haute-Savoie, Valais, Vallée d'Aoste (CAF Annecy, Région Vallée d'Aoste) ; " +
+                "Suisse, réseau de la Rega (OFCOM). Sous-canal 123 Hz pour la France et l'Italie.",
+            "DÉTRESSE UNIQUEMENT. Le 112 reste le premier réflexe. Le canal E ne couvre que certains massifs, " +
+                "et rien ne garantit qu'il soit écouté à l'endroit où vous êtes. Restez à l'écoute après l'appel. " +
+                "L'émission n'est pas bloquée : en détresse, il faut pouvoir appeler.",
+            listOf(ch("Canal E", 161.300, 0, false, 4, power = 7).copy(txTone = "123,0 Hz"))),
         Preset("PMR446 · 16 canaux",
             "Plan de fréquences PMR446 (446,00625 à 446,19375 MHz, pas de 12,5 kHz)",
             "L'autorisation PMR446 vise des postes conformes à antenne intégrée : vérifiez l'usage de vos radios auprès de l'Arcep.",

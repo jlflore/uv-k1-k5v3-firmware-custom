@@ -60,7 +60,7 @@ class ThemePreview(ctx: Context, palette: Palette) : View(ctx) {
         }
         txt.textAlign = Paint.Align.LEFT
         if (camo != null) { txt.typeface = Fonts.stencil(context); label("K1 REMOTE", 64f, 54f, 22f, p.text, false); txt.typeface = Typeface.DEFAULT }
-        else label("K1 Remote", 22f, 54f, 22f, p.text, true)
+        else label("UV-Kx OPS", 22f, 54f, 22f, p.text, true)
         label(camo?.unit ?: "UV-K1 · F4HWN Fusion", if (camo != null) 64f else 22f, 70f, 10f, p.muted, false)
         for (i in 0..2) {
             fill.color = p.surface; c.drawCircle(254f + i * 44f, 48f, 19f, fill)

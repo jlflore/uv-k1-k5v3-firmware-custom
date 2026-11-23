@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>K1 Remote – Mode d'emploi</title>
+<title>UV-Kx OPS – Mode d'emploi</title>
 <style>
   :root { --bg:#F7F8FB; --card:#FFFFFF; --line:#E3E7EE; --text:#1F2A37; --muted:#5B6878; --code:#F1F3F7; }
   /* Six pastels, un par section (fond doux + ton soutenu pour les accents) */
@@ -49,7 +49,7 @@
 <body>
 <div class="hero">
 <h1>Mode d'emploi</h1>
-<p>K1 Remote 0.76-essai · télécommande pour Quansheng UV-K1 / UV-K5 V3 sous F4HWN Fusion, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
+<p>UV-Kx OPS 0.80-essai (ex-UV-Kx OPS) · télécommande pour Quansheng UV-K1 / UV-K5 V3 sous F4HWN Fusion, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
 </div>
 <nav class="toc" aria-label="Sommaire"><a class="c0" href="#avant">Avant de commencer</a><a class="c1" href="#brancher">Brancher la radio</a><a class="c2" href="#ecran">L'écran principal</a><a class="c3" href="#clavier">Le clavier de la radio</a><a class="c4" href="#raccourcis">Les raccourcis</a><a class="c5" href="#equipe">Configuration d'équipe et partage</a><a class="c1" href="#carte">La carte d'équipe</a><a class="c2" href="#ptt">Firmware Fusion PTT</a><a class="c3" href="#appelants">Savoir qui appelle</a><a class="c0" href="#puissance">Le bouton Puissance</a><a class="c5" href="#scan">Le bouton Scan</a><a class="c1" href="#nuit">Mode nuit et mode furtif</a><a class="c3" href="#operation">En opération</a><a class="c0" href="#laterales">Touches F1 / F2</a><a class="c4" href="#canaux">Les canaux de la radio</a><a class="c2" href="#aide">L'aide « ? »</a><a class="c3" href="#preferences">Préférences et noms des appelants</a><a class="c4" href="#problemes">Problèmes fréquents</a></nav>
 <section class="s c0"><h2 id="avant">Avant de commencer</h2>
@@ -90,20 +90,21 @@
 <p>Internet n'est utilisé que par la carte d'équipe (positions chiffrées) et le téléchargement des fonds de carte. Le pilotage de la radio, la lecture et l'écriture des canaux se font sans réseau. Avec le firmware Fusion PTT, l'appli peut émettre (PTT à distance) ; sans lui, l'alternat reste sur la radio.</p>
 </section>
 <section class="s c1"><h2 id="brancher">Brancher la radio</h2>
-<p>Allumez la radio, puis branchez-la au téléphone : K1 Remote s'ouvre toute seule.</p>
+<p>Allumez la radio, puis branchez-la au téléphone : UV-Kx OPS s'ouvre toute seule.</p>
 <ol>
-<li>Android demande si K1 Remote peut accéder à l'appareil USB : touchez <strong>OK</strong>. Cochez « toujours » pour ne plus avoir la question.</li>
+<li>Android demande si UV-Kx OPS peut accéder à l'appareil USB : touchez <strong>OK</strong>. Cochez « toujours » pour ne plus avoir la question.</li>
 <li>L'écran de la radio apparaît dans l'appli au bout d'une seconde environ.</li>
 <li>La pastille d'état, en haut, indique la liaison. Touchez-la pour vous connecter si besoin ; un <strong>appui long</strong> dessus déconnecte.</li>
 <li>Les pastilles <strong>RX</strong> et <strong>TX</strong> s'allument quand la radio reçoit ou émet.</li>
 </ol>
+<p><strong>Écran d'ouverture</strong> : au lancement de l'appli, une photo de montagne ou d'airsoft tirée au hasard s'affiche 2 secondes avec le nom UV-Kx OPS, pendant que l'appli cherche la radio et la lit en dessous (la ligne du bas dit où elle en est). Touchez la photo pour passer tout de suite. Il ne réapparaît pas quand on revient dans l'appli depuis une autre, ni en tournant le téléphone. En paysage, seules les photos qui s'y prêtent sont tirées.</p>
 <p><strong>Écran de démarrage</strong> (firmware Fusion PTT r31 ou plus) : à chaque connexion, un anneau qui tourne et « Lecture de l'état de la radio… » s'affichent sur l'écran de l'appli. L'appli lit alors l'état réel de la radio (éclairage, verrou, liste de scan…) pour que ses boutons disent vrai dès le départ. Pendant cette lecture, ses touches et son PTT répondent « Patientez » ; elle dure une fraction de seconde (par câble comme par le boîtier), 3 secondes au plus. L'anneau reste affiché au moins 0,6 s pour qu'on le voie, mais les touches sont libérées dès la fin de la lecture. Le journal technique note chaque lecture, par exemple « État de la radio lu à la connexion (44 ms) : éclairage normal, liste de scan L2 ». Le PTT de la radio reste toujours libre.</p>
 <p>Bon à savoir : branchée, la radio se recharge sur le téléphone, ce qui vide la batterie du téléphone plus vite.</p>
 <h3>Sans fil, avec le boîtier K1 Relais</h3>
 <p>Le boîtier K1 Relais se branche sur la radio et relaie tout en Bluetooth : le téléphone reste dans la poche, sans câble.</p>
 <ol>
 <li>Branchez la batterie sur le port <strong>COM</strong> du boîtier et la radio sur son port <strong>USB</strong>.</li>
-<li>Ouvrez K1 Remote sans câble : l'appli cherche le boîtier, le mémorise et s'y connecte. Android demande la première fois l'autorisation « Appareils à proximité » : acceptez.</li>
+<li>Ouvrez UV-Kx OPS sans câble : l'appli cherche le boîtier, le mémorise et s'y connecte. Android demande la première fois l'autorisation « Appareils à proximité » : acceptez.</li>
 <li>La pastille d'état affiche « Connecté · Bluetooth ». Si le boîtier s'éloigne ou s'éteint, l'appli se reconnecte d'elle-même dès qu'il revient.</li>
 </ol>
 <p>La lumière du boîtier : <strong>éclat rouge</strong> = en attente, <strong>bleu</strong> = téléphone connecté mais radio éteinte ou absente, <strong>orange</strong> = radio branchée sans téléphone, <strong>vert</strong> = tout est prêt, <strong>violet clignotant</strong> = appairage ouvert, <strong>orange clignotant rapide</strong> = l'appli attend un appui bref sur BOOT pour écrire des canaux, <strong>orange presque fixe</strong> = écriture des canaux autorisée. Son intensité (éteinte, faible, normale) se règle dans les Préférences ; elle s'éteint d'office en mode furtif. La petite lumière rouge fixe indique seulement que la carte est alimentée : on ne peut pas l'éteindre, un morceau d'adhésif noir suffit.</p>
@@ -265,7 +266,8 @@
 </tbody>
 </table></div>
 <p><strong>Les témoins ●</strong> : Écran éteint, Furtif, Verrou, Scan, Spectre et Inv. relais s'allument tant que la fonction est active sur la radio, et s'éteignent dès qu'elle ne l'est plus. Avec le firmware Fusion PTT, l'appli lit cet état dans la radio : Verrou, Scan, Spectre et Inv. relais à partir de r28, Écran éteint à partir de r31 (sauf en furtif, où l'appli garde ce qu'elle sait). Un réglage changé directement sur la radio se voit donc aussi dans l'appli. Les boutons d'équipe ont leur propre témoin (section suivante).</p>
-<p><strong>Refus</strong> : clavier verrouillé, l'appli refuse ses raccourcis (sauf Verrou). Spectre ouvert sur la radio, seuls Écran éteint et Furtif passent, et Spectre, qui le ferme (comme EXIT). Radio allumée directement en spectre (F4HWN rouvre le dernier écran) : les touches de l'appli pilotent le spectre et EXIT le ferme ; l'appli termine sa connexion juste après. Les appuis longs de Puissance et Scan n'ouvrent pas leur colonne non plus. Le message dit toujours pourquoi.</p>
+<p><strong>Refus</strong> : clavier verrouillé, l'appli refuse ses raccourcis (sauf Verrou). Spectre ouvert sur la radio, seuls Écran éteint et Furtif passent, et Spectre, qui le ferme (comme EXIT). Radio allumée directement en spectre (F4HWN rouvre le dernier écran) : les touches de l'appli pilotent le spectre et EXIT le ferme ; l'appli termine sa connexion juste après. Les appuis longs de Puissance et Scan n'ouvrent pas leur colonne non plus.</p>
+<p><strong>Touches du spectre</strong> : spectre ouvert, un <strong>appui long sur le raccourci Spectre</strong> affiche sur les touches de l'appli leur fonction dans la vue spectre, en couleur : 1/7 pas de balayage + / −, 2/8 saut des flèches + / −, 3/9 échelle + / −, ✱/F seuil + / −, 4 largeur, 5 saisie d'une fréquence, 6 filtre, 0 modulation. Un nouvel appui long rétablit les touches normales ; elles reviennent seules à la fermeture du spectre. Ce n'est que de l'affichage : les touches envoyées sont les mêmes. Après PTT (vue fixe sur une fréquence) ou pendant la saisie d'une fréquence, certaines touches font autre chose. Pour modifier ou supprimer le raccourci Spectre, passez par « Modifier ». Le message dit toujours pourquoi.</p>
 <p><strong>Modifier ou supprimer</strong> : maintenez le doigt environ une seconde sur le bouton, puis choisissez Modifier ou Supprimer (pour Puissance et Scan, dont l'appui long sert au choix au doigt, passez par le bouton « Modifier »). Le bouton « Modifier » en haut de la zone passe aussi tous les boutons en mode modification ; touchez « Terminé » pour en sortir.</p>
 <p>Pour revenir aux raccourcis de départ : Préférences › Réinitialiser les raccourcis. Toutes les fenêtres de l'appli (choix, confirmations, progression) suivent le thème choisi ; une suppression se confirme toujours par un bouton rouge, et toucher à côté de la fenêtre l'annule.</p>
 </section>
@@ -337,7 +339,7 @@
 <p><strong>Partager à l'équipe</strong></p>
 <ol>
 <li>Maintenez le doigt sur le bouton d'équipe, puis <strong>« Partager à l'équipe (QR code) »</strong>.</li>
-<li>Votre coéquipier scanne le QR code avec l'appareil photo de son téléphone : K1 Remote s'ouvre avec le profil rempli.</li>
+<li>Votre coéquipier scanne le QR code avec l'appareil photo de son téléphone : UV-Kx OPS s'ouvre avec le profil rempli.</li>
 <li>Il touche <strong>Enregistrer</strong>, branche sa radio et touche le nouveau bouton.</li>
 </ol>
 <p>Si le scan n'ouvre pas l'appli : touchez « Envoyer le lien » (SMS, WhatsApp…). Le coéquipier copie le lien reçu, puis dans l'appli : « + Ajouter » › Configuration d'équipe › <strong>« Coller un profil reçu »</strong>.</p>
@@ -346,7 +348,7 @@
 <p>Le bouton <strong>⌖</strong> de l'écran principal ouvre une carte (photos aériennes ou plan IGN) avec votre position et celles de vos coéquipiers. Les positions passent par Internet (4G/5G), pas par la radio.</p>
 <ol>
 <li><strong>Une seule fois, le chef d'équipe</strong> : Préférences › Carte d'équipe › <strong>Créer une équipe</strong>, puis montre le <strong>QR code</strong> (ou envoie le lien).</li>
-<li><strong>Chaque joueur</strong> scanne le QR code ou ouvre le lien : K1 Remote propose de rejoindre l'équipe. Saisissez aussi <strong>votre nom</strong> dans les Préférences.</li>
+<li><strong>Chaque joueur</strong> scanne le QR code ou ouvre le lien : UV-Kx OPS propose de rejoindre l'équipe. Saisissez aussi <strong>votre nom</strong> dans les Préférences.</li>
 <li>Sur la carte, touchez <strong>Partager ma position</strong>. Android demande l'accès à la position et aux notifications : acceptez.</li>
 </ol>
 <p>Le partage continue écran éteint, téléphone dans la poche ; une notification le rappelle et permet de l'arrêter. Chaque joueur apparaît avec sa couleur et son nom ; une flèche indique sa direction quand il se déplace. Au-delà de 2 minutes sans nouvelle, il passe en gris. Touchez <strong>Photo/Plan</strong> pour changer de fond, <strong>◎</strong> pour vous recentrer. En mode nuit, la carte passe en rouge sombre.</p>
@@ -359,7 +361,7 @@
 <p>Confidentialité : les positions sont <strong>chiffrées</strong> avec la clé secrète de l'équipe ; le relais Internet ne voit que des données illisibles. À l'arrêt du partage, votre dernière position est effacée. Les morceaux de carte déjà vus sont gardés sur le téléphone et restent visibles sans réseau. L'intervalle d'envoi (5 à 60 s) se règle dans les Préférences : plus il est court, plus la batterie baisse vite.</p>
 </section>
 <section class="s c2"><h2 id="ptt">Firmware Fusion PTT : PTT à distance et réglages directs</h2>
-<p>Le firmware <strong>« Fusion PTT »</strong> est le firmware d'Armel F4HWN v7 avec trois ajouts pour K1 Remote. Installez-le dans un emplacement Multiboot (le firmware d'origine reste en « Main ») ; la radio affiche « FusPTT r32 Edition » au démarrage (r32 = numéro de révision : prenez toujours le fichier au numéro le plus élevé). Après chaque installation, il faut aussi installer les « assets » (polices et textes) : sans eux, l'écran de la radio s'allume mais reste vide. Dans UV Studio, une fois le firmware écrit dans son emplacement Multiboot, ouvrez l'onglet de flashage du firmware : il propose alors l'installation des assets ; lancez-la, puis redémarrez la radio. Quand l'appli le reconnaît, elle l'annonce et la pastille d'état se termine par « · PTT » ; sous le titre s'affichent le modèle (selon le réglage SetNav) et la version.</p>
+<p>Le firmware <strong>« Fusion PTT »</strong> est le firmware d'Armel F4HWN v7 avec trois ajouts pour UV-Kx OPS. Installez-le dans un emplacement Multiboot (le firmware d'origine reste en « Main ») ; la radio affiche « FusPTT r32 Edition » au démarrage (r32 = numéro de révision : prenez toujours le fichier au numéro le plus élevé). Après chaque installation, il faut aussi installer les « assets » (polices et textes) : sans eux, l'écran de la radio s'allume mais reste vide. Dans UV Studio, une fois le firmware écrit dans son emplacement Multiboot, ouvrez l'onglet de flashage du firmware : il propose alors l'installation des assets ; lancez-la, puis redémarrez la radio. Quand l'appli le reconnaît, elle l'annonce et la pastille d'état se termine par « · PTT » ; sous le titre s'affichent le modèle (selon le réglage SetNav) et la version.</p>
 <ul>
 <li><strong>Réglages directs</strong> : la configuration d'équipe, le mode furtif et les raccourcis de réglage sont envoyés à la radio en quelques secondes, sans parcourir les menus, avec la fréquence exacte. Chaque réglage est confirmé par la radio ; en cas de refus, l'appli s'arrête et dit pourquoi.</li>
 <li><strong>Touches muettes</strong> : les touches envoyées par le téléphone ne bipent jamais.</li>
@@ -379,7 +381,7 @@
 <p>Sécurité : la radio coupe d'elle-même l'émission si elle ne reçoit plus de nouvelles du téléphone pendant 0,9 s (doigt levé, liaison perdue, appli fermée), et au plus tard au bout de 30 s. Le bouton de l'appli marche toujours en « maintenir pour émettre », même si la radio est en PTT « une pression » (indicateur OP en haut de l'écran). Si la radio refuse d'émettre, l'appli dit pourquoi au bout d'une seconde. Avec ce firmware, l'écran de la radio reste à jour dans l'appli pendant l'émission, barre d'émission comprise (le firmware d'origine le fige).</p>
 <p>Pendant qu'UV Studio échange avec la radio, celle-ci refuse d'émettre (elle se croit en cours de programmation) : fermez UV Studio ou débranchez le câble avant d'émettre.</p>
 <p><strong>Journal des appels</strong> (bouton ☰ Journal à gauche du PTT, ou Préférences › Journal) : les appels reçus et vos émissions, jour par jour, du plus récent au plus ancien. Chaque ligne donne l'heure, l'appelant (son nom s'il a un code d'appel connu, sinon « appelant non identifié ») et la durée. Les ouvertures très brèves du squelch ne sont pas notées, et les reprises rapprochées d'un même appelant ne font qu'une ligne. « Partager » propose le journal des appels seul, ou le rapport complet pour un diagnostic. « Effacer » demande confirmation et indique combien d'éléments partent.</p>
-<p><strong>Journal technique</strong> : bouton « Technique » du journal des appels, ou appui long sur le titre « K1 Remote ». L'appli y note tout ce qu'elle envoie (touches, réglages, bouton PTT) et tout ce que fait la radio, avec le firmware Fusion PTT chaque changement de son état. Il sert au diagnostic ; vous n'en avez pas besoin au quotidien.</p>
+<p><strong>Journal technique</strong> : bouton « Technique » du journal des appels, ou appui long sur le titre « UV-Kx OPS ». L'appli y note tout ce qu'elle envoie (touches, réglages, bouton PTT) et tout ce que fait la radio, avec le firmware Fusion PTT chaque changement de son état. Il sert au diagnostic ; vous n'en avez pas besoin au quotidien.</p>
 </section>
 <section class="s c3"><h2 id="appelants">Savoir qui appelle</h2>
 <p>En FM, la voix ne dit pas qui parle. Chaque radio peut envoyer un court code (bip-bip DTMF) au début de ses émissions, et l'appli affiche alors « Appel de Paul (A1) ».</p>
@@ -474,7 +476,8 @@
 <li><strong>Passer la radio sur un canal</strong> : appui long sur le canal, ou « ▶ Passer la radio sur ce canal » dans sa fiche. L'appli tape les mêmes touches que le raccourci « Aller à un canal » (passage en mode canal compris) et revient à l'écran principal. La radio prend le canal tel qu'il est enregistré chez elle : un canal modifié et pas encore envoyé garde son ancienne version, l'appli le signale.</li>
 <li><strong>Modifier ou créer</strong> : touchez un canal, sa fiche s'ouvre directement ; « Annuler » ressort sans rien changer. Nom (10 caractères ; la radio l'affiche si son menu ChDisp est sur NAME), fréquence, décalage, modulation, puissance (LOW 1 &lt; 20 mW … HIGH ≈ 5 W), largeur, codes CTCSS/DCS, pas, liste de scan. Un canal appartient à une seule liste, de 1 à 24 (avec son nom s'il en a un sur la radio), ou à « Toutes les listes ». « Écoute » signale un canal en AM (la radio n'émet jamais en AM) ou marqué « Émission bloquée » : avec le firmware Fusion PTT r25 ou plus, la radio refuse alors toute émission sur ce canal. Les canaux aviation et fluviaux de la bibliothèque sont bloqués d'office.</li>
 <li><strong>Brouillon</strong> : vos modifications sont gardées à chaque changement, même si l'appli est interrompue ; elles reviennent quand vous rouvrez la même sauvegarde.</li>
-<li><strong>Bibliothèque</strong> : une tuile par liste (aviation Lyon, fluvial Saône, PMR446) avec son nombre de canaux et sa source ; touchez-la pour voir les canaux avant de les ajouter. Ils sont placés à partir du canal 101 dans les emplacements libres.</li>
+<li><strong>Bibliothèque</strong> : une tuile par liste (aviation Lyon, fluvial Saône, secours montagne, PMR446) avec son nombre de canaux et sa source ; touchez-la pour voir les canaux avant de les ajouter. Ils sont placés à partir du canal 101 dans les emplacements libres.</li>
+<li><strong>Secours montagne · Canal E</strong> : 161,300 MHz, FM, sous-canal 123 Hz à l'émission (France et Italie), puissance HIGH. C'est le canal d'urgence de la Haute-Savoie, du Valais, de la Vallée d'Aoste et de la Suisse (réseau de la Rega). <strong>Détresse uniquement</strong> : le 112 reste le premier réflexe, et le canal E ne couvre que certains massifs. L'émission n'y est pas bloquée, pour pouvoir appeler en détresse. Après un appel, restez à l'écoute.</li>
 <li><strong>Sauvegardes</strong> : chaque lecture et chaque envoi en créent une. La liste montre pour chacune son nom ou sa date et son nombre de canaux ; « OUVERTE » marque celle affichée, « RÉCENTE » la dernière. Touchez-en une pour l'ouvrir, la nommer ou la supprimer ; exportez-les (fichier .k1r) ou rouvrez-les sans radio.</li>
 </ul>
 <h3>Envoyer à la radio</h3>
@@ -673,6 +676,6 @@
 </tbody>
 <tr><td>La radio émet d'un appui et s'arrête au suivant ; bip long ; minuteur à 00:00</td><td>La radio est passée en PTT « une pression » (OP en haut de l'écran, au lieu de CL). Une touche latérale (ou M long) réglée sur l'action « PTT » l'a basculée. Appuyez de nouveau sur cette touche, ou éteignez puis rallumez la radio ; puis changez la fonction de cette touche (menus 23 à 27).</td></tr>
 </table></div></section>
-<p class="foot">K1 Remote · votre téléphone devient la télécommande de la radio, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
+<p class="foot">UV-Kx OPS · votre téléphone devient la télécommande de la radio, par câble USB ou sans fil avec le boîtier K1 Relais.</p>
 </body>
 </html>

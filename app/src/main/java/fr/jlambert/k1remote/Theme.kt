@@ -244,4 +244,9 @@ object Fonts {
     fun stencil(ctx: Context): android.graphics.Typeface =
         stencil ?: (runCatching { android.graphics.Typeface.createFromAsset(ctx.assets, "fonts/BlackOpsOne-Regular.ttf") }
             .getOrNull() ?: android.graphics.Typeface.DEFAULT_BOLD).also { stencil = it }
+    /** 0.80 : pochoir fin (Allerta Stencil, licence OFL) pour les petits textes de l'écran d'ouverture. */
+    @Volatile private var stencilLight: android.graphics.Typeface? = null
+    fun stencilLight(ctx: Context): android.graphics.Typeface =
+        stencilLight ?: (runCatching { android.graphics.Typeface.createFromAsset(ctx.assets, "fonts/AllertaStencil-Regular.ttf") }
+            .getOrNull() ?: android.graphics.Typeface.DEFAULT).also { stencilLight = it }
 }

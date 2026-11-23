@@ -219,7 +219,7 @@ class PreferencesActivity : Activity() {
         // Journal : tout ce que l'appli et la radio ont fait (appelants, réglages, liaison)
         col.addView(section("JOURNAL"))
         col.addView(text("Les appels reçus et vos émissions, jour par jour. Le journal technique complet (pour un diagnostic) " +
-            "est à un bouton de là, et aussi par un appui long sur le titre « K1 Remote ».", 12f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 6))
+            "est à un bouton de là, et aussi par un appui long sur le titre « UV-Kx OPS ».", 12f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 6))
         col.addView(button("Ouvrir le journal des appels") { MemoryBridge.openJournal = true; finish() }, lp(top = 8))
 
         // Touches latérales de la radio (menus 23 à 27), écrites en clair
@@ -376,7 +376,7 @@ class PreferencesActivity : Activity() {
         val version = runCatching { packageManager.getPackageInfo(packageName, 0).versionName }.getOrNull() ?: ""
         val about = card()
         about.setPadding(dp(16), dp(14), dp(16), dp(14))
-        about.addView(text("K1 Remote" + if (version.isNotEmpty()) "  v$version" else "", 17f, p.text, Typeface.DEFAULT_BOLD))
+        about.addView(text("UV-Kx OPS" + if (version.isNotEmpty()) "  v$version" else "", 17f, p.text, Typeface.DEFAULT_BOLD))
         about.addView(text("Télécommande pour Quansheng UV-K1 / UV-K5 V3 sous firmware F4HWN Fusion, par câble USB ou avec le boîtier K1 Relais.",
             13f, p.muted).apply { setLineSpacing(0f, 1.2f) }, lp(top = 4))
         about.addView(text("CRÉDITS", 12f, p.muted, Typeface.DEFAULT_BOLD).apply { letterSpacing = 0.08f }, lp(top = 14))
@@ -450,14 +450,14 @@ class PreferencesActivity : Activity() {
                 addView(QrView(this@PreferencesActivity, qr))
             }, LinearLayout.LayoutParams(dp(250), dp(250)))
             addView(text("Vos coéquipiers scannent ce code avec l'appareil photo, ou ouvrent le lien reçu : " +
-                "K1 Remote leur propose alors de rejoindre « ${prefs.mapTeam} ».", 13f, p.muted), lp(top = 10))
+                "UV-Kx OPS leur propose alors de rejoindre « ${prefs.mapTeam} ».", 13f, p.muted), lp(top = 10))
         }
         Sheet.show(this, "Équipe « ${prefs.mapTeam} »", null, box, listOf(
             Sheet.Btn("Fermer"),
             Sheet.Btn("Envoyer le lien", Sheet.Style.PRIMARY) {
                 startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND)
                     .setType("text/plain")
-                    .putExtra(android.content.Intent.EXTRA_TEXT, "Rejoins l'équipe « ${prefs.mapTeam} » sur la carte K1 Remote : $link"),
+                    .putExtra(android.content.Intent.EXTRA_TEXT, "Rejoins l'équipe « ${prefs.mapTeam} » sur la carte UV-Kx OPS : $link"),
                     "Envoyer le lien d'équipe"))
             }))
     }

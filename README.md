@@ -1,5 +1,12 @@
 # K1 Remote Essai · version 0.76-essai (firmware Fusion PTT r32)
 
+## 0.80-essai — UV-Kx OPS : nouveau nom, écran d'ouverture, touches du spectre, secours montagne
+
+- **Nom** : K1 Remote devient **UV-Kx OPS** (titre en pochoir Black Ops One, licence OFL). Le format des sauvegardes ne change pas.
+- **Écran d'ouverture** (idée de D'jé) : une photo de D'jé tirée au hasard (montagne ou airsoft, signatures retirées), le nom en pochoir, « By D'Jé, Claude & ChatGPT · 2026 », 2 s pendant que l'appli se connecte et lit la radio en dessous. Posé sur la fenêtre, il ne bloque rien ; un toucher le ferme. Recadrage par photo et par orientation (point d'intérêt vérifié) ; la photo en hauteur n'est jamais tirée en paysage.
+- **Touches du spectre** (idée de D'jé) : spectre ouvert, appui long sur Spectre → fonctions du spectre sur les touches (relevées dans spectrum.c). Affichage seul ; retour automatique à la fermeture du spectre.
+- **Bibliothèque** : « Secours montagne · Canal E » (161,300 MHz, CTCSS 123 Hz à l'émission, HIGH, émission non bloquée, avertissement détresse). Sources : CAF Annecy (fiche canal E), Région Vallée d'Aoste (Interreg), Rega et OFCOM (Suisse), consultées le 23/11/2026.
+
 ## 0.79-essai — sortie du spectre à l'allumage
 
 - Bug (23/11) : radio allumée en spectre, l'appli ne pouvait pas en sortir. La vérification du firmware attend la fermeture du spectre (jusqu'à 10 min) et tournait sur le fil qui envoie les touches : EXIT et les autres appuis restaient en file, puis partaient tous d'un coup une fois le spectre fermé sur la radio. Elle tourne désormais sur son propre fil (une seule à la fois).

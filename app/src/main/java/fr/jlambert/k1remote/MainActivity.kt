@@ -703,7 +703,11 @@ class MainActivity : Activity() {
         lcd.setOnClickListener { v -> onLcdTap(lcdTapY < v.height / 2f) }
         lcd.contentDescription = "Écran de la radio. Toucher en haut pour la ligne A, en bas pour la ligne B."
         shortcuts = Shortcut.load(prefs)
-        if (!showPendingCrash()) buildUi()
+        if (!showPendingCrash()) {
+            buildUi()
+            // 0.80 : écran d'ouverture, au lancement seulement (pas après une rotation ni au retour)
+            if (savedInstanceState == null && SplashOverlay.active) SplashOverlay.show(this) { splashStatus() }
+        }
 
         val filter = IntentFilter().apply {
             addAction(ACTION_PERMISSION)
@@ -721,7 +725,7 @@ class MainActivity : Activity() {
         Thread.setDefaultUncaughtExceptionHandler { t, e ->
             runCatching {
                 getSharedPreferences("k1remote", Context.MODE_PRIVATE).edit()
-                    .putString("lastCrash", "K1 Remote 0.14 · Android " + Build.VERSION.RELEASE + " · " + Build.MODEL + "\n\n" +
+                    .putString("lastCrash", "UV-Kx OPS $appVersion · Android " + Build.VERSION.RELEASE + " · " + Build.MODEL + "\n\n" +
                         android.util.Log.getStackTraceString(e))
                     .commit()
             }
@@ -748,7 +752,7 @@ class MainActivity : Activity() {
             "Touchez « Copier » puis collez ce rapport dans la conversation avec Claude.", box,
             listOf(Sheet.Btn("Fermer"), Sheet.Btn("Copier", Sheet.Style.PRIMARY) {
                 val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                cm.setPrimaryClip(android.content.ClipData.newPlainText("Rapport K1 Remote", trace))
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("Rapport UV-Kx OPS", trace))
                 toastSafe("Rapport copié")
             }), onDismiss = { buildUi() })
         return true
@@ -1000,7 +1004,7 @@ class MainActivity : Activity() {
             // on vérifiera de nouveau son firmware à la première image.
             direct = false
             radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; scanTracker.reset(); linkGen++
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; scanTracker.reset(); linkGen++; spectrumKeys = false
             lastProbeAt = 0L
             watcherFor = null
             lcd.placeholder = "Allumez la radio et branchez-la sur le boîtier"
@@ -1161,7 +1165,7 @@ class MainActivity : Activity() {
     }
 
     private fun shareJournal(callsOnly: Boolean) {
-        val head = "K1 Remote " + appVersion + " · " + (radioInfo ?: "radio ?")
+        val head = "UV-Kx OPS " + appVersion + " · " + (radioInfo ?: "radio ?")
         // Android refuse (et ferme l'appli) au-delà d'environ 500 Ko passés à une autre appli :
         // on ne partage que le plus récent, bien en dessous de cette limite (0.60).
         fun cap(t: String, max: Int) = if (t.length <= max) t
@@ -1172,7 +1176,7 @@ class MainActivity : Activity() {
         runCatching {
             startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, if (callsOnly) "Journal des appels K1 Remote" else "Rapport K1 Remote")
+                putExtra(Intent.EXTRA_SUBJECT, if (callsOnly) "Journal des appels UV-Kx OPS" else "Rapport UV-Kx OPS")
                 putExtra(Intent.EXTRA_TEXT, body)
             }, if (callsOnly) "Envoyer le journal des appels" else "Envoyer le rapport"))
         }.onFailure { toast("Partage impossible : " + (it.message ?: it.javaClass.simpleName)) }
@@ -1199,6 +1203,7 @@ class MainActivity : Activity() {
             if (raw == null) rstate.onTimeout() else rstate.onResult(RadioStatus.decode(raw), t)
         }
         if (raw != null) (RadioStatus.decode(raw) as? RadioStatus.Result.Invalid)?.let { Journal.add("État 0x09 ignoré : ${it.reason}") }
+        if (spectrumKeys) ui.post { dropSpectrumKeysIfClosed() }
         // 0.77 : suivi du scan (voir ScanTracker)
         // Revue 0.77 (P1) : seulement sur une réponse 0x09 fraîche et valide, jamais sur l'état gardé
         // après une lecture manquée (un ancien « repos » arrêtait fictivement le scan)
@@ -1345,6 +1350,34 @@ class MainActivity : Activity() {
     @Volatile private var radioScanList: Int? = null
     /** 0.77 : scan lancé ou arrêté par l'appli, recalé sur l'état 0x09 (ScanTracker). */
     private val scanTracker = ScanTracker()
+
+    /** 0.80 : étiquettes du spectre sur les touches de l'appli (choix de l'utilisateur, spectre ouvert seulement). */
+    private var spectrumKeys = false
+
+    private fun toggleSpectrumKeys() {
+        if (!spectrumKeys && !spectrumOpen()) {
+            toast("Touches du spectre : ouvrez d'abord le spectre (raccourci Spectre)"); return
+        }
+        spectrumKeys = !spectrumKeys
+        toast(if (spectrumKeys) "Touches du spectre affichées (vue spectre)" else "Touches normales")
+        if (editor == null) buildUi()
+    }
+
+    /** Spectre refermé (sur la radio ou par l'appli) : retour aux étiquettes normales. */
+    private fun dropSpectrumKeysIfClosed() {
+        if (spectrumKeys && !spectrumOpen()) {
+            spectrumKeys = false
+            if (editor == null) buildUi()
+        }
+    }
+
+    /** Ligne d'état de l'écran d'ouverture. */
+    private fun splashStatus(): String = when {
+        startupReading -> "Lecture de la radio…"
+        direct -> "Radio prête" + (radioInfo?.let { " · $it" } ?: "")
+        cdc != null -> "Connexion à la radio…"
+        else -> "Branchez la radio ou allumez le boîtier"
+    }
 
     /** Écran de démarrage : spinner sur la vitre, touches et PTT de l'appli bloqués (3 s au plus). */
     /**
@@ -1736,7 +1769,7 @@ class MainActivity : Activity() {
         synchronized(rstate) { rstate.reset() }
         lastStatusAt = 0L
         radioInfo = null; fwRevision = 0; fwProtocol = 0; teamSettings = null; longFrameChecked = false
-        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; scanTracker.reset(); linkGen++
+        lightsReadAt = 0L; setStartupReading(false); radioScanList = null; scanRequested = null; scanTracker.reset(); linkGen++; spectrumKeys = false
         lastProbeAt = 0L
         parser.reset()
         lastFlags = 0
@@ -2142,8 +2175,9 @@ class MainActivity : Activity() {
             isBaselineAligned = true
         }
         val title = CapsLabel(this).apply {
-            text = if (camo != null) "K1 REMOTE" else "K1 Remote"
-            setFont(if (camo != null) Fonts.stencil(this@MainActivity) else Typeface.DEFAULT_BOLD, if (L) 17f else 20f)
+            text = if (camo != null) "UV-KX OPS" else "UV-Kx OPS"
+            // 0.80 : le nom en pochoir, comme sur l'écran d'ouverture
+            setFont(Fonts.stencil(this@MainActivity), if (L) 17f else 20f)
             if (camo != null) letterSpacing = 0.02f
             color = p.text
             isLongClickable = true
@@ -2657,6 +2691,9 @@ class MainActivity : Activity() {
         }
         if (s.isPower && !helpMode && !editMode) attachPowerPicker(box)
         else if (s.isScan && !helpMode && !editMode) attachScanPicker(box)
+        else if (s.type == "action" && s.action == "spectrum" && !helpMode && !editMode) slowLongPress(box) {
+            longPressFeedback(it); toggleSpectrumKeys()
+        }
         else slowLongPress(box) {
             longPressFeedback(it)
             if (helpMode) openSheet("sc:" + s.id) else openSheet("act:" + s.id)
@@ -3330,9 +3367,11 @@ class MainActivity : Activity() {
             k.id == "RIGHT" && !prefs.k1Arrows -> "▼"
             else -> k.main
         }
-        val sub = if (prefs.functionLabels) k.funcSub else k.radioSub
+        // 0.80 : touches du spectre affichées à la demande (appui long sur Spectre, spectre ouvert)
+        val spec = if (spectrumKeys) SpectrumKeys.LABELS[k.id] else null
+        val sub = spec ?: if (prefs.functionLabels) k.funcSub else k.radioSub
         if (sub.isEmpty()) return main
-        val accent = k.id == "F"
+        val accent = k.id == "F" || spec != null
         return SpannableStringBuilder().apply {
             append(main, StyleSpan(Typeface.BOLD), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             append("  ")
@@ -3715,19 +3754,19 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER_HORIZONTAL; topMargin = dp(10)
             })
         }
-        card.addView(text("Vos coéquipiers scannent ce code avec l'appareil photo de leur téléphone : K1 Remote s'ouvre avec le profil, " +
+        card.addView(text("Vos coéquipiers scannent ce code avec l'appareil photo de leur téléphone : UV-Kx OPS s'ouvre avec le profil, " +
             "ils touchent « Enregistrer ». Sinon, envoyez-leur le lien, qu'ils copient puis collent dans l'éditeur (« Coller un profil reçu »).",
             12f, p.muted).apply { setLineSpacing(0f, 1.15f) }, lp(-1, -2, top = 10))
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         row.addView(actionButton("Envoyer le lien", 1) {
             startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, "Profil radio « " + s.name + " » pour K1 Remote (" + t.summary() + ") :\n" + link)
+                putExtra(Intent.EXTRA_TEXT, "Profil radio « " + s.name + " » pour UV-Kx OPS (" + t.summary() + ") :\n" + link)
             }, "Envoyer le profil"))
         }, LinearLayout.LayoutParams(0, dp(48), 1f))
         row.addView(actionButton("Copier", 0) {
             val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            cm.setPrimaryClip(android.content.ClipData.newPlainText("Profil K1 Remote", link))
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("Profil UV-Kx OPS", link))
             toast("Lien copié")
         }, LinearLayout.LayoutParams(-2, dp(48)).apply { marginStart = dp(8) })
         card.addView(row, lp(-1, -2, top = 12))

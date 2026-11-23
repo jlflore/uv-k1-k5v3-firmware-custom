@@ -28,6 +28,8 @@ class ScreensTest {
     private val out = File("build/screenshots").apply { mkdirs() }
     private val shots = mutableListOf<Pair<String, String>>()
 
+    init { SplashOverlay.active = false }      // sinon l'écran d'ouverture recouvrirait toutes les captures
+
     private fun prefs(theme: ThemeId, night: Boolean, uiMode: Int) {
         val sp = RuntimeEnvironment.getApplication().getSharedPreferences("k1remote", Context.MODE_PRIVATE)
         sp.edit().clear()
@@ -39,9 +41,16 @@ class ScreensTest {
             .commit()
     }
 
-    private fun capture(name: String, label: String, landscape: Boolean) {
+    /** [splash] : photo de l'écran d'ouverture à capturer ; null = pas d'écran d'ouverture. [spectrumKeys] : touches du spectre. */
+    private fun capture(name: String, label: String, landscape: Boolean, splash: Int? = null, spectrumKeys: Boolean = false) {
         RuntimeEnvironment.setQualifiers(if (landscape) "w780dp-h360dp-land-xxhdpi" else "w360dp-h780dp-port-xxhdpi")
+        SplashOverlay.active = splash != null
+        SplashOverlay.forcedShot = splash
         val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        if (spectrumKeys) {
+            MainActivity::class.java.getDeclaredField("spectrumKeys").apply { isAccessible = true }.setBoolean(controller.get(), true)
+            MainActivity::class.java.getDeclaredMethod("buildUi").apply { isAccessible = true }.invoke(controller.get())
+        }
         shadowOf(Looper.getMainLooper()).idle()
         val root: View = controller.get().window.decorView
         val dm = controller.get().resources.displayMetrics
@@ -54,6 +63,7 @@ class ScreensTest {
         File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         shots += name to label
         controller.pause().stop().destroy()
+        SplashOverlay.active = false; SplashOverlay.forcedShot = null
     }
 
     /** Liste des canaux à partir d'une mémoire d'exemple (cas : écoute seule + listes). */
@@ -250,6 +260,12 @@ class ScreensTest {
 
     @Test
     fun allScreens() {
+        // 0.80 : écran d'ouverture (portrait et paysage) et touches du spectre
+        prefs(ThemeId.CIEL, false, 0)
+        capture("ouverture_portrait", "Écran d'ouverture · portrait (glacier)", false, splash = 0)
+        capture("ouverture_paysage", "Écran d'ouverture · paysage (airsoft)", true, splash = 5)
+        capture("ouverture_paysage_ski", "Écran d'ouverture · paysage (ski)", true, splash = 3)
+        capture("spectre_touches_portrait", "Touches du spectre · portrait", false, spectrumKeys = true)
         val themes = ThemeId.values().filter { it != ThemeId.NUIT }
         for (t in themes) for (ui in 0..1) for (land in listOf(false, true)) {
             prefs(t, false, ui)
