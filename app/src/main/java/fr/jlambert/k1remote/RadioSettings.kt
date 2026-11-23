@@ -58,6 +58,24 @@ object RadioSettings {
         return if (parts.size <= 1) parts.joinToString() else parts.dropLast(1).joinToString(", ") + " et " + parts.last()
     }
 
+    /**
+     * 0.73 : un envoi peut-il changer un réglage vérifié par le témoin d'équipe ? Seuls ces
+     * envois effacent la lecture 0x0A en cours ; les autres (éclairage, furtif profond, DTMF…)
+     * la laissent valable, d'où un témoin qui ne clignote plus à chaque réglage sans rapport.
+     * Prudence : toute touche simulée peut tout changer (menu au clavier) → oui.
+     */
+    fun mayChangeTeamSettings(steps: List<KeyStep>): Boolean = steps.any { st ->
+        if (st.keyId == KeyStep.WAIT) return@any false
+        val c = st.cmd ?: return@any true                        // appui de touche
+        if (c.size < 6) return@any true
+        val op = c[4].toInt() and 0xFF
+        when (op) {
+            0x01 -> (c[5].toInt() and 0xFF) in WHITELIST           // réglage de menu
+            0x07, 0x08 -> false                                    // furtif profond, envoi DTMF
+            else -> true                                           // fréquence (02), code (03), autre
+        }
+    }
+
     fun request(positions: List<Int>): ByteArray {
         require(positions.size in 1..MAX_PER_REQUEST)
         return K5ViewerProtocol.command(OP, positions.size, *positions.toIntArray())

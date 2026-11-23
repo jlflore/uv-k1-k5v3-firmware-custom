@@ -1,4 +1,7 @@
-# K1 Remote Essai · version 0.72-essai (firmware Fusion PTT r31)
+# K1 Remote Essai · version 0.73-essai (firmware Fusion PTT r31)
+
+## 0.73-essai — retours des essais r31 (23/11)
+- Le bouton d'équipe ne clignote plus à chaque réglage sans rapport avec l'équipe (écran éteint, furtif profond, DTMF) : seuls les envois qui peuvent changer un réglage d'équipe (un des 10 menus vérifiés, fréquence, code d'appel, ou un appui de touche simulé) effacent la lecture. Dans tous les cas, les réglages sont relus dès la fin de l'envoi. RadioSettingsTest 15.
 
 ## 0.72-essai — avec le firmware Fusion PTT r31 (éclairage lisible)
 - Le bouton « Écran éteint » suit la radio, plus seulement l'appli : avec r31, l'appli lit dans la radio les deux réglages d'éclairage (36 BLTime, 39 BLTxRx). « Éteint » = les deux à 0. Corrige le bouton allumé alors que l'écran de la radio l'était (réglages changés hors de l'appli : UV Studio, menu au clavier). En furtif, l'état est ambigu (mêmes valeurs) : l'appli garde alors sa mémoire.
@@ -16,7 +19,7 @@
 - Une vérification sans réponse ou incohérente efface la lecture précédente : le témoin s'éteint (jamais d'ancienne lecture pour masquer un échec), sans clignoter pendant les vérifications réussies.
 - Une lecture des réglages ne vaut que pour la ligne qui l'a validée : changer de canal ou de ligne l'abandonne, et elle n'est jamais réutilisée au retour (relue alors).
 - « Cette radio a déjà les réglages de l'équipe » : avec r30, le message énumère exactement ce qui vient d'être vérifié ; seul le canal en mémoire n'est pas relu. Sans code d'appel dans les préférences, le code et ses options ne sont pas contrôlés, et le message le dit. Si un réglage diffère (squelch changé à la main…), la configuration part directement et l'appli dit lesquels différaient. Avec r29 : comportement de la 0.69.
-- Contrat de la commande : K1R-contrat-lecture-reglages-0x0A.md v1.3 (dépôt firmware). Contrôles : RadioSettingsTest 14 (trames de référence, trames corrompues, inconnu jamais conforme, clé de stabilité, et réglages attendus = réglages envoyés par la configuration d'équipe).
+- Contrat de la commande : K1R-contrat-lecture-reglages-0x0A.md v1.3 (dépôt firmware). Contrôles : RadioSettingsTest 15 (trames de référence, trames corrompues, inconnu jamais conforme, clé de stabilité, et réglages attendus = réglages envoyés par la configuration d'équipe).
 
 ## 0.69-essai
 - Fenêtres modernes aux couleurs du thème (ChoiceSheet) à la place des listes système d'Android : « Canaux de la radio » (Lire la radio · Dernière sauvegarde avec nom, date et nombre de canaux · Annuler), Bibliothèque (une tuile par liste, avec nombre de canaux et source), Sauvegardes (tuiles avec nom ou date, nombre de canaux, pastilles OUVERTE / RÉCENTE) et ses actions (Ouvrir · Nommer · Supprimer, avec confirmation).

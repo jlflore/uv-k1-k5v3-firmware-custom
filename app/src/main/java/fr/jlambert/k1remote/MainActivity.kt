@@ -1667,8 +1667,11 @@ class MainActivity : Activity() {
             else it.keyId + (if (it.long) "(long)" else "") }.take(400))
         if (longSequenceRunning) { toast("Patientez : réglage de la radio en cours"); return false }
         if (startupReading) { toast("Patientez : lecture de l'état de la radio"); return false }
-        // Réglages en cours d'envoi : la lecture 0x0A précédente ne vaut plus (relue au prochain état)
-        teamSettings = null; teamSettingsAskedAt = 0L
+        // Réglages en cours d'envoi : la lecture 0x0A précédente ne vaut plus s'ils peuvent toucher
+        // un réglage d'équipe (0.73 : les autres ne l'effacent plus, le témoin ne clignote plus).
+        // Dans tous les cas, relecture dès la fin de l'envoi.
+        if (RadioSettings.mayChangeTeamSettings(input)) teamSettings = null
+        teamSettingsAskedAt = 0L
         // Réglage long et bip actif : on coupe le bip d'abord (quelques bips au lieu de dizaines),
         // puis on le rétablit à la fin. Inutile en furtif : le bip y est déjà coupé.
         // Clavier de la radio verrouillé (cadenas) : le verrou protège aussi l'appli des touchers
@@ -1759,7 +1762,9 @@ class MainActivity : Activity() {
                 }
             } finally {
                 if (long) longSequenceRunning = false
-                // Réglage fini : l'état de la radio est relu tout de suite (confirmation, § 6.5)
+                // Réglage fini : l'état de la radio est relu tout de suite (confirmation, § 6.5),
+                // et les réglages d'équipe aussi (0.73)
+                teamSettingsAskedAt = 0L
                 statusKick = true; watchKick = true
                 // Réussite annoncée seulement si tout est passé (avant la 0.58, « terminé »
                 // s'affichait même après une interruption)

@@ -150,6 +150,19 @@ class RadioSettingsTest {
         assertTrue(!RadioSettings.applies(r.copy(key = null), snap, now = 2_000))                               // lecture non validée
     }
 
+    /** 0.73 : seuls les envois qui peuvent toucher un réglage d'équipe effacent la lecture 0x0A. */
+    @Test fun envois_qui_effacent_la_lecture() {
+        fun set(menu: Int, v: Int) = KeyStep("CMD", false, K5ViewerProtocol.setMenu(menu, v))
+        assertTrue(!RadioSettings.mayChangeTeamSettings(listOf(set(36, 0), set(39, 0))))        // écran éteint
+        assertTrue(!RadioSettings.mayChangeTeamSettings(listOf(KeyStep("CMD", false, K5ViewerProtocol.command(0x07, 1)))))  // furtif profond
+        assertTrue(!RadioSettings.mayChangeTeamSettings(listOf(KeyStep(KeyStep.WAIT, false))))
+        assertTrue(RadioSettings.mayChangeTeamSettings(listOf(set(36, 0), set(40, 0))))          // + bip
+        assertTrue(RadioSettings.mayChangeTeamSettings(listOf(set(54, 4))))                      // squelch
+        assertTrue(RadioSettings.mayChangeTeamSettings(listOf(KeyStep("F", false))))             // touche : tout est possible
+        assertTrue(RadioSettings.mayChangeTeamSettings(listOf(KeyStep("CMD", false, K5ViewerProtocol.setFreq(446_006_250)))))
+        for (m in RadioSettings.WHITELIST) assertTrue("menu $m", RadioSettings.mayChangeTeamSettings(listOf(set(m, 1))))
+    }
+
     @Test fun resume_n_annonce_que_ce_qui_est_verifie() {
         val team = TeamProfile(freq = "446.00625")
         assertEquals("pas, squelch, bip, veille, SetNFM, D Live et code d'appel (avec ses options)",
