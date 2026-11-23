@@ -1290,13 +1290,20 @@ class MainActivity : Activity() {
         val teams = runCatching { shortcuts.toList() }.getOrDefault(emptyList()).mapNotNull { it.team }
         if (teams.none { teamLineMatches(it) }) return
         teamSettingsAskedAt = now
-        val before = synchronized(rstate) { rstate.snapshot } ?: return
+        // Revue 0.70 : dès qu'une nouvelle vérification commence, l'ancienne lecture ne compte
+        // plus. Un échec (pas de réponse, réponse incohérente) laisse donc le témoin éteint.
+        teamSettings = null
+        fun failed(why: String) {
+            if (why != lastSettingsDiff) { lastSettingsDiff = why; Journal.add(why) }
+            ui.post { refreshIfActiveChanged() }
+        }
+        val before = synchronized(rstate) { rstate.snapshot } ?: return failed("Réglages 0x0A : état de la radio inconnu")
         val parts = RadioSettings.WHITELIST.chunked(5).map { pos ->
-            val raw = request(c, RadioSettings.request(pos), 800) ?: return
+            val raw = request(c, RadioSettings.request(pos), 800) ?: return failed("Réglages 0x0A : pas de réponse de la radio")
             RadioSettings.decode(raw, pos)
         }
         if (cdc !== c) return
-        val rawAfter = request(c, RadioStatus.REQUEST, 800) ?: return
+        val rawAfter = request(c, RadioStatus.REQUEST, 800) ?: return failed("Réglages 0x0A : pas de réponse de la radio")
         val t = System.currentTimeMillis()
         synchronized(rstate) { rstate.onResult(RadioStatus.decode(rawAfter), t) }
         val after = (RadioStatus.decode(rawAfter) as? RadioStatus.Result.Ok)?.snapshot
