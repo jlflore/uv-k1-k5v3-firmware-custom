@@ -1,5 +1,12 @@
 # K1 Remote Essai · version 0.76-essai (firmware Fusion PTT r32)
 
+## 0.81-essai — bibliothèque : Genève, Zermatt, réseaux de montagne
+
+- **Aviation · Genève** (écoute seule) : ATIS 135,575, tour 118,700, sol 121,675, approche 120,300, départ 119,525, arrivée 136,250, détresse 121,500. Bases publiques (metarcentral, airport-lookup), relevé du 23/11/2026 : à vérifier sur l'AIP suisse.
+- **Aviation · Zermatt et Alpes suisses** (écoute seule) : héliport de Zermatt 130,005 (Air Zermatt), fréquence de montagne suisse 130,355 (OFAC, juin 2026).
+- **Montagne · réseaux bénévoles PMR446** : RRM 8-16 (PMR 8, CTCSS 114,8 Hz) et Canal 7-7 (PMR 7, CTCSS 85,4 Hz), avec avertissement « pas un secours officiel ».
+- Canal E renommé « Alpes FR-IT-CH » (Haute-Savoie, Valais, Vallée d'Aoste, Suisse). Rien d'officiel trouvé pour les Pyrénées ni pour le reste de l'Italie.
+
 ## 0.80-essai — UV-Kx OPS : nouveau nom, écran d'ouverture, touches du spectre, secours montagne
 
 - **Nom** : K1 Remote devient **UV-Kx OPS** (titre en pochoir Black Ops One, licence OFL). Le format des sauvegardes ne change pas.
