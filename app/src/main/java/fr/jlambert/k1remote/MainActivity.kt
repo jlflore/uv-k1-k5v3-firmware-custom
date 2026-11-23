@@ -2907,6 +2907,7 @@ class MainActivity : Activity() {
             return
         }
         if (!retry && scanSending()) { toast("Patientez : commande de scan en cours d'envoi"); return }
+        if (!retry && refuseIfStale()) return
         scanSendingAt = System.currentTimeMillis()
         if (sendSteps(stop + listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(RadioSettings.SCAN_LIST, v))) +
                 ScanControl.startSteps(fromFrequency), onDone = {
@@ -3085,10 +3086,7 @@ class MainActivity : Activity() {
                         scanTracker.onStopSent(System.currentTimeMillis()); scanSendingAt = 0L; refreshChips()
                     })) toast("Scan arrêté") else scanSendingAt = 0L
             }
-            ScanControl.Decision.START -> if (scanStateStale()) {
-                    statusKick = true          // relecture tout de suite
-                    toast("État de la radio pas encore relu : réessayez dans un instant")
-                } else startScan(false)
+            ScanControl.Decision.START -> startScan(false)
             ScanControl.Decision.ASK_CHANNEL_MODE -> showScanModeChoice()
             ScanControl.Decision.LINE_UNKNOWN -> toast("Revenez à l'écran principal de la radio (ligne active non reconnue)")
         }
@@ -3114,10 +3112,19 @@ class MainActivity : Activity() {
     /** Dernier état 0x09 frais et valide (revue 0.77, P2) : sans lui, l'appli ne sait pas si un scan tourne. */
     @Volatile private var freshStateAt = 0L
     private fun scanStateStale() = synchronized(rstate) { rstate.usesFirmware } && System.currentTimeMillis() - freshStateAt > 8_000
+
+    /** Revue 0.77 : tout envoi de ✱ long passe par ici (appui court, fenêtre du mode fréquence, choix de liste). */
+    private fun refuseIfStale(): Boolean {
+        if (!scanStateStale()) return false
+        statusKick = true          // relecture tout de suite
+        toast("État de la radio pas encore relu : réessayez dans un instant")
+        return true
+    }
     private fun scanSending() = System.currentTimeMillis() - scanSendingAt < 6_000
 
     private fun startScan(fromFrequency: Boolean, before: List<KeyStep> = emptyList(), what: String? = null) {
         if (scanSending()) { toast("Patientez : commande de scan en cours d'envoi"); return }
+        if (refuseIfStale()) return
         scanSendingAt = System.currentTimeMillis()
         if (sendSteps(before + ScanControl.startSteps(fromFrequency), onDone = {
                 scanTracker.onStartSent(System.currentTimeMillis()); scanSendingAt = 0L; refreshChips()
