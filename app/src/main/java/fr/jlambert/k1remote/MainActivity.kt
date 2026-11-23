@@ -1175,7 +1175,10 @@ class MainActivity : Activity() {
         }
         if (raw != null) (RadioStatus.decode(raw) as? RadioStatus.Result.Invalid)?.let { Journal.add("État 0x09 ignoré : ${it.reason}") }
         // 0.77 : suivi du scan (voir ScanTracker)
-        synchronized(rstate) { if (rstate.usesFirmware) rstate.snapshot else null }?.let { st ->
+        // Revue 0.77 (P1) : seulement sur une réponse 0x09 fraîche et valide, jamais sur l'état gardé
+        // après une lecture manquée (un ancien « repos » arrêtait fictivement le scan)
+        (raw?.let { RadioStatus.decode(it) } as? RadioStatus.Result.Ok)?.snapshot?.let { st ->
+            freshStateAt = t
             val was = scanTracker.running
             val fn = st.function
             scanTracker.onState(fn == RadioStatus.Function.SCAN_OR_SPECTRUM, st.spectrumActive == true || spectrumOpen(),
@@ -1740,7 +1743,8 @@ class MainActivity : Activity() {
     @Volatile private var longSequenceRunning = false
 
     /** [onDone] : appelé (fil principal) seulement si toute la séquence est passée sans erreur. */
-    private fun sendSteps(input: List<KeyStep>, restoreBeep: Boolean = true, onDone: (() -> Unit)? = null): Boolean {
+    private fun sendSteps(input: List<KeyStep>, restoreBeep: Boolean = true, onDone: (() -> Unit)? = null,
+                          onRefused: ((op: Int?, status: Int?) -> Boolean)? = null): Boolean {
         val c = cdc ?: run { toast("Radio non connectée"); return false }
         Journal.add("Appli : envoi " + input.filter { it.keyId != KeyStep.WAIT }.joinToString(" ") {
             if (it.cmd != null) "[cmd " + it.cmd.joinToString("") { b -> "%02X".format(b) }.drop(8).dropLast(2) + "]"
@@ -1832,7 +1836,9 @@ class MainActivity : Activity() {
                                 // Refus prouvé par l'accusé (statut non nul) : la commande attendue est refusée
                                 r?.getOrNull(1)?.toInt()?.let { st -> if (st != 0) synchronized(rstate) { rstate.onAck(st) } }
                                 Journal.add("Appli : réglage interrompu — $why")
-                                ui.post { toast("Réglage interrompu : $why") }
+                                // Revue 0.77 : [onRefused] peut reprendre la main (true = géré, pas de message)
+                                val status = r?.getOrNull(1)?.toInt()
+                                ui.post { if (onRefused?.invoke(op, status) != true) toast("Réglage interrompu : $why") }
                                 break@run
                             }
                             Thread.sleep(40)
@@ -2889,9 +2895,10 @@ class MainActivity : Activity() {
      * 0.77 : choisir une liste lance le scan dessus (choix de D'jé). Scan en cours : EXIT d'abord
      * (le firmware r32 refuse de changer de liste pendant un scan), puis la liste, puis ✱ long.
      */
-    private fun applyScanList(v: Int, label: String) {
+    private fun applyScanList(v: Int, label: String, retry: Boolean = false) {
         if (spectrumOpen()) { toast(SPECTRUM_REFUSAL); return }
-        val scanning = scanTracker.running
+        // Revue 0.77 (P2) : une 2e tentative (après un refus « scan en cours ») renvoie toujours EXIT
+        val scanning = scanTracker.running || retry
         val fromFrequency = activeMode() == 'F'
         val stop = if (scanning) ScanControl.STOP_STEPS + KeyStep(KeyStep.WAIT, false) else emptyList()
         if (v == radioScanList) {
@@ -2899,10 +2906,11 @@ class MainActivity : Activity() {
             startScan(fromFrequency, what = "Scan lancé : $label")
             return
         }
-        if (scanning) scanTracker.onStopSent(System.currentTimeMillis())
+        if (!retry && scanSending()) { toast("Patientez : commande de scan en cours d'envoi"); return }
+        scanSendingAt = System.currentTimeMillis()
         if (sendSteps(stop + listOf(KeyStep("CMD", false, K5ViewerProtocol.setMenu(RadioSettings.SCAN_LIST, v))) +
                 ScanControl.startSteps(fromFrequency), onDone = {
-                scanTracker.onStartSent(System.currentTimeMillis())
+                scanTracker.onStartSent(System.currentTimeMillis()); scanSendingAt = 0L
                 refreshChips()
                 // Relue dans la radio pour confirmer (r32) ; sinon, on affiche ce qui a été accepté
                 if (fwProtocol < RadioSettings.PROTOCOL_SCANLIST) radioScanList = v
@@ -2910,7 +2918,14 @@ class MainActivity : Activity() {
                 lightsReadAt = 0L
                 toast("Scan lancé : $label")
                 if (editor == null) buildUi()
-            })) Journal.add("Appli : liste de scan → $label")
+            }, onRefused = { op, status ->
+                scanSendingAt = 0L
+                // EXIT n'a pas (encore) arrêté le scan : une seule reprise, EXIT compris
+                if (op == 0x01 && status == 5 && !retry) {
+                    Journal.add("Liste de scan refusée (scan en cours) : nouvel essai après EXIT")
+                    applyScanList(v, label, retry = true); true
+                } else false
+            })) Journal.add("Appli : liste de scan → $label") else scanSendingAt = 0L
     }
 
     private fun applyPower(target: Int) {
@@ -3062,11 +3077,18 @@ class MainActivity : Activity() {
      */
     private fun runScan() {
         if (cdc == null) { toast("Radio non connectée"); return }
+        if (scanSending()) { toast("Patientez : commande de scan en cours d'envoi"); return }
         when (ScanControl.onShortPress(scanTracker.running, activeMode())) {
-            ScanControl.Decision.STOP -> if (sendSteps(ScanControl.STOP_STEPS)) {
-                scanTracker.onStopSent(System.currentTimeMillis()); toast("Scan arrêté"); refreshChips()
+            ScanControl.Decision.STOP -> {
+                scanSendingAt = System.currentTimeMillis()
+                if (sendSteps(ScanControl.STOP_STEPS, onDone = {
+                        scanTracker.onStopSent(System.currentTimeMillis()); scanSendingAt = 0L; refreshChips()
+                    })) toast("Scan arrêté") else scanSendingAt = 0L
             }
-            ScanControl.Decision.START -> startScan(false)
+            ScanControl.Decision.START -> if (scanStateStale()) {
+                    statusKick = true          // relecture tout de suite
+                    toast("État de la radio pas encore relu : réessayez dans un instant")
+                } else startScan(false)
             ScanControl.Decision.ASK_CHANNEL_MODE -> showScanModeChoice()
             ScanControl.Decision.LINE_UNKNOWN -> toast("Revenez à l'écran principal de la radio (ligne active non reconnue)")
         }
@@ -3083,11 +3105,24 @@ class MainActivity : Activity() {
                 "Annuler")
     }
 
+    /**
+     * Revue 0.77 (P2) : sendSteps ne fait que mettre en file ; le suivi du scan ne change qu'une fois
+     * les touches passées (onDone). D'ici là, un nouvel appui sur Scan attend (6 s au plus, au cas où
+     * l'envoi échoue et onDone ne vient jamais).
+     */
+    @Volatile private var scanSendingAt = 0L
+    /** Dernier état 0x09 frais et valide (revue 0.77, P2) : sans lui, l'appli ne sait pas si un scan tourne. */
+    @Volatile private var freshStateAt = 0L
+    private fun scanStateStale() = synchronized(rstate) { rstate.usesFirmware } && System.currentTimeMillis() - freshStateAt > 8_000
+    private fun scanSending() = System.currentTimeMillis() - scanSendingAt < 6_000
+
     private fun startScan(fromFrequency: Boolean, before: List<KeyStep> = emptyList(), what: String? = null) {
-        if (sendSteps(before + ScanControl.startSteps(fromFrequency))) {
-            scanTracker.onStartSent(System.currentTimeMillis())
-            toast(what ?: "Scan lancé"); refreshChips()
-        }
+        if (scanSending()) { toast("Patientez : commande de scan en cours d'envoi"); return }
+        scanSendingAt = System.currentTimeMillis()
+        if (sendSteps(before + ScanControl.startSteps(fromFrequency), onDone = {
+                scanTracker.onStartSent(System.currentTimeMillis()); scanSendingAt = 0L; refreshChips()
+            })) toast(what ?: "Scan lancé")
+        else scanSendingAt = 0L
     }
 
     private val SPECTRUM_REFUSAL = "Spectre ouvert : la radio n'accepte pas ce réglage. Quittez le spectre (EXIT), puis réessayez."

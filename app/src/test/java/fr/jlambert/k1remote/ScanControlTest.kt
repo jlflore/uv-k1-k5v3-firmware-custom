@@ -61,4 +61,14 @@ class ScanControlTest {
         t.onState(true, false, false, 23_500); assertTrue("état frais : la radio scanne encore", t.running)
         t.reset(); assertFalse(t.running)
     }
+
+    @Test fun lectures_0x09_manquees_ne_changent_rien() {
+        // Revue 0.77 (P1) : l'appli n'appelle onState que sur une réponse fraîche ; sans réponse,
+        // le scan lancé reste « en cours » (l'appui suivant l'arrête, il ne renvoie pas ✱ long)
+        val t = ScanTracker()
+        t.onState(false, false, true, 1_000)          // repos, avant le lancement
+        t.onStartSent(2_000)
+        // 4 s sans aucune lecture 0x09 valide : aucun appel à onState
+        assertEquals(Decision.STOP, ScanControl.onShortPress(t.running, 'M'))
+    }
 }

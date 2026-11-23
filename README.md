@@ -8,6 +8,7 @@
 - **Journal** : bouton ☰ Journal à gauche du PTT.
 - **Mes canaux** : nombre de canaux sur chaque filtre.
 - **Préférences** : « Mon code d'appel » vide n'affiche plus « A1 » (passait pour une valeur saisie).
+- Revue ChatGPT : suivi du scan recalé seulement sur un état 0x09 frais (P1) ; changé une fois les touches passées, appuis Scan suivants en attente d'ici là (P2) ; une reprise si la radio refuse la liste (scan pas encore arrêté) ; lancement refusé si l'état de la radio n'a pas été relu depuis 8 s.
 - Pendant un scan : plus de lecture des réglages d'équipe (toujours abandonnée), fréquence hors de la comparaison du journal technique (plus d'« État radio » toutes les 1,5 s).
 
 ## 0.76-essai — plus aucune fenêtre système

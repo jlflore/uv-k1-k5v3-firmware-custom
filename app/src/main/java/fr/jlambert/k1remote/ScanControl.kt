@@ -16,9 +16,10 @@ class ScanTracker(private val graceMs: Long = 3_000) {
     @Volatile var running = false; private set
     private var changedAt = 0L
 
-    fun onStartSent(now: Long) { running = true; changedAt = now }
-    fun onStopSent(now: Long) { running = false; changedAt = now }
-    fun reset() { running = false; changedAt = 0L }
+    // Revue 0.77 (P3) : running et changedAt forment un seul état, modifié par deux fils : méthodes synchronisées
+    @Synchronized fun onStartSent(now: Long) { running = true; changedAt = now }
+    @Synchronized fun onStopSent(now: Long) { running = false; changedAt = now }
+    @Synchronized fun reset() { running = false; changedAt = 0L }
 
     /**
      * Nouvel état 0x09. [scanOrSpectrum] : fonction 5 ; [spectrum] : spectre ouvert ; [quiet] :
@@ -26,7 +27,7 @@ class ScanTracker(private val graceMs: Long = 3_000) {
      * Les états lus moins de [graceMs] après un appui de l'appli sont ignorés : ils peuvent
      * dater d'avant l'appui.
      */
-    fun onState(scanOrSpectrum: Boolean, spectrum: Boolean, quiet: Boolean, now: Long) {
+    @Synchronized fun onState(scanOrSpectrum: Boolean, spectrum: Boolean, quiet: Boolean, now: Long) {
         if (now - changedAt < graceMs) return
         when {
             spectrum -> running = false
