@@ -69,7 +69,12 @@ object ChoiceSheet {
             // Icône dans une pastille ronde
             row.addView(tv(o.icon, 18f, when { o.primary -> p.accentText; o.danger -> p.danger; else -> p.chipText }, true).apply {
                 gravity = Gravity.CENTER
-                background = Ui.shape(act, if (o.primary) p.accentBg else p.chipBg, 999f, if (o.primary) p.accentBorder else p.chipBorder)
+                // Icône vide (choix non coché, Sheet.pick) : simple anneau, comme un bouton radio
+                background = when {
+                    o.primary -> Ui.shape(act, p.accentBg, 999f, p.accentBorder)
+                    o.icon.isEmpty() -> Ui.shape(act, android.graphics.Color.TRANSPARENT, 999f, p.muted, 2f)
+                    else -> Ui.shape(act, p.chipBg, 999f, p.chipBorder)
+                }
             }, LinearLayout.LayoutParams(dp(40), dp(40)))
             val texts = LinearLayout(act).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, dp(8), 0) }
             val head = LinearLayout(act).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
